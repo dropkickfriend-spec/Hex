@@ -187,3 +187,37 @@ def test_tonality_renderer_contains_line_thickness_controls_and_live_wheel_hooks
     assert "--mh-b" in html
     assert "mhStageLabel" in html
     assert "mh-game-cell" in html
+
+
+# Retro game top-down 3-plane hex renderer contract checks
+def test_tonality_renderer_contains_top_down_hex_game_style_contract():
+    base = _require_base_url()
+    response = requests.get(f"{base}/api/tonality-renderer", timeout=20)
+    assert response.status_code == 200
+    html = response.text
+
+    # Game mode + style selector
+    assert 'id="mhGame"' in html
+    assert 'value="invaders"' in html
+    assert 'value="platformer"' in html
+    assert 'value="maze"' in html
+    assert 'id="mhGameStyle"' in html
+    assert "top-down 3-plane cube hex ground" in html
+
+    # Three-face ground cell contract
+    assert "mh-game-face-top" in html
+    assert "mh-game-face-left" in html
+    assert "mh-game-face-bottom" in html
+
+    # Token layer generated from same render/palette hooks
+    assert 'id="mhTokenLayer"' in html
+    assert ".mh-token.player" in html
+    assert ".mh-token.enemy" in html
+    assert ".mh-token.pickup" in html
+    assert "--token-color" in html
+
+    # Cube controls hooked into game redraw path
+    assert "cubeSize" in html
+    assert "cubeGap" in html
+    assert "grid.style.setProperty('--mh-hex-size', hexW + 'px')" in html
+    assert "if ($('mhGame').value !== 'website') drawGame($('mhGame').value);" in html

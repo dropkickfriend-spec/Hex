@@ -289,8 +289,67 @@ def build_tonality_renderer_html() -> str:
   .mh-line { height: 14px; background: #ff00ff; box-shadow: 0 0 18px currentColor; }
   .mh-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .mh-card { min-height: 58px; }
-  .mh-game-grid { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(10, 1fr); grid-auto-rows: 34px; gap: 6px; padding: 18px; align-content: center; }
-  .mh-game-cell { border: 1px solid rgba(255,255,255,.2); transform: skewY(-8deg); box-shadow: 0 0 18px rgba(255,255,255,.08); }
+  .mh-game-grid {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    display: block;
+    z-index: 2;
+    --mh-hex-size: 34px;
+  }
+  .mh-game-cell {
+    position: absolute;
+    width: var(--mh-hex-size);
+    height: calc(var(--mh-hex-size) / 0.866);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: transparent;
+    filter: drop-shadow(0 10px 12px rgba(0,0,0,.34));
+  }
+  .mh-game-face {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border: 1px solid rgba(255,255,255,.14);
+    background-color: var(--tile-color, #888);
+    background-image: var(--munker-pattern, none);
+    background-size: var(--munker-tile, auto);
+  }
+  .mh-game-face-top {
+    clip-path: polygon(50% 0%, 100% 25%, 50% 50%, 0% 25%);
+    filter: brightness(1.18) saturate(1.08);
+  }
+  .mh-game-face-left {
+    clip-path: polygon(0% 25%, 50% 50%, 50% 100%, 0% 75%);
+    filter: brightness(.62) saturate(.9);
+  }
+  .mh-game-face-bottom {
+    clip-path: polygon(50% 50%, 100% 75%, 50% 100%, 0% 75%);
+    filter: brightness(.78) saturate(.96);
+  }
+  .mh-token-layer { position: absolute; inset: 0; pointer-events: none; z-index: 7; }
+  .mh-token {
+    position: absolute;
+    width: calc(var(--mh-token-size, 34px) * .96);
+    height: calc(var(--mh-token-size, 34px) * 1.1);
+    transform: translate(-50%, -72%);
+    clip-path: polygon(50% 0%, 92% 24%, 92% 74%, 50% 100%, 8% 74%, 8% 24%);
+    filter: drop-shadow(0 13px 10px rgba(0,0,0,.55));
+  }
+  .mh-token::before, .mh-token::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
+  .mh-token::before {
+    background: var(--token-color, #ffff00);
+    clip-path: polygon(50% 0%, 92% 24%, 50% 48%, 8% 24%);
+    filter: brightness(1.22);
+  }
+  .mh-token::after {
+    background-image: var(--munker-pattern, none);
+    background-size: var(--munker-tile, auto);
+    mix-blend-mode: screen;
+    opacity: .86;
+  }
+  .mh-token.enemy { --token-color: var(--mh-b, #ff00ff); }
+  .mh-token.player { --token-color: var(--mh-a, #ffff00); }
+  .mh-token.pickup { --token-color: var(--mh-c, #00ffff); transform: translate(-50%, -62%) scale(.72); }
   .mh-stage-label { position: absolute; left: 12px; bottom: 10px; z-index: 8; font: 11px ui-monospace, monospace; color: var(--ink); background: rgba(0,0,0,.62); border: 1px solid var(--line); border-radius: 999px; padding: 7px 10px; }
   .mh-munker-field, .mh-hex-field { position: absolute; inset: -60px; pointer-events: none; z-index: 6; }
   .mh-munker-field {
@@ -325,6 +384,9 @@ def build_tonality_renderer_html() -> str:
       <option value="platformer">Game render · platformer</option>
       <option value="maze">Game render · puzzle maze</option>
     </select>
+    <select id="mhGameStyle">
+      <option value="hex3plane">Style · top-down 3-plane cube hex ground</option>
+    </select>
     <label class="mh-mini-field">Line thickness <span id="mhLineThicknessv">5</span>px
       <input id="mhLineThickness" type="range" min="1" max="40" value="5" />
     </label>
@@ -345,6 +407,7 @@ def build_tonality_renderer_html() -> str:
       <div class="mh-cards"><div class="mh-card"></div><div class="mh-card"></div><div class="mh-card"></div><div class="mh-card"></div></div>
     </div>
     <div class="mh-game-grid" id="mhGameGrid" style="display:none"></div>
+    <div class="mh-token-layer" id="mhTokenLayer"></div>
     <div class="mh-hex-field"></div>
     <div class="mh-munker-field" id="mhMunkerField"></div>
     <div class="mh-stage-label" id="mhStageLabel">website · original Munker overlay active</div>
@@ -357,6 +420,7 @@ def build_tonality_renderer_html() -> str:
   const frame = $('mhFrame');
   const synthetic = $('mhSynthetic');
   const grid = $('mhGameGrid');
+  const tokenLayer = $('mhTokenLayer');
   const label = $('mhStageLabel');
   const hostLabel = $('mhHostLabel');
   let renderPalette = ['#ffff00','#ff00ff','#00ffff','#ff3131','#39ff14','#0000ff'];
@@ -425,14 +489,76 @@ def build_tonality_renderer_html() -> str:
       el.style.background = rgba([p.a, p.b, p.centre][i % 3], .12);
     });
     document.querySelectorAll('.mh-game-cell').forEach((el, i) => {
-      el.style.background = renderPalette[(i + ($('mhGame')?.value === 'platformer' ? 2 : 0)) % renderPalette.length];
-      el.style.borderColor = renderPalette[(i + 3) % renderPalette.length];
+      el.style.setProperty('--tile-color', renderPalette[(i + ($('mhGame')?.value === 'platformer' ? 2 : 0)) % renderPalette.length]);
     });
     const readout = $('mhWheelReadout');
     if (readout) {
       readout.innerHTML = `<span class="mh-wheel-chip">A ${p.aHex} · ${Math.round(p.hue)}°</span><span class="mh-wheel-chip">B ${p.bHex}</span><span class="mh-wheel-chip">centre ${p.cHex}</span><span class="mh-wheel-chip">tone ${Math.round(p.tone)}</span>`;
     }
     return p;
+  }
+  function groundMetrics(){
+    let size = 34, gap = 3, N = 7;
+    try {
+      if (typeof cubeState !== 'undefined') { size = cubeState.size || size; gap = cubeState.gap || gap; }
+      if (typeof cubeStepCount === 'function') N = cubeStepCount();
+    } catch(e) {}
+    const hexW = Math.max(18, Math.min(56, parseInt(size, 10) || 34));
+    const hexH = hexW / 0.866;
+    const rowStep = hexH * 0.75 + Math.max(0, Math.min(20, gap)) * 0.65;
+    const colStep = hexW + Math.max(0, Math.min(20, gap));
+    return { size: hexW, gap, N: Math.max(4, Math.min(9, N)), hexW, hexH, rowStep, colStep };
+  }
+  function colorForGroundCell(xi, yi, kind, p, N){
+    try {
+      const hue = (p.hue + (xi / Math.max(1, N - 1)) * 150 + (kind === 'maze' ? yi * 13 : yi * 7)) % 360;
+      const tone = 32 + (yi / Math.max(1, N - 1)) * 38;
+      return toHex(rgbAt(hue, tone));
+    } catch(e) {
+      return renderPalette[(xi + yi) % renderPalette.length];
+    }
+  }
+  function makeHexTile(xPx, yPx, color, xi, yi){
+    const tile = document.createElement('div');
+    tile.className = 'mh-game-cell';
+    tile.dataset.x = String(xi);
+    tile.dataset.y = String(yi);
+    tile.style.left = xPx + 'px';
+    tile.style.top = yPx + 'px';
+    tile.style.setProperty('--tile-color', color);
+    ['top','left','bottom'].forEach(face => {
+      const d = document.createElement('div');
+      d.className = 'mh-game-face mh-game-face-' + face;
+      tile.appendChild(d);
+    });
+    return tile;
+  }
+  function makeToken(type, x, y, size, color){
+    const t = document.createElement('div');
+    t.className = 'mh-token ' + type;
+    t.style.left = x + 'px';
+    t.style.top = y + 'px';
+    t.style.setProperty('--mh-token-size', size + 'px');
+    if (color) t.style.setProperty('--token-color', color);
+    return t;
+  }
+  function tokenPlan(kind, metrics){
+    const N = metrics.N;
+    if (kind === 'maze') {
+      return [
+        { type: 'player', xi: 1, yi: N - 2 }, { type: 'enemy', xi: N - 2, yi: 1 },
+        { type: 'enemy', xi: Math.floor(N/2), yi: Math.floor(N/2) }, { type: 'pickup', xi: N - 2, yi: N - 2 },
+      ];
+    }
+    if (kind === 'invaders') {
+      const enemies = [];
+      for (let row = 1; row < Math.min(4, N); row++) for (let xi = 1; xi < N - 1; xi += 2) enemies.push({ type: 'enemy', xi, yi: row });
+      return [{ type: 'player', xi: Math.floor(N/2), yi: N - 1 }, ...enemies];
+    }
+    return [
+      { type: 'player', xi: 1, yi: N - 2 }, { type: 'enemy', xi: N - 2, yi: N - 3 },
+      { type: 'pickup', xi: Math.floor(N/2), yi: N - 4 }, { type: 'enemy', xi: N - 1, yi: N - 2 },
+    ];
   }
   function syncMunker(){
     const mode = $('munkerMode') ? $('munkerMode').value : 'diag';
@@ -451,22 +577,40 @@ def build_tonality_renderer_html() -> str:
   function drawGame(kind){
     const p = applyRenderPalette();
     grid.innerHTML = '';
-    grid.style.display = 'grid';
+    tokenLayer.innerHTML = '';
+    grid.style.display = 'block';
     frame.style.display = 'none';
     synthetic.style.display = 'none';
-    const cells = kind === 'maze' ? 90 : 70;
-    for(let i=0;i<cells;i++){
-      const d=document.createElement('div');
-      d.className='mh-game-cell';
-      const c=renderPalette[(i + (kind==='platformer'?2:0)) % renderPalette.length];
-      d.style.background = c;
-      d.style.borderColor = renderPalette[(i + 3) % renderPalette.length];
-      d.style.opacity = kind==='maze' && i%3===0 ? '.08' : String(.38 + (i%5)*.1);
-      d.style.gridColumn = kind==='invaders' && i%11===0 ? 'span 2' : 'span 1';
-      d.style.height = kind==='platformer' && i>48 ? '48px' : (kind==='maze' ? '28px' : '24px');
-      grid.appendChild(d);
+    const metrics = groundMetrics();
+    const { N, hexW, hexH, rowStep, colStep } = metrics;
+    const totalW = colStep * N + hexW * 0.5;
+    const totalH = rowStep * (N - 1) + hexH;
+    grid.style.setProperty('--mh-hex-size', hexW + 'px');
+    grid.style.width = totalW + 'px';
+    grid.style.height = totalH + 'px';
+    const stageRect = stage.getBoundingClientRect();
+    const offsetX = (stageRect.width - totalW) / 2;
+    const offsetY = (stageRect.height - totalH) / 2;
+    const cellCenters = {};
+    for(let row=0; row<N; row++){
+      const yi = row;
+      const rowOffset = row % 2 ? hexW * 0.5 : 0;
+      for(let xi=0; xi<N; xi++){
+        if (kind === 'maze' && ((xi === 2 && row > 1 && row < N - 1) || (row === 3 && xi > 1 && xi < N - 2))) continue;
+        const xPx = xi * colStep + rowOffset;
+        const yPx = row * rowStep;
+        const c = colorForGroundCell(xi, yi, kind, p, N);
+        grid.appendChild(makeHexTile(xPx, yPx, c, xi, yi));
+        cellCenters[`${xi},${yi}`] = { x: offsetX + xPx + hexW / 2, y: offsetY + yPx + hexH * 0.58 };
+      }
     }
-    label.textContent = 'game render · ' + kind + ' · wheel ' + p.aHex + ' → ' + p.bHex;
+    for (const token of tokenPlan(kind, metrics)) {
+      const pos = cellCenters[`${token.xi},${token.yi}`] || cellCenters[`${Math.floor(N/2)},${Math.floor(N/2)}`];
+      if (!pos) continue;
+      const color = token.type === 'player' ? p.aHex : token.type === 'enemy' ? p.bHex : p.cHex;
+      tokenLayer.appendChild(makeToken(token.type, pos.x, pos.y, hexW, color));
+    }
+    label.textContent = 'game render · ' + kind + ' · top-down 3-plane hex ground · ' + N + '×' + N;
   }
   function render(){
     const kind = $('mhGame').value;
@@ -477,6 +621,7 @@ def build_tonality_renderer_html() -> str:
       frame.style.display = 'block';
       synthetic.style.display = 'grid';
       grid.style.display = 'none';
+      tokenLayer.innerHTML = '';
       hostLabel.textContent = host(url);
       const p = applyRenderPalette();
       label.textContent = 'website render · ' + host(url) + ' · wheel ' + p.aHex + ' → ' + p.bHex;
@@ -484,14 +629,29 @@ def build_tonality_renderer_html() -> str:
     }
     drawGame(kind);
   }
-  ['munkerMode','munkerSpacing','munkerThick','munkerOpacity','munkerSpeed','hexIn','inH','inT','cfgY','cfgM','cfgC','cfgRot','cfgChroma','centreW'].forEach(id => {
-    const el=$(id); if(el) el.addEventListener('input', () => { syncMunker(); applyRenderPalette(); });
+  ['munkerMode','munkerSpacing','munkerThick','munkerOpacity','munkerSpeed','hexIn','inH','inT','cfgY','cfgM','cfgC','cfgRot','cfgChroma','centreW','cubeSize','cubeGap','cfgSteps'].forEach(id => {
+    const el=$(id); if(el) el.addEventListener('input', () => { syncMunker(); applyRenderPalette(); if ($('mhGame').value !== 'website') drawGame($('mhGame').value); });
   });
   document.querySelectorAll('#centreModes button').forEach(btn => btn.addEventListener('click', () => setTimeout(applyRenderPalette, 0)));
   $('mhLineThickness').addEventListener('input', e => { syncLineThickness(e.target.value, true); syncMunker(); });
   $('mhRenderBtn').addEventListener('click', render);
   $('mhSyncBtn').addEventListener('click', syncMunker);
+  function bindLateRenderSyncControls(){
+    if (window.__mhLateRenderSyncBound) return;
+    window.__mhLateRenderSyncBound = true;
+    ['munkerMode','munkerSpacing','munkerThick','munkerOpacity','munkerSpeed','hexIn','inH','inT','cfgY','cfgM','cfgC','cfgRot','cfgChroma','centreW','cubeSize','cubeGap','cfgSteps','cubeToneMin','cubeToneMax','cubeMode','cubeTime','cubePerspective','cubeMonet','cubePointillism','cubeSpeckles','cubeCalibratedDots','cubeGreyscale','cubeTintedShadows'].forEach(id => {
+      const el = $(id);
+      if (!el) return;
+      const ev = el.tagName === 'SELECT' ? 'change' : 'input';
+      el.addEventListener(ev, () => setTimeout(() => {
+        syncMunker();
+        applyRenderPalette();
+        if ($('mhGame').value !== 'website') drawGame($('mhGame').value);
+      }, 0));
+    });
+  }
   setTimeout(() => {
+    bindLateRenderSyncControls();
     const cubeBtn = document.querySelector('[data-tab="cube"]');
     if(cubeBtn) cubeBtn.click();
     const mode = $('munkerMode'); if(mode) mode.value = 'diag';
