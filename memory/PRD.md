@@ -30,8 +30,16 @@ Use the animated Munker render design over the user's hex-grid color-palette con
 - Added Mongo-backed saved render projects and load-back-into-render flow.
 - Verified backend APIs, mobile UI screenshots, tab navigation, save/list/load flow, and small-screen control layout.
 
+## Corrected — 2026-05-08
+- Restored the uploaded `tonality(1).html` as the foundation instead of the simplified rebuild.
+- Added `/api/tonality-renderer`, which serves the original Tonality/Munker/hex-cube studio plus an adapter for website URL and game renders.
+- Updated the Expo app to open the original renderer directly: native uses WebView; web preview uses an iframe fallback.
+- Verified original sections appear: Color wheel, Munker filter controls, CMY/RGB tonal grid, and Hue cube/hex layout.
+- Verified adapter actions: website URL render updates target host, and game render creates retro game cells under the original Munker + hex field.
+
 ## Current Product Notes
-- The MVP uses a local stylized URL composition rather than taking live website screenshots.
+- The current renderer preserves the original uploaded HTML studio and adds a target stage above it.
+- Website rendering attempts to load the URL in-frame and overlays the original Munker/hex style; some sites may block iframe display, so the adapter also keeps a stylized target layer visible.
 - No login or user accounts are required.
 - No external AI/image generation is used.
 
