@@ -970,7 +970,7 @@
               <option value="on">On (Seurat · neighbour-color dots)</option>
             </select>
           </label>
-          <label class="field" title="Speckles (Van Gogh-style) — random ambient noise that vibrates more in dark cells. Speckles are coloured with the COMPLEMENT of the cell hue so darks shimmer with their opposite. Independent from Pointillism — both can stack.">Speckles
+          <label class="field" title="Speckles (Van Gogh-style) — random ambient noise that vibrates more in dark cells. Speckles use cool CMY-side vibration (cyan/blue/violet), not cad red, so darks shimmer without muddying. Independent from Pointillism — both can stack.">Speckles
             <select id="cubeSpeckles" style="flex:1">
               <option value="off" selected>Off</option>
               <option value="on">On (Van Gogh · complement vibration in darks)</option>
@@ -1564,12 +1564,15 @@ function applyMunker() {
 // from canvas bottom (vivid foreground) to top (atmospheric desaturation).
 // noon = clearest (gentle), dusk/night = heaviest haze (sharpest curve).
 const TIME_OF_DAY = {
-  dawn:    { name: 'Dawn',        hex: '#c89db8', chromaFalloff: 1.5 },
-  morning: { name: 'Morning',     hex: '#7ba8d6', chromaFalloff: 0.75 },
-  noon:    { name: 'Noon',        hex: '#aed3f0', chromaFalloff: 0.5  },
-  golden:  { name: 'Golden hour', hex: '#e8a868', chromaFalloff: 1.0  },
-  dusk:    { name: 'Dusk',        hex: '#7d5a8c', chromaFalloff: 1.8  },
-  night:   { name: 'Night',       hex: '#1a2848', chromaFalloff: 2.0  },
+  // Landscape algorithm now keeps dark vibration on the cool CMY side.
+  // No cad-red/orange darks: dawn/golden keep warm light in labels, but the
+  // atmospheric anchor is cooled toward C/B/M so shadows stay painterly.
+  dawn:    { name: 'Dawn',        hex: '#9db8d8', chromaFalloff: 1.5, coolBias: true },
+  morning: { name: 'Morning',     hex: '#7ba8d6', chromaFalloff: 0.75, coolBias: true },
+  noon:    { name: 'Noon',        hex: '#aed3f0', chromaFalloff: 0.5,  coolBias: true },
+  golden:  { name: 'Golden hour', hex: '#88b8d8', chromaFalloff: 1.0,  coolBias: true },
+  dusk:    { name: 'Dusk',        hex: '#6f6ab0', chromaFalloff: 1.8,  coolBias: true },
+  night:   { name: 'Night',       hex: '#1a2848', chromaFalloff: 2.0,  coolBias: true },
 };
 let _atmCache = { key: '', hue: 0, rgb: [0,0,0] };
 function atmosphereInfo() {
@@ -1649,23 +1652,31 @@ function cubeColorFor(xi, yi, zi) {
   ];
 }
 
-// --- Shared painters logic: pull a hue toward red along Z, boost toward yellow ---
+// --- Shared painters logic: keep landscape depth/shadows on the cool CMY side.
+// Older version pulled depth toward cad-red. For this renderer the dark vibration
+// and landscape depth both move toward cool calibrated anchors (C/B/M), while
+// yellow boost only lifts genuinely yellow lights.
+function nearestCoolCMYHue(hue) {
+  const anchors = getCalibratedAnchors();
+  const cools = [anchors.C, anchors.B, anchors.M].filter(v => typeof v === 'number');
+  let best = cools[0] ?? 210;
+  let bestD = Infinity;
+  for (const c of cools) {
+    const d = angularDistance(hue, c);
+    if (d < bestD) { bestD = d; best = c; }
+  }
+  return best;
+}
 function applyWarmthAndYellow(hue, tone, cFrac) {
   const anchors = getCalibratedAnchors();
   const wd = cubeState.warmthDepth / 100;
-  const depthDeg = wd * 60;
-  const offset = (cFrac - 0.5) * 2 * depthDeg;
-  const toRed = signedArc(hue, anchors.R);
-  let shifted;
-  if (offset >= 0) {
-    const step = Math.min(Math.abs(toRed), offset);
-    shifted = mod(hue + Math.sign(toRed || 1) * step, 360);
-  } else {
-    shifted = mod(hue - Math.sign(toRed || 1) * Math.abs(offset), 360);
-  }
+  const coolTarget = nearestCoolCMYHue(hue);
+  const depthPull = (1 - cFrac) * wd * 0.72; // back/deeper slices cool harder
+  const shifted = mod(hue + signedArc(hue, coolTarget) * depthPull, 360);
+
   const yDist = angularDistance(shifted, anchors.Y);
   const yellowness = Math.max(0, 1 - yDist / 60);
-  const boost = (cubeState.yellowBoost / 100) * yellowness * 22;
+  const boost = (cubeState.yellowBoost / 100) * yellowness * 18;
   return { shifted, effectiveTone: clamp(tone + boost, 0, 100) };
 }
 
@@ -1861,29 +1872,39 @@ function extrasGradientFor(xi, yi, zi, N, map) {
   return layers.length ? layers.join(', ') : null;
 }
 
-// --- Van Gogh-style speckles: random low-opacity dots that vibrate the cell
-// with its COMPLEMENT colour. Density scales with darkness, so dark areas get
-// dense speckle activation (the "vibrating darks" effect from impressionist
-// portraits and night scenes). Deterministic per-cell seed so dots don't
-// flicker between renders.
+// --- Van Gogh-style speckles: random low-opacity cool CMY dots that vibrate
+// the darks. We do NOT use cad red/orange here; dark vibration is selected
+// from the cool side of the calibrated CMY wheel (cyan/blue/violet/magenta).
+// Density scales with darkness, so night/shadow areas shimmer without turning muddy.
+function coolCMYVibrationRgb(baseRgb, xi = 0, yi = 0, zi = 0) {
+  const [h, s, l] = rgbToHsl(baseRgb);
+  let coolHues;
+  try {
+    const anchors = getCalibratedAnchors();
+    coolHues = [anchors.C, anchors.B, anchors.M].filter(v => typeof v === 'number');
+  } catch(e) {
+    coolHues = [210, 270, 330];
+  }
+  // Pick nearest cool hue, then nudge per-cell for Van Gogh vibration.
+  let best = coolHues[0], bestD = Infinity;
+  for (const ch of coolHues) {
+    const d = angularDistance(h, ch);
+    if (d < bestD) { bestD = d; best = ch; }
+  }
+  const jitter = (((xi + 3) * 17 + (yi + 5) * 29 + (zi + 7) * 37) % 23) - 11;
+  const coolHue = mod(best + jitter, 360);
+  const coolSat = Math.min(1, Math.max(0.58, s + 0.22));
+  const coolLight = Math.min(0.78, Math.max(0.36, l + 0.20));
+  return hslToRgb(coolHue, coolSat, coolLight);
+}
 function speckleGradientFor(xi, yi, zi, baseRgb) {
   if (!cubeState.speckles) return null;
-  // Cell value 0..1 (max channel). Darker = denser speckling.
   const V = Math.max(baseRgb[0], baseRgb[1], baseRgb[2]) / 255;
   const darkness = 1 - V;
-  const speckleCount = Math.round(6 + darkness * 18); // 6..24
-  const baseOpacity = 0.25 + darkness * 0.45;          // .25..0.7
-
-  // Speckle colour = complement of cell hue, slightly more saturated/lighter
-  // so it visually "pops" against the dark base.
-  const [h, s, l] = rgbToHsl(baseRgb);
-  const compHue = (h + 180) % 360;
-  const compSat = Math.min(1, s + 0.3);
-  const compLight = Math.min(0.85, Math.max(0.4, l + 0.25));
-  const cRgb = hslToRgb(compHue, compSat, compLight);
+  const speckleCount = Math.round(6 + darkness * 18);
+  const baseOpacity = 0.23 + darkness * 0.44;
+  const cRgb = coolCMYVibrationRgb(baseRgb, xi, yi, zi);
   const cStr = `rgba(${cRgb[0]},${cRgb[1]},${cRgb[2]},${baseOpacity.toFixed(2)})`;
-
-  // Deterministic PRNG seeded by cell coords so speckles don't shimmer.
   let seed = ((xi + 1) * 73 + (yi + 1) * 137 + (zi + 1) * 211) | 0;
   const rand = () => {
     seed = (seed * 9301 + 49297) & 0x7fffffff;

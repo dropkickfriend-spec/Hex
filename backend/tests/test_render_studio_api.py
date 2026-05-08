@@ -154,12 +154,42 @@ def test_tonality_renderer_contains_original_layout_and_adapter():
     assert 'id="mhSyncBtn"' in html
 
 
+# Website proxy endpoint checks (/api/site-html)
+def test_site_html_proxy_inserts_base_tag_for_html_pages():
+    base = _require_base_url()
+    response = requests.get(f"{base}/api/site-html", params={"url": "https://example.com"}, timeout=20)
+    assert response.status_code == 200
+    html = response.text
+    assert "<base href='https://example.com'>" in html
+    assert "<html" in html.lower()
+
+
+# Website proxy validation checks
+def test_site_html_proxy_rejects_invalid_scheme():
+    base = _require_base_url()
+    response = requests.get(f"{base}/api/site-html", params={"url": "javascript:alert(1)"}, timeout=20)
+    assert response.status_code == 400
+    body = response.json()
+    assert body["detail"] == "Enter a valid http/https URL"
+
+
 # Original source file preservation checks
 def test_original_tonality_source_file_exists_with_required_sections():
     assert ORIGINAL_TONALITY_PATH.exists()
     original = ORIGINAL_TONALITY_PATH.read_text(encoding="utf-8")
     assert "Color wheel · CMY axis" in original
     assert "Hue cube · hue × tone × chroma" in original
+
+
+# Original source cool-CMY vibration and landscape-cooling checks
+def test_original_source_uses_cool_cmy_logic_for_speckles_and_landscape_depth():
+    original = ORIGINAL_TONALITY_PATH.read_text(encoding="utf-8")
+    assert "function coolCMYVibrationRgb" in original
+    assert "function nearestCoolCMYHue" in original
+    assert "function applyWarmthAndYellow" in original
+    assert "nearestCoolCMYHue(hue)" in original
+    assert "cad red" in original.lower()
+    assert "cool side" in original.lower() or "cool cmy-side" in original.lower()
 
 
 # Adapter controls and calibrated wheel integration checks

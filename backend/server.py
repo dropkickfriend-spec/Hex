@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from urllib.parse import urlparse
+import requests
 
 
 ROOT_DIR = Path(__file__).parent
@@ -236,6 +237,16 @@ def build_tonality_renderer_html() -> str:
     letter-spacing: .02em;
   }
   .mh-render-toolbar .mh-mini-field input { min-width: 120px; width: 100%; margin-top: 5px; }
+  .mh-painter-tip {
+    margin-top: 9px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-left: 3px solid var(--mh-c, #00ffff);
+    border-radius: 8px;
+    background: rgba(0,0,0,.22);
+    padding: 9px 10px;
+    color: var(--ink-dim);
+    font: 11px/1.45 ui-monospace, monospace;
+  }
   .mh-wheel-readout {
     display: flex;
     gap: 6px;
@@ -350,8 +361,36 @@ def build_tonality_renderer_html() -> str:
   .mh-token.enemy { --token-color: var(--mh-b, #ff00ff); }
   .mh-token.player { --token-color: var(--mh-a, #ffff00); }
   .mh-token.pickup { --token-color: var(--mh-c, #00ffff); transform: translate(-50%, -62%) scale(.72); }
+  .mh-ruliad-field, .mh-artifact-field { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .mh-ruliad-field { z-index: 5; mix-blend-mode: screen; opacity: .72; }
+  .mh-ruliad-node {
+    position: absolute;
+    width: 7px; height: 7px;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+    background: var(--node-color, var(--mh-a, #ffff00));
+    box-shadow: 0 0 12px currentColor;
+  }
+  .mh-ruliad-link {
+    position: absolute;
+    height: 1px;
+    transform-origin: 0 50%;
+    background: linear-gradient(90deg, transparent, var(--link-color, var(--mh-c, #00ffff)), transparent);
+    opacity: .62;
+  }
+  .mh-artifact-field { z-index: 6; mix-blend-mode: screen; opacity: var(--mh-opacity, 1); }
+  .mh-artifact-line {
+    position: absolute;
+    left: -20%;
+    width: 140%;
+    height: var(--line-h, 3px);
+    top: var(--line-y, 0px);
+    transform: rotate(var(--line-angle, -28deg));
+    background: var(--line-color, rgba(255,255,255,.92));
+    box-shadow: 0 0 9px var(--line-color, rgba(255,255,255,.92));
+  }
   .mh-stage-label { position: absolute; left: 12px; bottom: 10px; z-index: 8; font: 11px ui-monospace, monospace; color: var(--ink); background: rgba(0,0,0,.62); border: 1px solid var(--line); border-radius: 999px; padding: 7px 10px; }
-  .mh-munker-field, .mh-hex-field { position: absolute; inset: -60px; pointer-events: none; z-index: 6; }
+  .mh-munker-field, .mh-hex-field { position: absolute; inset: -60px; pointer-events: none; z-index: 4; }
   .mh-munker-field {
     opacity: var(--mh-opacity, 1);
     background: repeating-linear-gradient(var(--mh-angle, 135deg), var(--mh-a, #ffff00) 0 var(--mh-thick, 5px), var(--mh-b, #ff00ff) var(--mh-thick, 5px) calc(var(--mh-thick, 5px) + var(--mh-gap, 10px)));
@@ -393,6 +432,7 @@ def build_tonality_renderer_html() -> str:
     <button id="mhRenderBtn">Render with this style</button>
     <button id="mhSyncBtn">Sync Munker controls</button>
   </div>
+  <div class="mh-painter-tip" id="mhPainterTip">Painter tip: use cool CMY-side dark vibration; avoid cad red in shadows. Let uneven Munker white spacing create optical colour instead of forcing pigment.</div>
   <div class="mh-wheel-readout" id="mhWheelReadout">
     <span class="mh-wheel-chip">A #ffff00</span>
     <span class="mh-wheel-chip">B #0000ff</span>
@@ -410,6 +450,8 @@ def build_tonality_renderer_html() -> str:
     <div class="mh-token-layer" id="mhTokenLayer"></div>
     <div class="mh-hex-field"></div>
     <div class="mh-munker-field" id="mhMunkerField"></div>
+    <div class="mh-ruliad-field" id="mhRuliadField"></div>
+    <div class="mh-artifact-field" id="mhArtifactField"></div>
     <div class="mh-stage-label" id="mhStageLabel">website · original Munker overlay active</div>
   </div>
 </section>
@@ -421,6 +463,8 @@ def build_tonality_renderer_html() -> str:
   const synthetic = $('mhSynthetic');
   const grid = $('mhGameGrid');
   const tokenLayer = $('mhTokenLayer');
+  const ruliadField = $('mhRuliadField');
+  const artifactField = $('mhArtifactField');
   const label = $('mhStageLabel');
   const hostLabel = $('mhHostLabel');
   let renderPalette = ['#ffff00','#ff00ff','#00ffff','#ff3131','#39ff14','#0000ff'];
@@ -466,6 +510,17 @@ def build_tonality_renderer_html() -> str:
     }
     stage.style.setProperty('--mh-thick', n + 'px');
   }
+  function painterTip(p){
+    const tip = $('mhPainterTip');
+    if (!tip) return;
+    const tone = Math.round(p.tone);
+    const advice = tone < 45
+      ? 'Darks: keep vibration on the cool CMY side (cyan/blue/violet). Do not reach for cad red; neutralise with cool complement and let Munker white do the optical lift.'
+      : tone > 65
+        ? 'Lights: avoid killing chroma with opaque white. Use thin glaze logic—let spacing/thickness reveal the light through the palette.'
+        : 'Mids: mix toward the tonal centre first, then use uneven white stripes as optical artefacts instead of adding muddy pigment.';
+    tip.textContent = 'Painter tip: ' + advice;
+  }
   function applyRenderPalette(){
     const p = getWheelPalette();
     renderPalette = [p.aHex, ...p.colors.slice(0, 4), p.bHex, p.cHex];
@@ -495,7 +550,80 @@ def build_tonality_renderer_html() -> str:
     if (readout) {
       readout.innerHTML = `<span class="mh-wheel-chip">A ${p.aHex} · ${Math.round(p.hue)}°</span><span class="mh-wheel-chip">B ${p.bHex}</span><span class="mh-wheel-chip">centre ${p.cHex}</span><span class="mh-wheel-chip">tone ${Math.round(p.tone)}</span>`;
     }
+    painterTip(p);
     return p;
+  }
+  function seededRand(seedText){
+    let seed = 0;
+    for (let i = 0; i < seedText.length; i++) seed = ((seed << 5) - seed + seedText.charCodeAt(i)) | 0;
+    return function(){ seed = (seed * 1664525 + 1013904223) | 0; return ((seed >>> 0) % 10000) / 10000; };
+  }
+  function buildArtifactField(seedKey){
+    if (!artifactField) return;
+    const p = getWheelPalette();
+    artifactField.innerHTML = '';
+    const rand = seededRand(seedKey + p.aHex + p.bHex + ($('mhLineThickness')?.value || '5'));
+    const baseThick = Math.max(1, Math.min(40, parseInt($('mhLineThickness')?.value || '5', 10)));
+    const spacing = Math.max(0, parseInt($('munkerSpacing')?.value || '10', 10));
+    const mode = $('munkerMode') ? $('munkerMode').value : 'diag';
+    const angle = mode === 'h' ? '0deg' : mode === 'v' ? '90deg' : mode === 'grid' ? '-18deg' : '-28deg';
+    const lines = Math.max(16, Math.min(52, Math.round(430 / Math.max(4, spacing + baseThick)) + 10));
+    for (let i = 0; i < lines; i++) {
+      const line = document.createElement('div');
+      line.className = 'mh-artifact-line';
+      const uneven = Math.max(1, baseThick * (0.48 + rand() * 1.55));
+      const y = -80 + i * (spacing + baseThick + rand() * 8) + rand() * 10;
+      const colors = ['rgba(255,255,255,.94)', p.aHex, p.bHex, p.cHex, 'rgba(255,255,255,.72)'];
+      const color = colors[(i + Math.floor(rand() * colors.length)) % colors.length];
+      line.style.setProperty('--line-h', uneven.toFixed(1) + 'px');
+      line.style.setProperty('--line-y', y.toFixed(1) + 'px');
+      line.style.setProperty('--line-angle', angle);
+      line.style.setProperty('--line-color', color);
+      artifactField.appendChild(line);
+    }
+  }
+  function buildRuliadField(seedKey){
+    if (!ruliadField) return;
+    const p = getWheelPalette();
+    ruliadField.innerHTML = '';
+    const rand = seededRand(seedKey + p.aHex + p.bHex + p.cHex);
+    const rect = stage.getBoundingClientRect();
+    const W = Math.max(300, rect.width || 360);
+    const H = Math.max(320, rect.height || 430);
+    const metrics = groundMetrics();
+    const N = metrics.N;
+    const nodes = [];
+    for (let row = 0; row < N; row++) {
+      const rowOffset = row % 2 ? 0.5 : 0;
+      for (let col = 0; col < N; col++) {
+        const x = W * (0.12 + (col + rowOffset) / (N + .6) * .76) + (rand() - .5) * 10;
+        const y = H * (0.18 + row / Math.max(1, N - 1) * .64) + (rand() - .5) * 12;
+        nodes.push({ x, y, color: renderPalette[(row + col) % renderPalette.length] });
+      }
+    }
+    nodes.forEach((a, i) => {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const b = nodes[j];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (d < W / (N * 1.15) && rand() > .22) {
+          const link = document.createElement('div');
+          link.className = 'mh-ruliad-link';
+          link.style.left = a.x + 'px'; link.style.top = a.y + 'px';
+          link.style.width = d + 'px';
+          link.style.transform = `rotate(${Math.atan2(b.y - a.y, b.x - a.x)}rad)`;
+          link.style.setProperty('--link-color', i % 2 ? p.aHex : p.cHex);
+          ruliadField.appendChild(link);
+        }
+      }
+    });
+    nodes.forEach((n, i) => {
+      const node = document.createElement('div');
+      node.className = 'mh-ruliad-node';
+      node.style.left = n.x + 'px'; node.style.top = n.y + 'px';
+      node.style.setProperty('--node-color', n.color);
+      node.style.color = n.color;
+      ruliadField.appendChild(node);
+    });
   }
   function groundMetrics(){
     let size = 34, gap = 3, N = 7;
@@ -573,6 +701,7 @@ def build_tonality_renderer_html() -> str:
     stage.style.setProperty('--mh-opacity', mode === 'off' ? '.0' : String(opacity/100));
     stage.style.setProperty('--mh-speed', speed + 's');
     applyRenderPalette();
+    buildArtifactField($('mhGame')?.value + ($('mhUrl')?.value || ''));
   }
   function drawGame(kind){
     const p = applyRenderPalette();
@@ -610,6 +739,8 @@ def build_tonality_renderer_html() -> str:
       const color = token.type === 'player' ? p.aHex : token.type === 'enemy' ? p.bHex : p.cHex;
       tokenLayer.appendChild(makeToken(token.type, pos.x, pos.y, hexW, color));
     }
+    buildRuliadField('game-' + kind);
+    buildArtifactField('game-' + kind);
     label.textContent = 'game render · ' + kind + ' · top-down 3-plane hex ground · ' + N + '×' + N;
   }
   function render(){
@@ -617,13 +748,15 @@ def build_tonality_renderer_html() -> str:
     syncMunker();
     if(kind === 'website'){
       const url = safeUrl($('mhUrl').value);
-      frame.src = url;
+      frame.src = 'site-html?url=' + encodeURIComponent(url);
       frame.style.display = 'block';
-      synthetic.style.display = 'grid';
+      synthetic.style.display = 'none';
       grid.style.display = 'none';
       tokenLayer.innerHTML = '';
       hostLabel.textContent = host(url);
       const p = applyRenderPalette();
+      buildRuliadField('site-' + host(url));
+      buildArtifactField('site-' + host(url));
       label.textContent = 'website render · ' + host(url) + ' · wheel ' + p.aHex + ' → ' + p.bHex;
       return;
     }
@@ -673,6 +806,44 @@ def build_tonality_renderer_html() -> str:
 @api_router.get("/tonality-renderer", response_class=HTMLResponse)
 async def tonality_renderer():
     return HTMLResponse(build_tonality_renderer_html())
+
+
+@api_router.get("/site-html", response_class=HTMLResponse)
+async def site_html(url: str):
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise HTTPException(status_code=400, detail="Enter a valid http/https URL")
+    try:
+        response = requests.get(
+            url,
+            timeout=8,
+            headers={
+                "User-Agent": "Mozilla/5.0 (MunkerHex Studio renderer)",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            },
+        )
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail=f"Could not fetch website: {exc}") from exc
+
+    content_type = response.headers.get("content-type", "")
+    if "text/html" not in content_type and "application/xhtml" not in content_type:
+        html = f"""
+        <!doctype html><html><head><meta charset='utf-8'><base href='{url}'></head>
+        <body style='font-family:monospace;background:#fff;color:#111;padding:24px'>
+        <h1>{parsed.netloc}</h1><p>Fetched non-HTML content: {content_type or 'unknown'}</p>
+        </body></html>
+        """
+        return HTMLResponse(html)
+
+    html = response.text
+    base_tag = f"<base href='{url}'>"
+    if "<head" in html.lower():
+        head_end = html.lower().find(">", html.lower().find("<head"))
+        html = html[: head_end + 1] + base_tag + html[head_end + 1 :]
+    else:
+        html = f"<!doctype html><html><head>{base_tag}</head><body>{html}</body></html>"
+    return HTMLResponse(html)
 
 
 @api_router.get("/palettes", response_model=List[PalettePreset])
