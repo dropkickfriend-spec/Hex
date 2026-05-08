@@ -70,6 +70,14 @@ Use the animated Munker render design over the user's hex-grid color-palette con
 - Website iframe now receives whole-page styling from the current calibrated palette: global palette CSS, Munker stripe overlay, hex overlay, and ruliad overlay inside the fetched webpage document.
 - Verified by QA: backend 15/15 passed and frontend 100% passed for unified controls, preset sync, auto-animation, proxy render, and palette-driven iframe styling.
 
+## Updated — 2026-05-08 (website-builder export)
+- Added `/api/export-gif`, generating an animated GIF from the exact current calibrated palette and Munker settings.
+- Added a `Website-builder export · exact current palette` panel in the renderer.
+- Users can generate copyable embed code containing exact palette CSS variables plus Munker, hex, and ruliad overlays for site builders.
+- Users can export an animated GIF preview and download it from the app.
+- Generated code is intended for website builders such as Webflow, Framer, Shopify, Squarespace custom code, or custom HTML sites.
+- Verified by QA: backend GIF endpoint returns valid GIF bytes; frontend export panel, code generation, hue-updated palette code, and GIF download link all passed.
+
 ## Current Product Notes
 - The current renderer preserves the original uploaded HTML studio and adds a target stage above it.
 - Website rendering attempts to load the URL in-frame and overlays the original Munker/hex style; some sites may block iframe display, so the adapter also keeps a stylized target layer visible.
