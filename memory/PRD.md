@@ -37,6 +37,13 @@ Use the animated Munker render design over the user's hex-grid color-palette con
 - Verified original sections appear: Color wheel, Munker filter controls, CMY/RGB tonal grid, and Hue cube/hex layout.
 - Verified adapter actions: website URL render updates target host, and game render creates retro game cells under the original Munker + hex field.
 
+## Updated — 2026-05-08
+- Render target now reads from the user's live calibrated color wheel state (`state`, `rgbAt`, additive complement, tonal centre, calibrated anchors).
+- Website and game renders now update A/B/centre colors when the user changes hue, tone, calibration, chroma, or centre bias.
+- Added a top-level Line thickness control in the render adapter; it syncs into the original Munker thickness control and updates `--mh-thick` live.
+- Preserved the full uploaded original source in `/app/backend/original_tonality.html` and serves it through `/api/tonality-renderer` with the adapter injected above it.
+- Verified with backend regression and mobile UI automation: 8/8 backend checks passed and wheel/thickness/game render flows passed.
+
 ## Current Product Notes
 - The current renderer preserves the original uploaded HTML studio and adds a target stage above it.
 - Website rendering attempts to load the URL in-frame and overlays the original Munker/hex style; some sites may block iframe display, so the adapter also keeps a stylized target layer visible.
