@@ -61,6 +61,15 @@ Use the animated Munker render design over the user's hex-grid color-palette con
 - Added uneven Munker white artifact field based on line thickness and spacing to create optical white artefacts over websites/games.
 - QA fixes: speckles option copy updated, initial iframe source is proxy-based, render button touch target is 44px, and `/api/site-html` fetch runs off the event loop.
 
+## Updated — 2026-05-08 (unified Munker generator)
+- Consolidated Munker controls into one visible `Unified Munker generator` panel in the adapter.
+- Hid the original duplicate `Munker filter` details section while keeping its controls synced internally for the original renderer.
+- Added 5 generated Munker presets: white ruliad artefacts, cool dark vibration, hex cube scanline, palette crosshatch, and thin website render.
+- Presets auto-fill mode, pattern, spacing, thickness, opacity, speed, and auto-animation.
+- Auto animate is on by default and syncs to the original `munkerAnimate` control.
+- Website iframe now receives whole-page styling from the current calibrated palette: global palette CSS, Munker stripe overlay, hex overlay, and ruliad overlay inside the fetched webpage document.
+- Verified by QA: backend 15/15 passed and frontend 100% passed for unified controls, preset sync, auto-animation, proxy render, and palette-driven iframe styling.
+
 ## Current Product Notes
 - The current renderer preserves the original uploaded HTML studio and adds a target stage above it.
 - Website rendering attempts to load the URL in-frame and overlays the original Munker/hex style; some sites may block iframe display, so the adapter also keeps a stylized target layer visible.
