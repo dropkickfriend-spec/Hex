@@ -1,0 +1,172 @@
+{
+  "project_context": {
+    "name": "MunkerHex Studio",
+    "platform": "mobile_fullstack_expo_app",
+    "description": "A render-tool-first mobile app for creating and applying animated Munker stripe optical illusions and CMY Hex grids over URL previews, paired with a retro arcade gallery redesigned in this additive complement style."
+  },
+  "design_system": {
+    "theme_archetype": "Archetype 7 (Electric & Neon) + Archetype 4 (Swiss Brutalist Dark Mode)",
+    "colors": {
+      "background": {
+        "primary": "#050505",
+        "secondary": "#111111",
+        "surface": "#1A1A1A"
+      },
+      "brand": {
+        "cyan": "#00FFFF",
+        "magenta": "#FF00FF",
+        "yellow": "#FFFF00"
+      },
+      "text": {
+        "primary": "#FFFFFF",
+        "secondary": "#A1A1AA",
+        "accent": "#00FFFF"
+      },
+      "border": {
+        "subtle": "rgba(255,255,255,0.1)",
+        "active": "#FF00FF"
+      },
+      "accents": {
+        "retro_green": "#39FF14",
+        "retro_orange": "#FF3131"
+      }
+    },
+    "typography": {
+      "fonts": {
+        "heading": "Chivo",
+        "body": "JetBrains Mono"
+      },
+      "scale": {
+        "h1": {
+          "size": "40px",
+          "weight": "900",
+          "letterSpacing": "-1px",
+          "lineHeight": "48px"
+        },
+        "h2": {
+          "size": "24px",
+          "weight": "800",
+          "letterSpacing": "-0.5px",
+          "lineHeight": "32px"
+        },
+        "body": {
+          "size": "14px",
+          "weight": "400",
+          "letterSpacing": "0px",
+          "lineHeight": "20px"
+        },
+        "label_mono": {
+          "size": "10px",
+          "weight": "700",
+          "letterSpacing": "1.5px",
+          "textTransform": "uppercase"
+        }
+      }
+    },
+    "spacing_and_layout": {
+      "padding_scale": {
+        "sm": "8px",
+        "md": "16px",
+        "lg": "24px",
+        "xl": "32px",
+        "xxl": "48px"
+      },
+      "border_radius": {
+        "none": "0px",
+        "sm": "4px",
+        "md": "8px",
+        "pill": "9999px"
+      },
+      "grid": "Use 1px solid borders for bento layouts. High density."
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": {
+        "background": "#050505",
+        "border": "1px solid #00FFFF",
+        "text_color": "#00FFFF",
+        "shadow": "0px 0px 10px rgba(0, 255, 255, 0.3)"
+      },
+      "secondary": {
+        "background": "#1A1A1A",
+        "border": "1px solid rgba(255,255,255,0.1)",
+        "text_color": "#FFFFFF"
+      }
+    },
+    "sliders": {
+      "track": "rgba(255,255,255,0.1)",
+      "fill": "linear-gradient(90deg, #00FFFF, #FF00FF)",
+      "thumb": "#FFFFFF"
+    },
+    "cards": {
+      "background": "#050505",
+      "border": "1px solid rgba(255,255,255,0.1)",
+      "padding": "16px"
+    },
+    "bottom_sheet": {
+      "background": "rgba(5, 5, 5, 0.95)",
+      "border_top": "1px solid rgba(255, 255, 255, 0.1)",
+      "blur": "10px (if supported, else solid)"
+    }
+  },
+  "screens": {
+    "RenderStudio": {
+      "description": "Tool-first home screen. A large canvas previewing a URL, with bottom sheet controls for Munker overlays.",
+      "layout": {
+        "header": "Minimalist top bar with logo, hex toggle.",
+        "canvas": "Takes 60% of vertical space. Renders URL preview inside an iframe/WebView.",
+        "controls": "Bottom sheet (40%) with sliders for Tonal Ramp, Stripe Density, CMY tint.",
+        "testing_attributes": {
+          "url_input": "url-preview-input",
+          "render_button": "render-preview-button",
+          "munker_toggle": "munker-effect-toggle"
+        }
+      }
+    },
+    "HexPaletteGallery": {
+      "description": "A bento-grid gallery of retro games redesigned using the CMY Hex / Munker style.",
+      "layout": {
+        "grid": "Masonry or bento-style cards. Each card has a 1px border, stark contrast, and an image from the media section.",
+        "testing_attributes": {
+          "gallery_scroll": "retro-gallery-scrollview",
+          "gallery_card": "retro-game-card"
+        }
+      }
+    }
+  },
+  "media": {
+    "gallery_assets": [
+      {
+        "url": "https://images.pexels.com/photos/17255084/pexels-photo-17255084.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Neon arcade numbers - use for Arcade Card",
+        "category": "gallery_image"
+      },
+      {
+        "url": "https://images.pexels.com/photos/29027879/pexels-photo-29027879.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Vintage arcade joystick - use for Fighter/Platformer Card",
+        "category": "gallery_image"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1637687719242-dbe948abb41a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwxfHxnZW9tZXRyaWMlMjBhYnN0cmFjdCUyMG5lb24lMjBoZXglMjBncmlkfGVufDB8fHx8MTc3ODIwODIyNXww&ixlib=rb-4.1.0&q=85",
+        "description": "Purple pink Hex grid - use for Puzzle/Maze Card background",
+        "category": "gallery_image"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1636070759654-5c93bbca2862?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNzl8MHwxfHNlYXJjaHwzfHxyZXRybyUyMG5lb24lMjBhcmNhZGUlMjBnYW1lfGVufDB8fHx8MTc3ODIwODIyMXww&ixlib=rb-4.1.0&q=85",
+        "description": "Arcade room neon - general gallery header or hero",
+        "category": "hero_image"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Use NativeWind or standard StyleSheet for React Native.",
+    "Do NOT use HTML elements like div or span; use View, Text, Image, ScrollView.",
+    "Implement the UI with a strict Dark Tech/Brutalist feel: heavy 1px borders, deep black backgrounds, and neon CMY accents.",
+    "The Home screen must prioritize the Render Tool canvas. Build a fake or functional WebView preview for URLs with an overlay View that draws Munker stripes (repeating linear gradients or SVG lines) and Hex grids (SVG patterns).",
+    "Include 'testID' in React Native on all interactive elements as per the JSON (equivalent to data-testid).",
+    "All text should avoid default sans-serif (Inter/Roboto). Use a Monospace font family like 'SpaceMono' or 'JetBrainsMono' (load via Expo Google Fonts) for the tool/render vibe.",
+    "Ensure the bottom control sheet allows sliding or feels tactile.",
+    "Never use placeholder images; rely exclusively on the URLs provided in the media section."
+  ]
+}
