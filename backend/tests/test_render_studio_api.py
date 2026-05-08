@@ -134,3 +134,19 @@ def test_create_render_rejects_unknown_palette():
     assert response.status_code == 400
     body = response.json()
     assert body["detail"] == "Unknown palette preset"
+
+
+# Tonality renderer endpoint checks (original source + injected adapter)
+def test_tonality_renderer_contains_original_layout_and_adapter():
+    base = _require_base_url()
+    response = requests.get(f"{base}/api/tonality-renderer", timeout=20)
+    assert response.status_code == 200
+    html = response.text
+
+    assert "<title>Tonality" in html
+    assert "Color wheel · CMY axis" in html
+    assert "Hue cube · hue × tone × chroma" in html
+    assert 'id="mhRenderAdapter"' in html
+    assert "Render target · website/game through original Munker + hex grid" in html
+    assert 'id="mhRenderBtn"' in html
+    assert 'id="mhSyncBtn"' in html

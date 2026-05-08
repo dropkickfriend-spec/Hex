@@ -1,0 +1,3959 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tonality — CMY palette &amp; additive complement studio</title>
+<style>
+  :root {
+    --bg: #0b0b10;
+    --panel: #14141c;
+    --panel-2: #1c1c28;
+    --line: #2a2a3a;
+    --ink: #e8e8f0;
+    --ink-dim: #9a9aae;
+    --accent: #ffd24a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, "Inter", sans-serif; }
+  h1 { font-size: 14px; letter-spacing: .12em; text-transform: uppercase;
+    margin: 0; color: var(--ink); font-weight: 600; }
+  h2 { font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    margin: 0 0 8px 0; color: var(--ink-dim); font-weight: 600; }
+  header { padding: 14px 18px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 14px; }
+  header .sub { color: var(--ink-dim); font-size: 12px; }
+  main { display: grid; grid-template-columns: minmax(380px, 460px) 1fr 320px;
+    gap: 1px; background: var(--line); min-height: calc(100vh - 50px); }
+  section { background: var(--panel); padding: 16px; overflow: auto; }
+  input[type=range] { -webkit-appearance: none; appearance: none;
+    height: 22px; background: transparent; }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 4px; background: var(--line); border-radius: 2px; }
+  input[type=range]::-moz-range-track {
+    height: 4px; background: var(--line); border-radius: 2px; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none;
+    width: 18px; height: 18px; border-radius: 50%; background: var(--accent);
+    margin-top: -7px; cursor: pointer; border: 2px solid #000; }
+  input[type=range]::-moz-range-thumb { width: 18px; height: 18px;
+    border-radius: 50%; background: var(--accent); border: 2px solid #000;
+    cursor: pointer; }
+  .stack > * + * { margin-top: 18px; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row.wrap { flex-wrap: wrap; }
+  label.field { display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--ink-dim); }
+  label.field input[type=range] { flex: 1; accent-color: var(--accent); }
+  label.field .val { width: 38px; text-align: right; color: var(--ink);
+    font-variant-numeric: tabular-nums; font-size: 11px; }
+  button, select, input[type=text] {
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer; }
+  button:hover { border-color: #444; }
+  button.active { background: #2a2a3a; border-color: #555; color: var(--accent); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px;
+    overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 5px 10px; font-size: 11px;
+    background: transparent; color: var(--ink-dim); }
+  .seg button.active { background: var(--panel-2); color: var(--accent); }
+  .wheel-wrap { position: relative; width: 100%; aspect-ratio: 1; }
+  canvas { display: block; width: 100%; height: 100%; border-radius: 50%; }
+  .wheel-wrap .markers { position: absolute; inset: 0; pointer-events: none; }
+  .marker { position: absolute; width: 16px; height: 16px; border-radius: 50%;
+    transform: translate(-50%, -50%); border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #000, 0 2px 6px rgba(0,0,0,.6);
+    pointer-events: auto; cursor: grab; }
+  .marker.opp { width: 12px; height: 12px; border-color: #000;
+    box-shadow: 0 0 0 1px #fff, 0 2px 6px rgba(0,0,0,.6); }
+  .swatch-grid { display: grid; gap: 6px; }
+  .swatch { aspect-ratio: 1; border-radius: 6px; cursor: pointer;
+    position: relative; border: 1px solid rgba(255,255,255,.08); }
+  .swatch.sel { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ramp { display: grid; grid-template-columns: 70px 1fr; align-items: center;
+    gap: 10px; }
+  .ramp .label { font-size: 11px; color: var(--ink-dim); }
+  .ramp .strip { display: grid; height: 26px; border-radius: 4px; overflow: hidden;
+    grid-auto-flow: column; grid-auto-columns: 1fr; }
+  .ramp .strip > div { cursor: pointer; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+    border-radius: 8px; overflow: hidden; background: var(--line); }
+  .pair > div { aspect-ratio: 2/1; display: flex; align-items: flex-end;
+    padding: 8px; font-size: 10px; font-family: ui-monospace, monospace;
+    text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .overlay-stage { position: relative; aspect-ratio: 16/10; border-radius: 8px;
+    overflow: hidden; background: #000; }
+  .overlay-stage .layer { position: absolute; inset: 0; }
+  .overlay-stage .a { /* base */ }
+  .overlay-stage .b { mix-blend-mode: screen; opacity: 1; }
+  .overlay-stage .b.shape { background: none; }
+  .overlay-stage svg { position: absolute; inset: 0; width: 100%; height: 100%;
+    mix-blend-mode: screen; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px;
+    color: var(--ink-dim); }
+  .legend span.dot { display: inline-block; width: 10px; height: 10px;
+    border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  /* Category pills — Lights (CMY) cream, Earths (RGB) deep brown.
+     Same colours used for the in-wheel anchor labels. */
+  .cat-pill { display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-weight: 700; font-size: 10px; letter-spacing: 0.5px;
+    margin-right: 6px; vertical-align: 1px; border: 1px solid; }
+  .cat-pill.cat-light { background: rgba(245,232,180,0.95); color: #1a1a1a;
+    border-color: rgba(180,150,80,0.9); }
+  .cat-pill.cat-earth { background: rgba(60,38,28,0.95); color: #f0e8d0;
+    border-color: rgba(120,80,50,0.9); }
+  .palette-out { display: grid; grid-template-columns: repeat(8, 1fr);
+    gap: 4px; }
+  .palette-out .cell { aspect-ratio: 1; border-radius: 4px; cursor: pointer;
+    position: relative; }
+  .palette-out .cell .hex { position: absolute; bottom: 2px; left: 4px;
+    font: 9px ui-monospace, monospace; color: rgba(255,255,255,.85);
+    text-shadow: 0 1px 1px rgba(0,0,0,.7); opacity: 0; }
+  .palette-out .cell:hover .hex { opacity: 1; }
+  .hint { color: var(--ink-dim); font-size: 11px; }
+  .kbd { font: 11px ui-monospace, monospace; background: var(--panel-2);
+    padding: 1px 5px; border-radius: 3px; border: 1px solid var(--line); }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  details { background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 10px; }
+  details summary { cursor: pointer; color: var(--ink-dim); font-size: 11px;
+    text-transform: uppercase; letter-spacing: .1em; }
+  details[open] { padding-bottom: 12px; }
+  .swatch-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .swatch-pair > div { height: 36px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font: 10px ui-monospace, monospace;
+    text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--line);
+    margin-bottom: 12px; }
+  .tab-bar button { background: transparent; border: 0; border-bottom: 2px solid transparent;
+    border-radius: 0; padding: 6px 12px; color: var(--ink-dim); font-size: 11px;
+    text-transform: uppercase; letter-spacing: .1em; }
+  .tab-bar button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .picker-options { display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 6px; margin-top: 8px; }
+  .picker-options .opt { padding: 6px; border-radius: 4px;
+    border: 1px solid var(--line); cursor: pointer; text-align: center;
+    font-size: 10px; color: var(--ink-dim); background: var(--panel-2); }
+  .picker-options .opt.active { border-color: var(--accent); color: var(--ink); }
+  .picker-options .opt .pv { height: 24px; border-radius: 3px; margin-bottom: 4px;
+    display: flex; }
+  .picker-options .opt .pv > div { flex: 1; }
+
+  .centre-bar { background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 8px; padding: 12px; margin-bottom: 14px; }
+  .centre-bar h2 { margin-bottom: 10px; }
+  .centre-modes { display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 4px; margin-bottom: 10px; }
+  .centre-modes button { padding: 7px 6px; font-size: 11px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 4px;
+    color: var(--ink-dim); }
+  .centre-modes button.active { border-color: var(--accent); color: var(--accent); }
+  .centre-preview { display: grid; grid-template-columns: 1fr 64px 1fr;
+    gap: 4px; align-items: stretch; height: 56px; }
+  .centre-preview > div { border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font: 10px ui-monospace, monospace;
+    text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .centre-preview .arrow { background: transparent; color: var(--ink-dim);
+    font-size: 14px; }
+  .triple-pair { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+  .triple-pair > div { height: 50px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font: 10px ui-monospace, monospace;
+    text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+
+  /* Mobile / narrow viewports */
+  @media (max-width: 980px) {
+    main { grid-template-columns: 1fr; min-height: auto; }
+    section { padding: 14px; }
+    .wheel-wrap { max-width: 380px; margin: 0 auto; }
+    .config-grid { grid-template-columns: 1fr 1fr; }
+    header { padding: 12px 14px; flex-wrap: wrap; gap: 6px; }
+    header .sub { width: 100%; font-size: 11px; }
+    .centre-modes { grid-template-columns: repeat(4, 1fr); }
+    .palette-out { grid-template-columns: repeat(8, 1fr); }
+  }
+  @media (max-width: 560px) {
+    h1 { font-size: 13px; }
+    section { padding: 12px; }
+    .config-grid { grid-template-columns: 1fr; gap: 4px; }
+    label.field { font-size: 13px; }
+    label.field input[type=range] { height: 28px; }
+    button, select, input[type=text] { padding: 8px 12px; font-size: 13px;
+      min-height: 36px; }
+    .seg { display: flex; flex-wrap: wrap; }
+    .seg button { flex: 1; min-width: 80px; padding: 8px 6px; font-size: 11px; }
+    .centre-modes { grid-template-columns: repeat(2, 1fr); }
+    .centre-modes button { padding: 10px 6px; font-size: 12px; }
+    .picker-options { grid-template-columns: repeat(2, 1fr); }
+    .palette-out { grid-template-columns: repeat(6, 1fr); }
+    .swatch-pair > div { height: 44px; font-size: 11px; }
+    .triple-pair > div { height: 56px; font-size: 11px; }
+    .ramp { grid-template-columns: 64px 1fr; }
+    .ramp .strip { height: 32px; }
+    .row.wrap > * { flex: 1 1 calc(50% - 5px); min-width: 140px; }
+    .tab-bar button { padding: 10px 8px; font-size: 11px; flex: 1; }
+    .tab-bar { overflow-x: auto; }
+    details summary { font-size: 12px; padding: 4px 0; }
+    .palette-out .cell .hex { opacity: 1; font-size: 8px; }
+  }
+  @media (max-width: 380px) {
+    .palette-out { grid-template-columns: repeat(4, 1fr); }
+    .centre-preview { grid-template-columns: 1fr 32px 1fr; }
+  }
+
+  /* ------- Munker white-illusion overlay -------
+     Same hex below, different perceived tone — the overlay is a thin-line
+     pattern rendered via ::after on every coloured host. Underlying pixel
+     values are unchanged; only the visual reading shifts. */
+  body.munker-on .ramp .strip > div,
+  body.munker-on .triple-pair > div,
+  body.munker-on .swatch-pair > div,
+  body.munker-on .centre-preview > div,
+  body.munker-on .picker-options .opt .pv > div { position: relative; }
+
+  body.munker-on .swatch::after,
+  body.munker-on .palette-out .cell::after,
+  body.munker-on .ramp .strip > div::after,
+  body.munker-on .swatch-pair > div::after,
+  body.munker-on .triple-pair > div::after,
+  body.munker-on .centre-preview > div::after,
+  body.munker-on .picker-options .opt .pv > div::after,
+  body.munker-on .stack-cell::after,
+  body.munker-on .cube-flat-cell::after,
+  body.munker-on .cube-hex::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    border-radius: inherit;
+    background-image: var(--munker-pattern, none);
+    background-size: var(--munker-tile, auto);
+    z-index: 5;
+  }
+  body.munker-on .stack-cell { position: relative; }
+  body.munker-on .cube-flat-cell { position: relative; }
+  body.munker-on .cube-hex::after { clip-path: inherit; }
+  /* Munker pattern stacked on top of cube face colors — applies to all 6 faces
+     of every cube cell when munker is on. */
+  body.munker-on .cube-face {
+    background-image: var(--munker-pattern, none);
+    background-size: var(--munker-tile, auto);
+    background-color: var(--face-color);
+  }
+
+  /* Pointillism: speckled neighbor-color dots overlaid on cells.
+     Stacks BENEATH Munker via background-image layer ordering. */
+  .cube-cell { --pointillism: none; }
+  body.pointillism-on .cube-face { background-image: var(--pointillism, none); }
+  body.pointillism-on.munker-on .cube-face {
+    background-image: var(--munker-pattern, none), var(--pointillism, none);
+    background-color: var(--face-color);
+  }
+  /* Flat + hex cells: pointillism via ::before (Munker uses ::after at z=5) */
+  body.pointillism-on .cube-flat-cell::before,
+  body.pointillism-on .cube-hex::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image: var(--pointillism, none);
+    border-radius: inherit;
+    z-index: 4;
+  }
+  body.pointillism-on .cube-hex::before { clip-path: inherit; }
+  body.pointillism-on .cube-flat-cell { position: relative; }
+
+  /* Click pulse — when user taps a cell, briefly scale it up and glow with
+     the cell's own colour. Lightweight CSS animation, GPU-composited via
+     transform + box-shadow. Auto-fades; we remove the class after 700ms. */
+  @keyframes cell-pulse {
+    0%   { transform: scale(1);    box-shadow: 0 0 0 0 transparent; }
+    25%  { transform: scale(1.18); box-shadow: 0 0 14px 4px var(--pulse-color, rgba(255,255,255,0.7)); }
+    100% { transform: scale(1);    box-shadow: 0 0 0 0 transparent; }
+  }
+  .cube-hex.pulsing,
+  .cube-flat-cell.pulsing {
+    animation: cell-pulse 0.7s ease-out forwards;
+    z-index: 2;
+  }
+
+  /* Munker pattern oscillation — auto-pans the line pattern back and forth
+     to make the illusion harder to "see through". CSS-only, GPU-composited. */
+  @keyframes munker-pan-h {
+    0%   { background-position: 0 0; }
+    100% { background-position: 80px 0; }
+  }
+  @keyframes munker-pan-v {
+    0%   { background-position: 0 0; }
+    100% { background-position: 0 80px; }
+  }
+  @keyframes munker-pan-diag {
+    0%   { background-position: 0 0; }
+    100% { background-position: 80px 80px; }
+  }
+  /* Per-face iso-hex pans. Each face pans in the direction of its OWN stripe
+     gradient so the stripes appear to march coherently across that face,
+     not against it. Direction = (sin(angle), -cos(angle)) × 80px.
+       top   gradient 60°  → ( 69, -40)
+       right gradient 120° → ( 69,  40)
+       left  gradient 90°  → ( 80,   0)  */
+  @keyframes munker-pan-face-top {
+    0%   { background-position: 0 0; }
+    100% { background-position: 69px -40px; }
+  }
+  @keyframes munker-pan-face-right {
+    0%   { background-position: 0 0; }
+    100% { background-position: 69px 40px; }
+  }
+  @keyframes munker-pan-face-left {
+    0%   { background-position: 0 0; }
+    100% { background-position: 80px 0; }
+  }
+  body.munker-on.munker-animate .swatch::after,
+  body.munker-on.munker-animate .palette-out .cell::after,
+  body.munker-on.munker-animate .ramp .strip > div::after,
+  body.munker-on.munker-animate .swatch-pair > div::after,
+  body.munker-on.munker-animate .triple-pair > div::after,
+  body.munker-on.munker-animate .centre-preview > div::after,
+  body.munker-on.munker-animate .picker-options .opt .pv > div::after,
+  body.munker-on.munker-animate .stack-cell::after,
+  body.munker-on.munker-animate .wheel-wrap::after,
+  body.munker-on.munker-animate .overlay-stage::after,
+  body.munker-on.munker-animate .cube-face,
+  body.munker-on.munker-animate .cube-flat-cell {
+    animation: var(--munker-anim, munker-pan-diag) var(--munker-speed, 4s) linear infinite alternate;
+    will-change: background-position;
+  }
+  /* Per-face iso-hex animations — each face pans its own stripe direction
+     for coherent marching across the cube surface. Speed shared via --munker-speed. */
+  body.munker-on.munker-animate .hex-face-top {
+    animation: munker-pan-face-top var(--munker-speed, 4s) linear infinite alternate;
+    will-change: background-position;
+  }
+  body.munker-on.munker-animate .hex-face-right {
+    animation: munker-pan-face-right var(--munker-speed, 4s) linear infinite alternate;
+    will-change: background-position;
+  }
+  body.munker-on.munker-animate .hex-face-left {
+    animation: munker-pan-face-left var(--munker-speed, 4s) linear infinite alternate;
+    will-change: background-position;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body.munker-on.munker-animate * { animation: none !important; }
+  }
+
+  /* ------- Cube alternate slice views (grid + scrub) ------- */
+  .cube-grid-view {
+    position: absolute; inset: 8px 8px 8px 8px;
+    overflow-y: auto; overflow-x: hidden;
+    display: flex; flex-direction: column; gap: 12px;
+    padding-right: 4px;
+  }
+  .cube-slice-panel {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px;
+  }
+  .cube-slice-label {
+    font: 10px ui-monospace, monospace;
+    color: var(--ink-dim);
+    margin-bottom: 6px;
+    display: flex; justify-content: space-between;
+  }
+  .cube-slice-grid { display: grid; gap: 1px; }
+  .cube-flat-cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.15);
+    touch-action: manipulation;
+  }
+  .cube-scrub-view {
+    position: absolute; inset: 8px;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: 8px;
+    justify-items: center;
+  }
+  .cube-scrub-slice {
+    display: grid; gap: 2px;
+    aspect-ratio: 1;
+    max-width: 100%; max-height: 100%;
+    width: 100%;
+    align-self: center;
+  }
+  .cube-scrub-slice .cube-flat-cell { aspect-ratio: 1; border-radius: 3px; }
+  .cube-scrub-controls {
+    width: 100%;
+    display: flex; align-items: center; gap: 8px;
+    color: var(--ink-dim); font: 11px ui-monospace, monospace;
+  }
+  .cube-scrub-controls input[type=range] { flex: 1; accent-color: var(--accent); }
+  .cube-scrub-controls .scrub-z-label { min-width: 60px; color: var(--ink); text-align: right; }
+
+  /* ------- Cube hex tiled view (X,Y plane, one Z slice at a time) ------- */
+  .cube-hex-view {
+    position: absolute; inset: 8px;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: 8px;
+    align-items: center; justify-items: center;
+  }
+  .cube-hex-grid {
+    position: relative;
+    margin: auto;
+    --hex-size: 44px;
+  }
+  .cube-hex {
+    position: absolute;
+    width: var(--hex-size);
+    height: calc(var(--hex-size) / 0.866); /* pointy-top regular hex aspect */
+    /* pointy-top hexagon polygon — kept on container so Munker/pointillism pseudos stay hex-clipped */
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    cursor: pointer;
+    transition: transform .12s ease;
+    touch-action: manipulation;
+    background: transparent; /* faces inside provide the color */
+  }
+  /* Isometric 3-face cube illusion — 3 rhombi from hex center to alternating vertices */
+  .hex-face {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* background set per-face via inline style */
+  }
+  /* TOP face: top vertex → upper-right → center → upper-left (sky-lit, brightest) */
+  .hex-face-top {
+    clip-path: polygon(50% 0%, 100% 25%, 50% 50%, 0% 25%);
+  }
+  /* RIGHT face: upper-right → lower-right → bottom → center (key-lit, medium) */
+  .hex-face-right {
+    clip-path: polygon(100% 25%, 100% 75%, 50% 100%, 50% 50%);
+  }
+  /* LEFT face: upper-left → center → bottom → lower-left (shadow, darkest) */
+  .hex-face-left {
+    clip-path: polygon(0% 25%, 50% 50%, 50% 100%, 0% 75%);
+  }
+  .cube-hex:hover { transform: scale(1.08); z-index: 1; }
+  .cube-hex-controls {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--ink-dim); font: 11px ui-monospace, monospace;
+    background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px;
+  }
+  .cube-hex-controls button {
+    background: var(--panel-2); border: 1px solid var(--line);
+    color: var(--ink); padding: 4px 10px; border-radius: 4px;
+    font: inherit; cursor: pointer;
+  }
+  .cube-hex-controls button:hover { border-color: #555; }
+  .cube-hex-controls .play-btn.active { color: var(--accent); border-color: var(--accent); }
+  .cube-hex-controls .layer-label { min-width: 70px; text-align: center; color: var(--ink); }
+  /* Overlay-stage — the discs blended in screen mode get a Munker overlay too */
+  body.munker-on .overlay-stage::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image: var(--munker-pattern, none);
+    background-size: var(--munker-tile, auto);
+    z-index: 3;
+  }
+  body.munker-on .wheel-wrap::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    border-radius: 50%;
+    background-image: var(--munker-pattern, none);
+    background-size: var(--munker-tile, auto);
+    z-index: 5;
+  }
+  body.munker-on .wheel-wrap .markers { z-index: 6; }
+  /* Skip overlay on tiny inspector chips so hex labels stay legible */
+  body.munker-on #insA::after,
+  body.munker-on #insB::after { display: none; }
+
+  /* ------- 3D cube swatch viewer -------
+     Hue × tone × chroma volume. Front (max Z) = full chroma rainbow;
+     each slice back blends toward the cell's A↔B tonal centre. */
+  .cube-stage {
+    position: relative;
+    width: 100%;
+    height: clamp(360px, 60vh, 560px);
+    border-radius: 8px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 50% 40%, #1d1d2a 0%, #0a0a10 75%);
+    perspective: 1400px;
+    perspective-origin: 50% 45%;
+    user-select: none;
+  }
+  .cube-scene {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    transform-style: preserve-3d;
+    transform: translate(-50%, -50%) rotateX(-22deg) rotateY(30deg);
+    will-change: transform;
+  }
+  .cube-cell {
+    position: absolute;
+    width: var(--cube-size, 36px);
+    height: var(--cube-size, 36px);
+    transform-style: preserve-3d;
+    --face-color: #888;
+    cursor: pointer;
+  }
+  .cube-face {
+    position: absolute; inset: 0;
+    background-color: var(--face-color);
+    backface-visibility: hidden;
+    border: 1px solid rgba(0,0,0,0.18);
+  }
+  .cube-face.front  { transform: translateZ(calc(var(--cube-size, 36px) / 2)); }
+  .cube-face.back   { transform: translateZ(calc(var(--cube-size, 36px) / -2)) rotateY(180deg); filter: brightness(0.55); }
+  .cube-face.right  { transform: rotateY(90deg)  translateZ(calc(var(--cube-size, 36px) / 2)); filter: brightness(0.85); }
+  .cube-face.left   { transform: rotateY(-90deg) translateZ(calc(var(--cube-size, 36px) / 2)); filter: brightness(0.85); }
+  .cube-face.top    { transform: rotateX(90deg)  translateZ(calc(var(--cube-size, 36px) / 2)); filter: brightness(1.15); }
+  .cube-face.bottom { transform: rotateX(-90deg) translateZ(calc(var(--cube-size, 36px) / 2)); filter: brightness(0.5); }
+  .cube-axis-labels { position: absolute; left: 8px; bottom: 8px;
+    font: 10px ui-monospace, monospace; color: var(--ink-dim);
+    pointer-events: none; line-height: 1.5; opacity: .7; }
+  .cube-readout { position: absolute; right: 8px; bottom: 8px;
+    font: 10px ui-monospace, monospace; color: var(--ink-dim);
+    pointer-events: none; }
+
+  /* ------- Inline collapsible panels (h2-as-summary) -------
+     Lets large palette/grid surfaces fold away without changing the
+     visual rhythm of the existing sections. */
+  details.collapsible {
+    background: transparent;
+    border: 0;
+    padding: 0;
+  }
+  details.collapsible[open] { padding-bottom: 0; }
+  details.collapsible > summary {
+    list-style: none;
+    cursor: pointer;
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+  }
+  details.collapsible > summary::-webkit-details-marker { display: none; }
+  details.collapsible > summary::before {
+    content: '';
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid var(--ink-dim);
+    transition: transform .15s ease;
+    flex-shrink: 0;
+  }
+  details.collapsible:not([open]) > summary::before {
+    transform: rotate(-90deg);
+  }
+  details.collapsible:not([open]) > summary {
+    margin-bottom: 0;
+  }
+  details.collapsible > summary:hover { color: var(--ink); }
+
+  /* ─── Paint Mix / Pigment Solver ─────────────────────── */
+  .pm-seg { display: inline-flex; border: 1px solid var(--line);
+    border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
+  .pm-seg button { border: 0; border-radius: 0; padding: 5px 10px;
+    font-size: 11px; background: transparent; color: var(--ink-dim); }
+  .pm-seg button.active { background: var(--panel-2); color: var(--accent); }
+  .pm-block { background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 10px; margin-bottom: 8px; }
+  .pm-block h3 { font-size: 10px; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--ink-dim); margin: 0 0 8px 0; font-weight: 600; }
+  .pm-swatches { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+  .pm-sw { flex: 1; height: 40px; border-radius: 4px; display: flex;
+    align-items: flex-end; padding: 3px 4px;
+    font: 9px ui-monospace, monospace; text-shadow: 0 1px 2px rgba(0,0,0,.7);
+    border: 1px solid rgba(255,255,255,.08); cursor: default; }
+  .pm-sw.lg { height: 50px; }
+  .pm-op { color: var(--ink-dim); font-size: 14px; flex: 0 0 auto; }
+  .pm-bar-row { display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px; font-size: 10px; color: var(--ink-dim); }
+  .pm-bar-track { flex: 1; height: 6px; background: var(--line);
+    border-radius: 3px; overflow: hidden; }
+  .pm-bar-fill { height: 100%; border-radius: 3px; transition: width .2s; }
+  .pm-bar-val { width: 30px; text-align: right; color: var(--ink);
+    font-variant-numeric: tabular-nums; font-size: 10px; }
+  .pm-label { font-size: 10px; color: var(--ink-dim); }
+  .pm-warn { font-size: 10px; color: #f5a623; margin-top: 4px;
+    line-height: 1.4; }
+  .pm-note { font-size: 10px; color: var(--ink-dim); line-height: 1.45;
+    margin-top: 4px; }
+  .pm-recipe { margin-top: 6px; }
+  .pm-recipe-row { display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px; }
+  .pm-recipe-sw { width: 28px; height: 28px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,.1); flex-shrink: 0; }
+  .pm-recipe-info { font-size: 10px; color: var(--ink); line-height: 1.4; }
+  .pm-recipe-info .pct { color: var(--accent); font-weight: 600; }
+  .pm-tint-ramp { display: grid;
+    grid-template-columns: repeat(6, 1fr); gap: 3px; margin: 6px 0 4px; }
+  .pm-tint-ramp > div { height: 28px; border-radius: 3px;
+    border: 1px solid rgba(255,255,255,.06); }
+  .pm-ratio { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .pm-ratio input[type=range] { flex: 1; }
+  .pm-ratio-sw { display: flex; gap: 3px; }
+  .pm-ratio-sw > div { width: 20px; height: 20px; border-radius: 3px; }
+  .pm-additive-ramp { display: grid;
+    grid-template-columns: repeat(7, 1fr); gap: 3px; margin: 6px 0; }
+  .pm-additive-ramp > div { height: 28px; border-radius: 3px;
+    border: 1px solid rgba(255,255,255,.06); }
+  #paintSection { display: block; }
+
+  /* ─── Minimal Palette Analyzer ─────────────────────── */
+  .mpa-tube-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .mpa-tube { display: flex; flex-direction: column; align-items: center;
+    gap: 3px; }
+  .mpa-tube-sw { width: 34px; height: 34px; border-radius: 5px;
+    border: 2px solid transparent; transition: border-color .15s, opacity .15s; }
+  .mpa-tube-sw.used   { border-color: var(--accent); }
+  .mpa-tube-sw.unused { opacity: .28; filter: grayscale(.5); }
+  .mpa-tube-name { font: 9px ui-monospace, monospace; color: var(--ink-dim);
+    text-align: center; }
+  .mpa-tube-name.used { color: var(--accent); }
+  .mpa-summary { background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 5px; padding: 8px 10px; font-size: 11px; margin-bottom: 8px; }
+  .mpa-summary b { color: var(--ink); }
+  .mpa-recipe-list { display: flex; flex-direction: column; gap: 6px; }
+  .mpa-recipe-card { background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 5px; padding: 8px; }
+  .mpa-card-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .mpa-target-sw { width: 30px; height: 30px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,.12); flex-shrink: 0; }
+  .mpa-card-hex { font: 10px ui-monospace, monospace; color: var(--ink); flex: 1; }
+  .mpa-card-score { font: 10px ui-monospace, monospace; }
+  .mpa-card-score.good   { color: #7ecf60; }
+  .mpa-card-score.ok     { color: #f5a623; }
+  .mpa-card-score.poor   { color: #e05c5c; }
+  .mpa-mix-row { display: flex; align-items: center; gap: 4px; }
+  .mpa-mix-sw { width: 22px; height: 22px; border-radius: 3px;
+    border: 1px solid rgba(255,255,255,.1); flex-shrink: 0; }
+  .mpa-mix-label { font-size: 10px; color: var(--ink-dim); }
+  .mpa-mix-result { width: 28px; height: 28px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,.1); }
+  .mpa-split-hint { font-size: 10px; color: #c4a0f5; margin-top: 4px;
+    line-height: 1.4; }
+  .mpa-gamut-row { display: flex; gap: 2px; margin: 6px 0; height: 14px; }
+  .mpa-gamut-seg { flex: 1; border-radius: 2px; }
+  .mpa-empty { font-size: 11px; color: var(--ink-dim); padding: 10px 0;
+    text-align: center; }
+  .mpa-hue-map { display: grid; grid-template-columns: repeat(24,1fr);
+    gap: 2px; margin: 6px 0; }
+  .mpa-hue-map > div { height: 16px; border-radius: 2px;
+    border: 1px solid rgba(0,0,0,.2); }
+  .mpa-hue-map > div.covered   { opacity: 1; }
+  .mpa-hue-map > div.uncovered { opacity: .18; filter: grayscale(.8); }
+  .mpa-hue-map > div.poor      { opacity: .55; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Tonality</h1>
+  <span class="sub">CMY palette · additive (RGB-screen) complement studio</span>
+</header>
+
+<main>
+  <!-- LEFT: Wheel + plotter -->
+  <section class="stack">
+    <div>
+      <h2>Color wheel · CMY axis</h2>
+      <div class="wheel-wrap" id="wheelWrap">
+        <canvas id="wheel" width="800" height="800"></canvas>
+        <div class="markers" id="markers">
+          <div class="marker" id="markerA" title="Selected hue · drag"></div>
+          <div class="marker opp" id="markerB" title="Additive complement"></div>
+        </div>
+      </div>
+      <div class="legend" style="margin-top:10px; gap: 14px">
+        <span title="Lights — bright, neon-capable. Read as luminous; can carry the highest chroma."><span class="cat-pill cat-light">Lights</span> Y · M · C</span>
+        <span title="Earths — grounded, heavier. Read as material/ground; carry mood and shadow."><span class="cat-pill cat-earth">Earths</span> R · G · B</span>
+      </div>
+      <p class="hint" style="margin:8px 0 0; line-height:1.4">
+        <b>Painter's category framework:</b> the CMY anchors are <b>Lights</b> (yellow, magenta, cyan — they can read as neon and luminous). The RGB inverses are <b>Earths</b> (red, green, blue — they ground the painting). For shadows, reach for a tinted dark (Tinted shadows in the cube panel) instead of black — earths neutralised toward blue read as cool shadow, the painter's classic move.
+      </p>
+    </div>
+
+    <div>
+      <h2>Wheel calibration</h2>
+      <div class="config-grid">
+        <label class="field">Y° <input type="range" id="cfgY" min="0" max="359" value="90"><span class="val" id="cfgYv">90</span></label>
+        <label class="field">M° <input type="range" id="cfgM" min="0" max="359" value="330"><span class="val" id="cfgMv">330</span></label>
+        <label class="field">C° <input type="range" id="cfgC" min="0" max="359" value="210"><span class="val" id="cfgCv">210</span></label>
+        <label class="field">Rot° <input type="range" id="cfgRot" min="-180" max="180" value="0"><span class="val" id="cfgRotv">0</span></label>
+        <label class="field">Chroma <input type="range" id="cfgChroma" min="0" max="100" value="100"><span class="val" id="cfgChromav">100</span></label>
+        <label class="field">Tones <input type="range" id="cfgSteps" min="5" max="33" step="1" value="9"><span class="val" id="cfgStepsv">9</span></label>
+        <label class="field">Hue rows <input type="range" id="cfgHueRows" min="6" max="24" step="1" value="6"><span class="val" id="cfgHueRowsv">6</span></label>
+      </div>
+      <p class="hint" style="margin:8px 0 0">Default places Y at top, with M/C set so each primary's <b>additive complement</b> (its RGB inverse) lands at exactly 180°. Drag the white dot, or click anywhere on the wheel.</p>
+    </div>
+
+    <details class="collapsible">
+      <summary>Munker filter · illusion overlay</summary>
+      <div class="config-grid">
+        <label class="field">Mode
+          <select id="munkerMode" style="flex:1">
+            <option value="off" selected>Off</option>
+            <option value="h">Horizontal stripes</option>
+            <option value="v">Vertical stripes</option>
+            <option value="grid">Grid (cross-hatch)</option>
+            <option value="diag">Diagonal</option>
+          </select>
+        </label>
+        <label class="field">Pattern
+          <select id="munkerPattern" style="flex:1">
+            <option value="white" selected>White lines (classic)</option>
+            <option value="black">Black lines</option>
+            <option value="bw">Alternating B / W</option>
+            <option value="A">Lines = A hue</option>
+            <option value="B">Lines = B hue</option>
+            <option value="AB">Alternating A / B</option>
+            <option value="comp">Lines = complement</option>
+          </select>
+        </label>
+        <label class="field" title="Gap between stripes. Set to 0 with an alternating pattern (B/W or A/B) for the classic Munker full-coverage illusion.">Spacing <input type="range" id="munkerSpacing" min="0" max="40" value="10"><span class="val" id="munkerSpacingv">10</span></label>
+        <label class="field">Thickness <input type="range" id="munkerThick" min="1" max="20" value="5"><span class="val" id="munkerThickv">5</span></label>
+        <label class="field">Opacity <input type="range" id="munkerOpacity" min="0" max="100" value="100"><span class="val" id="munkerOpacityv">100</span></label>
+        <label class="field" title="Auto-pan the pattern. Movement makes the Munker effect easier to perceive.">Animate
+          <select id="munkerAnimate" style="flex:1">
+            <option value="off" selected>Off</option>
+            <option value="diag">Oscillate diagonal</option>
+            <option value="h">Oscillate horizontal</option>
+            <option value="v">Oscillate vertical</option>
+          </select>
+        </label>
+        <label class="field" title="Animation speed (lower = faster).">Speed <input type="range" id="munkerSpeed" min="1" max="10" value="4"><span class="val" id="munkerSpeedv">4</span>s</label>
+      </div>
+      <div class="row" style="margin-top:8px; gap:6px; flex-wrap:wrap">
+        <button id="munkerIllusionPreset" title="Auto-config for the classic Munker-White illusion: greyscale cube + alternating opaque colored stripes at full coverage. The grey cells take on the stripe colours.">🎨 Try illusion preset</button>
+        <button id="munkerReset" title="Reset Munker to defaults.">Reset</button>
+      </div>
+      <p class="hint" style="margin:8px 0 0">Lays lines over the wheel and every swatch. <b>For the real illusion:</b> tap "Try illusion preset" — it greyscales the cube and sets full-coverage alternating stripes so the grey cells appear coloured. Manual: set Spacing=0 and pick an alternating pattern (B/W or A/B) for full coverage.</p>
+    </details>
+
+    <div>
+      <h2>Plotter inputs</h2>
+      <div class="row wrap">
+        <label class="field" style="min-width:160px">H° <input type="range" id="inH" min="0" max="359" value="90"><span class="val" id="inHv">90</span></label>
+        <label class="field" style="min-width:160px">Tone <input type="range" id="inT" min="0" max="100" value="50"><span class="val" id="inTv">50</span></label>
+        <input type="text" id="hexIn" value="#ffff00" style="width:90px; font-family:ui-monospace, monospace">
+        <button id="addPin">Pin to palette</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CENTER: Tones + overlays -->
+  <section class="stack">
+    <div class="centre-bar">
+      <h2>Tonal centre · neutral middle ground</h2>
+      <div class="centre-modes" id="centreModes">
+        <button data-m="mean" class="active" title="Arithmetic average — neutral midpoint of A and B in RGB">Mean</button>
+        <button data-m="lum" title="Luminance-matched gray at the perceptual midpoint">Lum gray</button>
+        <button data-m="multiply" title="Subtractive overlap (a×b/255) — where pigments would meet">Multiply</button>
+        <button data-m="screen" title="Additive overlap (1−(1−a)(1−b)) — where lights would meet">Screen</button>
+        <button data-m="overlay" title="Overlay blend — keeps shadows dark, highlights bright">Overlay</button>
+        <button data-m="geo" title="Geometric mean √(a·b) — perceptually deeper midpoint">Geometric</button>
+        <button data-m="darken" title="Min channel — the dimmer of the two">Darken</button>
+        <button data-m="lighten" title="Max channel — the brighter of the two">Lighten</button>
+      </div>
+      <label class="field" style="margin-bottom:8px">
+        Bias A↔B
+        <input type="range" id="centreW" min="0" max="100" value="50">
+        <span class="val" id="centreWv">50</span>
+      </label>
+      <div class="centre-preview">
+        <div id="cpA"></div>
+        <div class="arrow">→</div>
+        <div id="cpB"></div>
+      </div>
+      <div style="margin-top:6px; height: 42px; display: grid; grid-template-columns: 1fr; gap: 4px;">
+        <div id="cpC" style="border-radius: 4px; display: flex; align-items: center; justify-content: center; font: 10px ui-monospace, monospace; text-shadow: 0 1px 2px rgba(0,0,0,.6);"></div>
+      </div>
+      <p class="hint" style="margin:8px 0 0">The centre is the neutral middle between A and B — its value depends on the blend model you pick. <b>Mean</b> &amp; <b>Lum gray</b> are perceptual mids; <b>Multiply</b>/<b>Screen</b> match what you see when the colours physically overlap; <b>Overlay</b>/<b>Darken</b>/<b>Lighten</b> behave like Photoshop layer modes.</p>
+    </div>
+
+    <div class="tab-bar">
+      <button data-tab="tones" class="active">Tonal points</button>
+      <button data-tab="overlay">Overlay opposites</button>
+      <button data-tab="picker">Palette picker</button>
+      <button data-tab="cube">3D cube</button>
+    </div>
+
+    <div id="tab-tones" class="stack">
+      <div>
+        <h2>Selected hue · tonal ramp</h2>
+        <div class="triple-pair" style="margin-bottom:8px">
+          <div id="bigA"></div><div id="bigC"></div><div id="bigB"></div>
+        </div>
+        <div id="rampA"></div>
+      </div>
+      <div>
+        <h2>Additive complement · tonal ramp</h2>
+        <div id="rampB"></div>
+      </div>
+      <details id="allHueDetails" class="collapsible" open>
+        <summary>CMY + RGB · all-hue tonal grid <span style="opacity:.6; text-transform:none; letter-spacing:.04em; font-weight:400" id="allHueCount"></span></summary>
+        <div id="tonalGrid"></div>
+        <p class="hint" style="margin:8px 0 0">Click any swatch to select. Tone 0 = black, 100 = white, 50 = full chroma. Drag <b>Tones</b> up to 33 for fine ramps; drag <b>Hue rows</b> up for more in-between hues.</p>
+      </details>
+    </div>
+
+    <div id="tab-overlay" class="stack" style="display:none">
+      <div>
+        <h2>Additive overlay · pair lighting</h2>
+        <div class="overlay-stage" id="overlayStage">
+          <div class="layer a" id="ovA"></div>
+          <svg viewBox="0 0 100 60" preserveAspectRatio="none">
+            <circle id="ovCircA" cx="35" cy="30" r="22" />
+            <circle id="ovCircB" cx="65" cy="30" r="22" />
+          </svg>
+        </div>
+        <p class="hint" style="margin:8px 0 0">Two discs of the selected pair, blended in screen mode (= additive RGB on pixels). Centre = sum.</p>
+      </div>
+      <details class="collapsible" open>
+        <summary>Stack · A over B at varying tones</summary>
+        <div id="stackGrid"></div>
+      </details>
+      <div>
+        <h2>A · centre · B</h2>
+        <div class="triple-pair" id="sumOut"></div>
+      </div>
+
+      <details class="collapsible" open>
+        <summary>Tones converging on centre</summary>
+        <div id="convergeGrid"></div>
+        <p class="hint" style="margin:8px 0 0">Each strip is a 9-stop gradient from full-chroma A (left) → centre (mid) → full-chroma B (right) at increasing tone.</p>
+      </details>
+    </div>
+
+    <div id="tab-picker" class="stack" style="display:none">
+      <div>
+        <h2>Harmony · high-chroma combinations</h2>
+        <div class="seg" id="harmonySeg">
+          <button data-h="comp" class="active">Complement</button>
+          <button data-h="split">Split-comp</button>
+          <button data-h="tri">Triad CMY</button>
+          <button data-h="triRGB">Triad RGB</button>
+          <button data-h="tet">Tetrad</button>
+          <button data-h="ana">Analogous</button>
+          <button data-h="warmcool">Warm/Cool</button>
+        </div>
+        <div class="picker-options" id="harmonyPreview"></div>
+      </div>
+      <details class="collapsible" open>
+        <summary>Suggested high-chroma palette</summary>
+        <div class="palette-out" id="suggested"></div>
+      </details>
+      <details class="collapsible" open>
+        <summary>Full chroma → centre gradients</summary>
+        <div id="centreGradients"></div>
+        <p class="hint" style="margin:8px 0 0">Each row blends from one harmony hue at full chroma into the chosen tonal centre. Click any band to plot it.</p>
+      </details>
+      <div>
+        <h2>Pinned palette</h2>
+        <div class="palette-out" id="pinned"></div>
+        <p class="hint" style="margin:8px 0 0">Click a pinned cell to remove. <span class="kbd">Shift+click</span> a swatch elsewhere to pin without selecting.</p>
+      </div>
+    </div>
+
+    <div id="tab-cube" class="stack" style="display:none">
+      <div>
+        <h2>Hue cube · hue × tone × chroma</h2>
+        <div class="cube-stage" id="cubeStage">
+          <div class="cube-scene three-d-only" id="cubeScene" style="display:none"></div>
+          <div class="cube-grid-view" id="cubeGridView" style="display:none"></div>
+          <div class="cube-scrub-view" id="cubeScrubView" style="display:none">
+            <div class="cube-scrub-slice" id="cubeScrubSlice"></div>
+            <div class="cube-scrub-controls">
+              <span>back</span>
+              <input type="range" id="cubeScrubZ" min="0" max="8" value="8">
+              <span>front</span>
+              <span class="scrub-z-label" id="cubeScrubLabel">Z 8/8</span>
+            </div>
+          </div>
+          <div class="cube-hex-view" id="cubeHexView" style="display:none">
+            <div class="cube-hex-grid" id="cubeHexGrid"></div>
+            <div class="cube-hex-controls">
+              <button id="cubeHexPrev" title="Previous Z slice">◀</button>
+              <button id="cubeHexPlay" class="play-btn" title="Auto-cycle through layers">▶ play</button>
+              <button id="cubeHexNext" title="Next Z slice">▶</button>
+              <span class="layer-label" id="cubeHexLabel">Z 0/0</span>
+            </div>
+          </div>
+          <div class="cube-axis-labels">
+            X · hue<br>Y · tone<br>Z · chroma (front = full)
+          </div>
+          <div class="cube-readout" id="cubeReadout"></div>
+        </div>
+        <p class="hint" style="margin:8px 0 0">
+          Front slice = full-chroma rainbow. Each slice back blends toward the cell's <b>A↔B tonal centre</b> (uses the blend mode you pick in the centre bar). Drag to orbit. Tap any cube to select that hue/tone.
+        </p>
+      </div>
+      <details class="collapsible" open>
+        <summary>Cube controls</summary>
+        <div class="config-grid">
+          <label class="field">Depth mode
+            <select id="cubeMode" style="flex:1">
+              <option value="atmosphere" selected>Atmosphere (landscape · time of day)</option>
+              <option value="warmth">Warmth ladder (front = red-pulled · yellow = light)</option>
+              <option value="chroma">Chroma fade (front = full chroma)</option>
+            </select>
+          </label>
+          <label class="field">View
+            <select id="cubeViewMode" style="flex:1">
+              <option value="hex" selected>Isometric hex (3-face cube · X,Y,Z)</option>
+              <option value="grid">Flat slices grid (all visible)</option>
+              <option value="scrub">Single slice scrubber</option>
+            </select>
+          </label>
+          <label class="field" title="How layers are revealed in the Hex view (no slider, no drag).">Layer reveal
+            <select id="cubeLayerReveal" style="flex:1">
+              <option value="cycle" selected>Auto-cycle</option>
+              <option value="step">Step buttons only</option>
+              <option value="drill">Drill — tap a hex to advance</option>
+            </select>
+          </label>
+          <label class="field">Time of day
+            <select id="cubeTime" style="flex:1">
+              <option value="dawn">Dawn — soft pink-violet</option>
+              <option value="morning">Morning — cool clear sky</option>
+              <option value="noon" selected>Noon — pale cyan</option>
+              <option value="golden">Golden hour — warm amber</option>
+              <option value="dusk">Dusk — magenta-violet</option>
+              <option value="night">Night — deep indigo</option>
+            </select>
+          </label>
+          <label class="field">Background
+            <select id="cubeBg" style="flex:1">
+              <option value="default" selected>Default (dark void)</option>
+              <option value="solid-fg">Solid · foreground colour</option>
+              <option value="solid-atm">Solid · atmosphere colour</option>
+              <option value="sky">Sky-to-ground gradient</option>
+              <option value="munker">Munker grid (illusion test)</option>
+            </select>
+          </label>
+          <label class="field">Cell size <input type="range" id="cubeSize" min="16" max="56" value="34"><span class="val" id="cubeSizev">34</span></label>
+          <label class="field">Gap <input type="range" id="cubeGap" min="0" max="20" value="3"><span class="val" id="cubeGapv">3</span></label>
+          <label class="field three-d-only" style="display:none">Yaw <input type="range" id="cubeYaw" min="-180" max="180" value="30"><span class="val" id="cubeYawv">30</span></label>
+          <label class="field three-d-only" style="display:none">Pitch <input type="range" id="cubePitch" min="-85" max="85" value="-22"><span class="val" id="cubePitchv">-22</span></label>
+          <label class="field">Alpha <input type="range" id="cubeAlpha" min="0" max="100" value="100"><span class="val" id="cubeAlphav">100</span></label>
+          <label class="field">Back fade <input type="range" id="cubeBackFade" min="0" max="100" value="100"><span class="val" id="cubeBackFadev">100</span></label>
+          <label class="field" title="Warmth depth — how far hue shifts toward/away from RED across Z.">Warmth dist <input type="range" id="cubeWarmth" min="0" max="100" value="60"><span class="val" id="cubeWarmthv">60</span></label>
+          <label class="field" title="Yellow value boost — brightens cells whose hue lands near calibrated yellow.">Yellow boost <input type="range" id="cubeYellow" min="0" max="100" value="50"><span class="val" id="cubeYellowv">50</span></label>
+          <label class="field" title="Ambient wash — blends the time-of-day atmosphere colour into every cell, regardless of position. Sun-setting tints everything orange.">Ambient <input type="range" id="cubeAmbient" min="0" max="100" value="0"><span class="val" id="cubeAmbientv">0</span></label>
+          <label class="field" title="Lighting strength — atmosphere acts as a true light source. Combines multiplicative wash + additive sun + tone-shift baseline so palette tonality is recalibrated by time of day.">Lighting <input type="range" id="cubeLighting" min="0" max="100" value="0"><span class="val" id="cubeLightingv">0</span></label>
+          <label class="field three-d-only" style="display:none" title="Explode factor — only used in Exploded 3D view. Spreads slices apart along Z.">Explode <input type="range" id="cubeExplode" min="100" max="500" value="200"><span class="val" id="cubeExplodev">200</span></label>
+          <label class="field" title="Lower bound of tone range. Clips dark cells out so the bottom-black layer doesn't block the gradient.">Tone min <input type="range" id="cubeToneMin" min="0" max="50" value="25"><span class="val" id="cubeToneMinv">25</span></label>
+          <label class="field" title="Upper bound of tone range. Clips light cells out so the top-white layer doesn't block the gradient.">Tone max <input type="range" id="cubeToneMax" min="50" max="100" value="75"><span class="val" id="cubeToneMaxv">75</span></label>
+          <label class="field" title="Perspective effects — bottom row stays vivid (foreground), top desaturates (atmospheric haze). Reds also shift toward CYAN-neutral at extreme depth (top + back) — cyan is the bright atmospheric pivot, distant warms drift toward it. Curve sharpness ties to time-of-day (noon gentle, dusk sharp).">Perspective
+            <select id="cubePerspective" style="flex:1">
+              <option value="off" selected>Off</option>
+              <option value="on">On (chroma fade + red→cyan at depth)</option>
+            </select>
+          </label>
+          <label class="field" title="Monet mode — Impressionist tonal compression. Most cells squeeze into a narrow lightness band (the misty field), and a small percentage punch through with vivid chroma at original lightness (the orange sun in blue-grey haze). Adjust band width + accent ratio with the sliders.">Monet mode
+            <select id="cubeMonet" style="flex:1">
+              <option value="off" selected>Off</option>
+              <option value="on">On (compressed band + chroma accents)</option>
+            </select>
+          </label>
+          <label class="field" title="Tonal band width — % of the lightness range that non-accent cells occupy. Lower = tighter compression (more atmospheric, more uniform value field). 30% means cells live in 35..65% L — the Monet sweet spot.">Monet band <input type="range" id="cubeMonetBand" min="10" max="60" value="30"><span class="val" id="cubeMonetBandv">30</span>%</label>
+          <label class="field" title="Accent ratio — % of cells that punch through with full chroma + complement hue at original lightness. 20% matches the impressionist rule. Higher = more accent activity, lower = more atmospheric uniformity.">Accents <input type="range" id="cubeMonetAccent" min="0" max="50" value="20"><span class="val" id="cubeMonetAccentv">20</span>%</label>
+          <label class="field" title="Pointillism (Seurat-style) — structured 6-dot grid per cell, each dot using a neighbour's colour. The brain mixes adjacent dots optically at distance. Hue stays on the base.">Pointillism
+            <select id="cubePointillism" style="flex:1">
+              <option value="off" selected>Off</option>
+              <option value="on">On (Seurat · neighbour-color dots)</option>
+            </select>
+          </label>
+          <label class="field" title="Speckles (Van Gogh-style) — random ambient noise that vibrates more in dark cells. Speckles are coloured with the COMPLEMENT of the cell hue so darks shimmer with their opposite. Independent from Pointillism — both can stack.">Speckles
+            <select id="cubeSpeckles" style="flex:1">
+              <option value="off" selected>Off</option>
+              <option value="on">On (Van Gogh · complement vibration in darks)</option>
+            </select>
+          </label>
+          <label class="field" title="Calibrated dots — half grey carriers + half dots in the 6 calibrated wheel anchor colours. At distance the chromatic half optically averages back to grey (the 6 anchors balance), but locally provides chroma material the brain mixes with Munker stripes — the illusion fires harder. Designed to pair with the Munker preset.">Calibrated dots
+            <select id="cubeCalibratedDots" style="flex:1">
+              <option value="off" selected>Off</option>
+              <option value="on">On (half grey + half palette · Munker aid)</option>
+            </select>
+          </label>
+          <label class="field" title="Greyscale render — three modes. (1) Off shows full colour. (2) HSV V grey converts each cell to its own value-grey (great for seeing tonal range). (3) Uniform mid-grey forces every cell to the SAME grey (#888). Mode 3 is required for the actual Munker-White illusion: the brain only attributes stripe colour to the cell when the underlying targets are identical.">Greyscale
+            <select id="cubeGreyscale" style="flex:1">
+              <option value="off" selected>Off (full colour)</option>
+              <option value="value">HSV V (per-cell value-grey)</option>
+              <option value="uniform">Uniform mid-grey (true Munker target)</option>
+            </select>
+          </label>
+          <label class="field" title="Tinted shadows — push dark cells toward a chosen shadow colour instead of pure black. Painters learning to mix should avoid the black tube; oils naturally darken via complement neutralisation or warm-cool bias. Pick the shadow direction that matches the scene.">Tinted shadows
+            <select id="cubeTintedShadows" style="flex:1">
+              <option value="off" selected>Off (true black at low tones)</option>
+              <option value="cool-blue">Cool blue (deep night-blue)</option>
+              <option value="paynes">Payne's grey (warm-cool balanced)</option>
+              <option value="cool-grey">Cool grey (steel)</option>
+              <option value="warm-grey">Warm grey (mauve)</option>
+            </select>
+          </label>
+        </div>
+        <div class="row three-d-only" style="display:none; margin-top:8px; gap:6px; flex-wrap:wrap">
+          <button id="cubeReset">Reset view</button>
+          <button id="cubeFront">Front-on</button>
+          <button id="cubeIso">Iso view</button>
+          <button id="cubeTop">Top-down</button>
+        </div>
+        <p class="hint" style="margin:8px 0 0">
+          <b>Atmosphere mode</b>: X blends from your selected foreground hue → time-of-day atmosphere; the warmth + yellow algorithm reapplies at every X step. Cube resolution is driven by the global <b>Tones</b> slider above (capped at 9³ = 729 cells). White/black layers are clipped — the cube shows only useful tonal positions.
+        </p>
+      </details>
+    </div>
+  </section>
+
+  <!-- RIGHT: Inspector -->
+  <section class="stack">
+    <div>
+      <h2>Inspector</h2>
+      <div class="swatch-pair">
+        <div id="insA"></div><div id="insB"></div>
+      </div>
+      <details open style="margin-top:10px">
+        <summary>A · selected</summary>
+        <div id="insAdata" style="margin-top:8px; font-family:ui-monospace, monospace; font-size:11px; line-height:1.7"></div>
+      </details>
+      <details open>
+        <summary>B · additive complement</summary>
+        <div id="insBdata" style="margin-top:8px; font-family:ui-monospace, monospace; font-size:11px; line-height:1.7"></div>
+      </details>
+      <details open>
+        <summary>Centre · neutral mid</summary>
+        <div id="sumData" style="margin-top:8px; font-family:ui-monospace, monospace; font-size:11px; line-height:1.7"></div>
+      </details>
+    </div>
+
+    <!-- ─── Paint Mix · Pigment Solver ─── -->
+    <div id="paintSection">
+      <h2>Paint Mix · Pigment Solver</h2>
+
+      <div class="pm-seg" id="paintModeBar">
+        <button data-pm="additive" class="active">Additive · light</button>
+        <button data-pm="subtractive">Subtractive · pigment</button>
+      </div>
+
+      <!-- ADDITIVE SECTION -->
+      <div id="pm-add">
+        <div class="pm-block">
+          <h3>Screen blend — A + B (RGB light)</h3>
+          <div class="pm-swatches" id="pm-add-swatches">
+            <div class="pm-sw" id="pm-add-a"></div>
+            <div class="pm-op">+</div>
+            <div class="pm-sw" id="pm-add-b"></div>
+            <div class="pm-op">=</div>
+            <div class="pm-sw lg" id="pm-add-result"></div>
+          </div>
+          <div class="pm-bar-row">
+            <span class="pm-label">R channel</span>
+            <div class="pm-bar-track"><div class="pm-bar-fill" id="pm-add-rbar" style="background:#f55"></div></div>
+            <span class="pm-bar-val" id="pm-add-rv">—</span>
+          </div>
+          <div class="pm-bar-row">
+            <span class="pm-label">G channel</span>
+            <div class="pm-bar-track"><div class="pm-bar-fill" id="pm-add-gbar" style="background:#5f5"></div></div>
+            <span class="pm-bar-val" id="pm-add-gv">—</span>
+          </div>
+          <div class="pm-bar-row">
+            <span class="pm-label">B channel</span>
+            <div class="pm-bar-track"><div class="pm-bar-fill" id="pm-add-bbar" style="background:#55f"></div></div>
+            <span class="pm-bar-val" id="pm-add-bv">—</span>
+          </div>
+          <div class="pm-note" id="pm-add-note"></div>
+        </div>
+        <div class="pm-block">
+          <h3>Additive blend ramp · A → A+B</h3>
+          <div class="pm-additive-ramp" id="pm-add-ramp"></div>
+          <div class="pm-note">Left = A alone; right = screen-blended result. Each step adds more of B's photons.</div>
+        </div>
+      </div>
+
+      <!-- SUBTRACTIVE SECTION -->
+      <div id="pm-sub" style="display:none">
+        <div class="pm-block">
+          <h3>Direct pigment mix (CMY subtractive)</h3>
+          <div class="pm-swatches">
+            <div class="pm-sw" id="pm-sub-a"></div>
+            <div class="pm-op">+</div>
+            <div class="pm-sw" id="pm-sub-b"></div>
+            <div class="pm-op">=</div>
+            <div class="pm-sw lg" id="pm-sub-result"></div>
+          </div>
+          <!-- ratio slider -->
+          <div class="pm-ratio">
+            <span class="pm-label" style="min-width:10px">A</span>
+            <input type="range" id="pmRatio" min="0" max="100" value="50">
+            <span class="pm-label">B</span>
+            <span class="pm-bar-val" id="pmRatiov">50%</span>
+          </div>
+          <div class="pm-bar-row">
+            <span class="pm-label">Chroma kept</span>
+            <div class="pm-bar-track"><div class="pm-bar-fill" id="pm-sub-cbar" style="background:#c8e832"></div></div>
+            <span class="pm-bar-val" id="pm-sub-cv">—</span>
+          </div>
+          <div class="pm-bar-row">
+            <span class="pm-label">Mud added</span>
+            <div class="pm-bar-track"><div class="pm-bar-fill" id="pm-sub-mbar" style="background:#8a7a5a"></div></div>
+            <span class="pm-bar-val" id="pm-sub-mv">—</span>
+          </div>
+          <div class="pm-warn" id="pm-sub-warn"></div>
+          <div class="pm-note" id="pm-sub-note"></div>
+        </div>
+
+        <div class="pm-block">
+          <h3>Wheel approach — preserve chroma</h3>
+          <div class="pm-note" style="margin-bottom:6px">Start from adjacent anchor pigments. Less hue distance = less gray. The two closest calibrated tube pigments for <b>A</b>:</div>
+          <div id="pm-approach-recipe" class="pm-recipe"></div>
+          <div class="pm-swatches" style="margin-top:6px">
+            <div class="pm-sw" id="pm-app-p1"></div>
+            <div class="pm-op">+</div>
+            <div class="pm-sw" id="pm-app-p2"></div>
+            <div class="pm-op">≈</div>
+            <div class="pm-sw lg" id="pm-app-result"></div>
+          </div>
+          <div class="pm-bar-row">
+            <span class="pm-label">Approach chroma</span>
+            <div class="pm-bar-track"><div class="pm-bar-fill" id="pm-app-cbar" style="background:#c8e832"></div></div>
+            <span class="pm-bar-val" id="pm-app-cv">—</span>
+          </div>
+          <div class="pm-note" id="pm-app-note"></div>
+        </div>
+
+        <div class="pm-block">
+          <h3>White tint ramp — chroma cost</h3>
+          <div class="pm-tint-ramp" id="pm-tint-ramp"></div>
+          <div class="pm-bar-row">
+            <span class="pm-label">Chroma at 25% white</span>
+            <div class="pm-bar-track"><div class="pm-bar-fill" id="pm-tint-cbar" style="background:#aaa"></div></div>
+            <span class="pm-bar-val" id="pm-tint-cv">—</span>
+          </div>
+          <div class="pm-warn">White kills chroma. For lights/tints, prefer diluting with medium (glazing) or thin washes — transparent layers preserve the hue while reducing coverage.</div>
+        </div>
+
+        <div class="pm-block">
+          <h3>Complement mud · A ↔ B neutralisation</h3>
+          <div class="pm-swatches">
+            <div class="pm-sw" id="pm-mud-a"></div>
+            <div class="pm-op">+</div>
+            <div class="pm-sw" id="pm-mud-b"></div>
+            <div class="pm-op">→</div>
+            <div class="pm-sw lg" id="pm-mud-result"></div>
+          </div>
+          <div class="pm-bar-row">
+            <span class="pm-label">Angle distance</span>
+            <div class="pm-bar-track"><div class="pm-bar-fill" id="pm-mud-dbar" style="background:#f5a623"></div></div>
+            <span class="pm-bar-val" id="pm-mud-dv">—</span>
+          </div>
+          <div class="pm-note" id="pm-mud-note"></div>
+        </div>
+      </div>
+    </div>
+
+    <details class="collapsible" id="mpaSection" open>
+      <summary>Minimal Palette · Tube Set Analyzer</summary>
+
+      <!-- Tube coverage grid — 6 calibrated anchors, used = lit, unused = dim -->
+      <div class="pm-block" style="margin-top:8px">
+        <h3>Calibrated tube coverage</h3>
+        <div class="mpa-tube-row" id="mpa-tubes"></div>
+        <div class="mpa-summary" id="mpa-summary">Pin colours to your palette (use "Pin to palette" in Plotter) — the analyzer will find the minimal tube set to mix them all.</div>
+      </div>
+
+      <!-- Hue sector coverage map -->
+      <div class="pm-block">
+        <h3>Hue sector coverage · 24 sectors</h3>
+        <div class="mpa-hue-map" id="mpa-hue-map"></div>
+        <div class="pm-note">Green sectors reachable from your tube set at ≥70% chroma. Grey = out of gamut with current tubes. Sectors score based on best 2-tube pigment mix.</div>
+      </div>
+
+      <!-- Per-colour mix recipes -->
+      <div id="mpa-recipe-list" class="mpa-recipe-list"></div>
+
+      <!-- Split-primary recommendation -->
+      <div class="pm-block" id="mpa-split-block">
+        <h3>Split primary recommendation</h3>
+        <div class="pm-note" id="mpa-split-note">Pin colours to see whether a warm/cool split of any primary would expand your gamut.</div>
+      </div>
+
+    </details>
+
+    <div>
+      <h2>Notes</h2>
+      <p class="hint">
+        Wheel uses a <b>CMY-anchored</b> hue mapping: Y, M, C are the named primaries; R, G, B are the secondaries (in additive light). Each hue's marker on the wheel sits at a position computed from the calibration sliders, so dragging Y/M/C changes the wheel geometry while RGB stay locked to <b>true additive opposites</b>.<br><br>
+        "Tone" = lightness from 0 (black) to 100 (white) along a chroma-preserving ramp. 50 is full-chroma. Above 50 we add white (additive); below, we subtract toward black.<br><br>
+        Pairs across the wheel are <b>RGB inverses</b> at full chroma — they sum to white when overlaid in <i>screen</i> blend mode (which is exactly additive on opaque pixels).
+      </p>
+    </div>
+  </section>
+</main>
+
+<script>
+//=========================================================================
+// Color math
+//=========================================================================
+const TAU = Math.PI * 2;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const mod = (a, n) => ((a % n) + n) % n;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// Calibration: where on the wheel each named primary sits (degrees, 0 = up, CW).
+// Defaults pick: Y=90 (top in math = 0° = right; we transform), M=330, C=210
+// rotated so visually Y is at top and M/C sit 120° away.
+// We store the user's chosen anchor angles and interpolate the rest.
+const cal = {
+  Y: 90, M: 330, C: 210, rot: 0, chroma: 100, steps: 9, hueRows: 6,
+};
+
+// Map a "wheel angle" (in degrees) -> linear RGB color at full chroma.
+// Strategy: place CMY primaries at user-chosen angles, place RGB at additive
+// inverses (opposite RGB triplet) automatically by rotating the angle 180°
+// from each CMY anchor; then interpolate around the circle by short arcs.
+function calibratedAnchors() {
+  const Y = mod(cal.Y + cal.rot, 360);
+  const M = mod(cal.M + cal.rot, 360);
+  const C = mod(cal.C + cal.rot, 360);
+  // Additive (RGB) inverses sit 180° opposite each CMY anchor:
+  const B = mod(Y + 180, 360); // Yellow's inverse is Blue
+  const G = mod(M + 180, 360); // Magenta's inverse is Green
+  const R = mod(C + 180, 360); // Cyan's inverse is Red
+  // Painter's category framework (Brandon):
+  //   Lights = Y, M, C — the CMY anchors. Bright, neon-capable, can read as luminous.
+  //   Earths = R, G, B — the RGB inverses. Grounded, heavier, read as material/ground.
+  // Encoded on each anchor so wheel labels and downstream algorithms can branch on it.
+  return [
+    { name: 'Y', a: Y, rgb: [255, 255,   0], category: 'Light' },
+    { name: 'G', a: G, rgb: [  0, 255,   0], category: 'Earth' },
+    { name: 'C', a: C, rgb: [  0, 255, 255], category: 'Light' },
+    { name: 'B', a: B, rgb: [  0,   0, 255], category: 'Earth' },
+    { name: 'M', a: M, rgb: [255,   0, 255], category: 'Light' },
+    { name: 'R', a: R, rgb: [255,   0,   0], category: 'Earth' },
+  ].sort((p, q) => p.a - q.a);
+}
+
+function hueAtAngle(deg) {
+  const anchors = calibratedAnchors();
+  deg = mod(deg, 360);
+  // find segment
+  for (let i = 0; i < anchors.length; i++) {
+    const A = anchors[i];
+    const B = anchors[(i + 1) % anchors.length];
+    let span = mod(B.a - A.a, 360);
+    let off = mod(deg - A.a, 360);
+    if (off <= span) {
+      const t = span === 0 ? 0 : off / span;
+      return [
+        Math.round(lerp(A.rgb[0], B.rgb[0], t)),
+        Math.round(lerp(A.rgb[1], B.rgb[1], t)),
+        Math.round(lerp(A.rgb[2], B.rgb[2], t)),
+      ];
+    }
+  }
+  return [255, 255, 255];
+}
+
+// Apply chroma scaling toward neutral (50% gray).
+function applyChroma(rgb, chromaPct) {
+  const k = chromaPct / 100;
+  return rgb.map(c => Math.round(lerp(127.5, c, k)));
+}
+
+// Tone 0..100 mapping: 0=black, 50=full chroma, 100=white. Additive ramp.
+function toneAdjust(rgb, tone) {
+  if (tone <= 50) {
+    const t = tone / 50; // 0..1
+    return rgb.map(c => Math.round(c * t));
+  } else {
+    const t = (tone - 50) / 50; // 0..1
+    return rgb.map(c => Math.round(c + (255 - c) * t));
+  }
+}
+
+function rgbAt(deg, tone, chroma = cal.chroma) {
+  const base = hueAtAngle(deg);
+  const ch = applyChroma(base, chroma);
+  return toneAdjust(ch, tone);
+}
+
+function additiveComplementHue(deg) {
+  return mod(deg + 180, 360);
+}
+
+// Tonal centre — the neutral middle ground between two colors. The model
+// picks how "neutral" is defined: averaging is the perceptual midpoint;
+// luminance gray strips chroma; multiply/screen mimic real ink/light overlap;
+// overlay/darken/lighten match common compositing modes. Bias t shifts the
+// midpoint toward A (0) or B (1).
+function tonalCentre(a, b, mode = 'mean', biasPct = 50) {
+  const t = clamp(biasPct, 0, 100) / 100;
+  const lerpCh = (av, bv) => av * (1 - t) + bv * t;
+  switch (mode) {
+    case 'mean':
+      return [lerpCh(a[0],b[0]), lerpCh(a[1],b[1]), lerpCh(a[2],b[2])].map(Math.round);
+    case 'lum': {
+      const la = 0.2126*a[0] + 0.7152*a[1] + 0.0722*a[2];
+      const lb = 0.2126*b[0] + 0.7152*b[1] + 0.0722*b[2];
+      const l = Math.round(la * (1 - t) + lb * t);
+      return [l, l, l];
+    }
+    case 'multiply':
+      return [a[0]*b[0]/255, a[1]*b[1]/255, a[2]*b[2]/255].map(Math.round);
+    case 'screen':
+      return [
+        255 - (255-a[0])*(255-b[0])/255,
+        255 - (255-a[1])*(255-b[1])/255,
+        255 - (255-a[2])*(255-b[2])/255,
+      ].map(Math.round);
+    case 'overlay':
+      return [0,1,2].map(i => {
+        const av = a[i], bv = b[i];
+        return Math.round(av < 128
+          ? 2 * av * bv / 255
+          : 255 - 2 * (255 - av) * (255 - bv) / 255);
+      });
+    case 'geo':
+      return [Math.sqrt(a[0]*b[0]), Math.sqrt(a[1]*b[1]), Math.sqrt(a[2]*b[2])].map(Math.round);
+    case 'darken':
+      return [Math.min(a[0],b[0]), Math.min(a[1],b[1]), Math.min(a[2],b[2])];
+    case 'lighten':
+      return [Math.max(a[0],b[0]), Math.max(a[1],b[1]), Math.max(a[2],b[2])];
+  }
+  return [Math.round(lerpCh(a[0],b[0])), Math.round(lerpCh(a[1],b[1])), Math.round(lerpCh(a[2],b[2]))];
+}
+
+function gradientFromAtoCentre(a, centre, steps) {
+  const out = [];
+  for (let i = 0; i < steps; i++) {
+    const t = i / (steps - 1);
+    out.push([
+      Math.round(lerp(a[0], centre[0], t)),
+      Math.round(lerp(a[1], centre[1], t)),
+      Math.round(lerp(a[2], centre[2], t)),
+    ]);
+  }
+  return out;
+}
+
+function rgbToHex([r, g, b]) {
+  return '#' + [r, g, b].map(v => clamp(v, 0, 255).toString(16).padStart(2, '0')).join('');
+}
+function hexToRgb(h) {
+  h = h.replace('#', '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+function rgbStr(rgb) { return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`; }
+
+// Find best wheel angle for an arbitrary hex (search nearest hue at full chroma).
+function angleForHex(hex) {
+  const target = hexToRgb(hex);
+  let best = 0, bestD = Infinity;
+  for (let d = 0; d < 360; d++) {
+    const c = hueAtAngle(d);
+    const dist = (c[0]-target[0])**2 + (c[1]-target[1])**2 + (c[2]-target[2])**2;
+    if (dist < bestD) { bestD = dist; best = d; }
+  }
+  return best;
+}
+
+// Cached calibrated-anchor lookup. Recomputes only when calibration sliders move.
+const _anchorCache = { stamp: '', data: null };
+function getCalibratedAnchors() {
+  const stamp = `${cal.Y},${cal.M},${cal.C},${cal.rot},${cal.chroma}`;
+  if (_anchorCache.stamp === stamp && _anchorCache.data) return _anchorCache.data;
+  const named = {
+    Y: [255,255,0], M: [255,0,255], C: [0,255,255],
+    R: [255,0,0],   G: [0,255,0],   B: [0,0,255],
+  };
+  const out = {};
+  for (const [name, rgb] of Object.entries(named)) {
+    let best = 0, bestD = Infinity;
+    for (let d = 0; d < 360; d++) {
+      const c = hueAtAngle(d);
+      const dist = (c[0]-rgb[0])**2 + (c[1]-rgb[1])**2 + (c[2]-rgb[2])**2;
+      if (dist < bestD) { bestD = dist; best = d; }
+    }
+    out[name] = best;
+  }
+  _anchorCache.stamp = stamp;
+  _anchorCache.data = out;
+  return out;
+}
+
+// Shortest signed angular distance from a → b in degrees, range [-180, 180]
+function signedArc(a, b) {
+  return ((b - a + 540) % 360) - 180;
+}
+// Unsigned shortest angular distance, [0, 180]
+function angularDistance(a, b) {
+  return Math.abs(signedArc(a, b));
+}
+
+// Standard RGB → HSL conversion. Returns h in 0..360, s/l in 0..1.
+// Used by the perspective + red→green shift to manipulate hue analytically.
+function rgbToHsl(rgb) {
+  const r = rgb[0] / 255, g = rgb[1] / 255, b = rgb[2] / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if      (max === r) h = ((g - b) / d + (g < b ? 6 : 0));
+  else if (max === g) h = ((b - r) / d + 2);
+  else                h = ((r - g) / d + 4);
+  return [h * 60, s, l];
+}
+// Standard HSL → RGB. h in degrees (any), s/l in 0..1. Returns 0..255 ints.
+function hslToRgb(h, s, l) {
+  h = ((h % 360) + 360) % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r, g, b;
+  if      (h < 60)  { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else              { r = c; g = 0; b = x; }
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+}
+
+//=========================================================================
+// State
+//=========================================================================
+const state = {
+  hue: 90,
+  tone: 50,
+  pinned: [],
+  harmony: 'comp',
+  tab: 'tones',
+  centreMode: 'mean',
+  centreBias: 50,
+};
+
+function currentCentre() {
+  const a = rgbAt(state.hue, state.tone);
+  const b = rgbAt(additiveComplementHue(state.hue), state.tone);
+  return tonalCentre(a, b, state.centreMode, state.centreBias);
+}
+
+//=========================================================================
+// Munker filter
+//=========================================================================
+const munker = {
+  mode: 'off', pattern: 'white', spacing: 10, thick: 5, opacity: 100,
+  animate: 'off', speed: 4,
+};
+
+// Build a Munker repeating-linear-gradient at the given CSS gradient angle.
+// Pulled out of applyMunker so per-face hex Munker can call it with
+// face-specific angles (each iso cube face needs its own stripe direction
+// to look painted-on the surface). Returns null if Munker is off.
+function buildMunkerPattern(angleDeg) {
+  if (munker.mode === 'off') return null;
+  const aHex = rgbToHex(rgbAt(state.hue, state.tone));
+  const bHex = rgbToHex(rgbAt(additiveComplementHue(state.hue), state.tone));
+  const compHex = bHex; // additive complement = B for our wheel
+  let c1, c2;
+  switch (munker.pattern) {
+    case 'white': c1 = '#ffffff'; c2 = '#ffffff'; break;
+    case 'black': c1 = '#000000'; c2 = '#000000'; break;
+    case 'bw':    c1 = '#ffffff'; c2 = '#000000'; break;
+    case 'A':     c1 = aHex;      c2 = aHex;      break;
+    case 'B':     c1 = bHex;      c2 = bHex;      break;
+    case 'AB':    c1 = aHex;      c2 = bHex;      break;
+    case 'comp':  c1 = compHex;   c2 = compHex;   break;
+    default:      c1 = '#ffffff'; c2 = '#ffffff';
+  }
+  const op = munker.opacity / 100;
+  const t  = munker.thick;
+  const noGapAlt = (munker.spacing === 0 && c1 !== c2);
+  const s  = noGapAlt ? t : Math.max(t + 1, munker.spacing + t);
+  const withA = (hex, a) => {
+    const [r,g,b] = hexToRgb(hex);
+    return `rgba(${r},${g},${b},${a})`;
+  };
+  const ca = withA(c1, op);
+  const cb = withA(c2, op);
+  const alt = (c1 !== c2);
+  const angle = `${angleDeg}deg`;
+
+  if (munker.mode === 'grid') {
+    // Grid uses 0/90, ignores the passed angle (per-face grid not meaningful).
+    const h = `repeating-linear-gradient(0deg, ${ca} 0 ${t}px, transparent ${t}px ${s}px)`;
+    const v = `repeating-linear-gradient(90deg, ${cb} 0 ${t}px, transparent ${t}px ${s}px)`;
+    return `${h}, ${v}`;
+  }
+  if (noGapAlt) {
+    return `repeating-linear-gradient(${angle},
+      ${ca} 0 ${t}px,
+      ${cb} ${t}px ${2 * t}px)`;
+  }
+  if (alt) {
+    const period = s * 2;
+    return `repeating-linear-gradient(${angle},
+      ${ca} 0 ${t}px,
+      transparent ${t}px ${s}px,
+      ${cb} ${s}px ${s + t}px,
+      transparent ${s + t}px ${period}px)`;
+  }
+  return `repeating-linear-gradient(${angle}, ${ca} 0 ${t}px, transparent ${t}px ${s}px)`;
+}
+
+// Per-face stripe angles for iso hex Munker. Each rhombus has natural axes
+// matching the iso cube's perspective; stripes parallel to those axes look
+// painted on the surface. Three distinct angles → strong 3D illusion.
+const HEX_FACE_MUNKER_ANGLE = {
+  top:   60,   // stripes slope ↘, parallel to top rhombus's depth-edge
+  left:  90,   // vertical stripes, along the cube's vertical edge
+  right: 120,  // stripes slope ↗, parallel to right rhombus's depth-edge
+};
+
+function applyMunker() {
+  const body = document.body;
+  if (munker.mode === 'off') {
+    body.classList.remove('munker-on');
+    body.style.removeProperty('--munker-pattern');
+    body.style.removeProperty('--munker-tile');
+    body.classList.remove('munker-animate');
+    // Refresh hex view to clear per-face patterns
+    if (cubeState.viewMode === 'hex') updateCubeColors();
+    return;
+  }
+  body.classList.add('munker-on');
+
+  // Global Munker pattern (used by all surfaces except iso hex faces, which
+  // use per-face angles inside updateFlatCellsFromMap).
+  const angleDeg =
+    munker.mode === 'h'    ? 0  :
+    munker.mode === 'v'    ? 90 :
+    munker.mode === 'diag' ? 45 : 0;
+  const pattern = buildMunkerPattern(angleDeg);
+  body.style.setProperty('--munker-pattern', pattern);
+  body.style.setProperty('--munker-tile', 'auto');
+
+  // Animation toggle + direction + speed
+  if (munker.animate && munker.animate !== 'off') {
+    body.classList.add('munker-animate');
+    body.style.setProperty('--munker-anim', `munker-pan-${munker.animate}`);
+    body.style.setProperty('--munker-speed', `${munker.speed}s`);
+  } else {
+    body.classList.remove('munker-animate');
+  }
+
+  // Refresh iso hex faces with new per-face patterns.
+  if (cubeState.viewMode === 'hex') updateCubeColors();
+}
+
+//=========================================================================
+// 3D cube viewer (X=hue · Y=tone · Z=chroma)
+//=========================================================================
+// --- Time-of-day anchor palette (atmospheric mode) ---
+// chromaFalloff drives perspective chroma curve. Higher = sharper drop-off
+// from canvas bottom (vivid foreground) to top (atmospheric desaturation).
+// noon = clearest (gentle), dusk/night = heaviest haze (sharpest curve).
+const TIME_OF_DAY = {
+  dawn:    { name: 'Dawn',        hex: '#c89db8', chromaFalloff: 1.5 },
+  morning: { name: 'Morning',     hex: '#7ba8d6', chromaFalloff: 0.75 },
+  noon:    { name: 'Noon',        hex: '#aed3f0', chromaFalloff: 0.5  },
+  golden:  { name: 'Golden hour', hex: '#e8a868', chromaFalloff: 1.0  },
+  dusk:    { name: 'Dusk',        hex: '#7d5a8c', chromaFalloff: 1.8  },
+  night:   { name: 'Night',       hex: '#1a2848', chromaFalloff: 2.0  },
+};
+let _atmCache = { key: '', hue: 0, rgb: [0,0,0] };
+function atmosphereInfo() {
+  const key = cubeState.timeOfDay;
+  if (_atmCache.key === key) return _atmCache;
+  const td = TIME_OF_DAY[key] || TIME_OF_DAY.noon;
+  _atmCache = { key, hue: angleForHex(td.hex), rgb: hexToRgb(td.hex) };
+  return _atmCache;
+}
+
+const cubeState = {
+  size: 34, gap: 3,
+  yaw: 30, pitch: -22,
+  alpha: 100,
+  mode: 'atmosphere',
+  warmthDepth: 60,
+  yellowBoost: 50,
+  backFade: 100,
+  timeOfDay: 'noon',
+  background: 'default',
+  // View / display extras:
+  viewMode: 'hex',  // 'grid' | 'scrub' | 'hex'  (3D cube and exploded views removed)
+  ambient: 0,        // 0–100% of atmosphere washed over every cell
+  lighting: 0,       // 0–100% atmosphere-as-light (multiply + additive + tone shift)
+  explode: 2.0,      // multiplier for Z spacing in 'exploded' view
+  scrubZ: 0,         // current Z slice (used by both scrub + hex views)
+  toneMin: 25,
+  toneMax: 75,
+  layerReveal: 'cycle', // 'cycle' | 'step' | 'drill' (used by hex view)
+  pointillism: false,    // Seurat: structured 6-dot grid using neighbour colors
+  speckles: false,       // Van Gogh: random ambient complement-color noise, denser in darks
+  calibratedDots: false, // Munker-aid: half grey + half calibrated palette dots; at distance they optically average to the cell's grey but locally provide chroma material for the illusion
+  greyscale: 'off',      // 'off' | 'value' (per-cell HSV V) | 'uniform' (all cells = same mid-grey, for true Munker illusion)
+  uniformGrey: 128,      // grey level used in uniform mode (0..255)
+  tintedShadows: 'off',  // shadow-direction bias: 'off' | 'cool-blue' | 'paynes' | 'cool-grey' | 'warm-grey'
+  perspective: false,    // perspective chroma + red→cyan shift (atmospheric depth)
+  monetMode: false,      // Impressionist tonal compression: 70%+ of cells squeezed into narrow tonal band, rare chroma accents punch through
+  monetBandWidth: 30,    // % of full lightness range that non-accent cells occupy (default 30 = cells live in 35..65%)
+  monetAccentRatio: 20,  // % of cells designated as chroma-accent punch-outs
+};
+let cubeBuilt = false;
+let _prevCubeN = 0;
+const cubeCells = [];
+const gridCells = [];   // flat cells in grid view
+const scrubCells = [];  // flat cells in scrub view
+const hexCells = [];    // hex tiles in hex view
+
+// All three cube axes share this — driven by the global Tones slider.
+// Capped at 7 (343 cells / 2058 faces) for mobile perf — was 9.
+function cubeStepCount() {
+  return Math.max(2, Math.min(cal.steps, 7));
+}
+
+// Tone formula uses cubeState.toneMin/toneMax to clip the visible range.
+// Defaults 25..75 so the topmost and bottommost rows aren't blocking the
+// gradient with near-white / near-black bands.
+function clippedTone(yi, N) {
+  const tmin = cubeState.toneMin ?? 20;
+  const tmax = cubeState.toneMax ?? 80;
+  if (N <= 1) return (tmin + tmax) / 2;
+  return tmin + (yi / (N - 1)) * (tmax - tmin);
+}
+
+function cubeColorFor(xi, yi, zi) {
+  const N = cubeStepCount();
+  const hue   = (xi / Math.max(1, N - 1)) * 360;
+  const tone  = clippedTone(yi, N);
+  const cFrac = N <= 1 ? 1 : (zi / (N - 1));
+  const chr = cal.chroma;
+  const a = rgbAt(hue, tone, chr);
+  const b = rgbAt(additiveComplementHue(hue), tone, chr);
+  const centre = tonalCentre(a, b, state.centreMode, state.centreBias);
+  return [
+    Math.round(lerp(centre[0], a[0], cFrac)),
+    Math.round(lerp(centre[1], a[1], cFrac)),
+    Math.round(lerp(centre[2], a[2], cFrac)),
+  ];
+}
+
+// --- Shared painters logic: pull a hue toward red along Z, boost toward yellow ---
+function applyWarmthAndYellow(hue, tone, cFrac) {
+  const anchors = getCalibratedAnchors();
+  const wd = cubeState.warmthDepth / 100;
+  const depthDeg = wd * 60;
+  const offset = (cFrac - 0.5) * 2 * depthDeg;
+  const toRed = signedArc(hue, anchors.R);
+  let shifted;
+  if (offset >= 0) {
+    const step = Math.min(Math.abs(toRed), offset);
+    shifted = mod(hue + Math.sign(toRed || 1) * step, 360);
+  } else {
+    shifted = mod(hue - Math.sign(toRed || 1) * Math.abs(offset), 360);
+  }
+  const yDist = angularDistance(shifted, anchors.Y);
+  const yellowness = Math.max(0, 1 - yDist / 60);
+  const boost = (cubeState.yellowBoost / 100) * yellowness * 22;
+  return { shifted, effectiveTone: clamp(tone + boost, 0, 100) };
+}
+
+function cubeColorWarmth(xi, yi, zi) {
+  const N = cubeStepCount();
+  const hue   = (xi / Math.max(1, N - 1)) * 360;
+  const tone  = clippedTone(yi, N);
+  const cFrac = N <= 1 ? 1 : (zi / (N - 1));
+  const { shifted, effectiveTone } = applyWarmthAndYellow(hue, tone, cFrac);
+  const chr = cal.chroma;
+  const a = rgbAt(shifted, effectiveTone, chr);
+  const b = rgbAt(additiveComplementHue(shifted), effectiveTone, chr);
+  const centre = tonalCentre(a, b, state.centreMode, state.centreBias);
+  return [
+    Math.round(lerp(centre[0], a[0], cFrac)),
+    Math.round(lerp(centre[1], a[1], cFrac)),
+    Math.round(lerp(centre[2], a[2], cFrac)),
+  ];
+}
+
+// --- Atmosphere mode (landscape painter depth aid) ---
+// X = shortest-arc hue blend from foreground (state.hue) → time-of-day atmosphere
+// Y = clipped tone (no pure white/black)
+// Z = depth: warmth+yellow algorithm reapplies; back slice pulls toward atmosphere
+function cubeColorAtm(xi, yi, zi) {
+  const N = cubeStepCount();
+  const tone  = clippedTone(yi, N);
+  const xFrac = N <= 1 ? 0 : (xi / (N - 1));
+  const cFrac = N <= 1 ? 1 : (zi / (N - 1));
+
+  const fgHue = state.hue;
+  const atm = atmosphereInfo();
+  // Shortest-arc hue blend foreground → atmosphere
+  const arc = signedArc(fgHue, atm.hue);
+  const xHue = mod(fgHue + arc * xFrac, 360);
+
+  // Reapply painters logic at THIS X position (per Brandon's spec)
+  const { shifted, effectiveTone } = applyWarmthAndYellow(xHue, tone, cFrac);
+
+  const chr = cal.chroma;
+  let outRgb = rgbAt(shifted, effectiveTone, chr);
+
+  // Z atmospheric pull: back slice blends harder toward time-of-day anchor
+  // (at this tone level so it stays luminance-coherent)
+  const atmAtTone = rgbAt(atm.hue, effectiveTone, chr);
+  const zAtmPull = (1 - cFrac) * 0.6;  // 0..0.6
+  outRgb = [
+    lerp(outRgb[0], atmAtTone[0], zAtmPull),
+    lerp(outRgb[1], atmAtTone[1], zAtmPull),
+    lerp(outRgb[2], atmAtTone[2], zAtmPull),
+  ];
+
+  return [Math.round(outRgb[0]), Math.round(outRgb[1]), Math.round(outRgb[2])];
+}
+
+function cubeAlphaFor(zi) {
+  const N = cubeStepCount();
+  const cFrac = N <= 1 ? 1 : (zi / (N - 1));
+  const baseA = clamp(cubeState.alpha, 0, 100) / 100;
+  const back  = clamp(cubeState.backFade, 0, 100) / 100;
+  return baseA * lerp(back, 1, cFrac);
+}
+
+// --- Isometric hex face tints. Each hex now renders as 3 rhombi forming a cube.
+// Standard isometric lighting convention: light source upper-left, sun is the
+// key. Top face catches sky, right face catches sun, left face is shadowed.
+// Multipliers picked to keep the cube readable across the full tone range
+// without crushing darks (top stays under 1.25 to avoid clip; left stays
+// above 0.55 to avoid pure-black on already-dark cells).
+const HEX_FACE_MUL = { top: 1.18, right: 0.92, left: 0.62 };
+function tintFace(rgb, mul) {
+  return [
+    Math.min(255, Math.round(rgb[0] * mul)),
+    Math.min(255, Math.round(rgb[1] * mul)),
+    Math.min(255, Math.round(rgb[2] * mul)),
+  ];
+}
+
+// --- Pointillism: speckle each cell with neighbor colors at lower opacity.
+// Hue stays on the cell; dots add subtle suggestions of neighboring hues.
+// Six dot positions are fixed so cells don't shimmer between renders.
+const POINTILLISM_DOTS = [
+  [22, 18, 2.5],  // x%, y%, radius px
+  [78, 12, 2.0],
+  [15, 65, 2.2],
+  [88, 70, 2.5],
+  [50, 45, 1.8],
+  [35, 90, 2.2],
+];
+
+function buildCubeColorMap() {
+  const N = cubeStepCount();
+  const map = new Array(N * N * N);
+  for (let z = 0; z < N; z++) {
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) {
+        map[z * N * N + y * N + x] = cubeColorWithAmbient(x, y, z);
+      }
+    }
+  }
+  return map;
+}
+function getMapColor(map, x, y, z, N) {
+  if (x < 0 || x >= N || y < 0 || y >= N || z < 0 || z >= N) return null;
+  return map[z * N * N + y * N + x];
+}
+
+function pointillismGradientFor(xi, yi, zi, N, map) {
+  if (!cubeState.pointillism) return 'none';
+  const offsets = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+  const neighbors = [];
+  for (const [dx, dy, dz] of offsets) {
+    const c = getMapColor(map, xi + dx, yi + dy, zi + dz, N);
+    if (c) neighbors.push(c);
+  }
+  if (neighbors.length === 0) return 'none';
+  const layers = POINTILLISM_DOTS.map(([px, py, r], i) => {
+    const c = neighbors[i % neighbors.length];
+    return `radial-gradient(circle ${r}px at ${px}% ${py}%, rgba(${c[0]},${c[1]},${c[2]},0.55), transparent 70%)`;
+  });
+  return layers.join(', ');
+}
+
+function refreshPointillismClass() {
+  // Single body class triggers extras CSS for pointillism, speckles, AND
+  // calibrated dots — all three compose into the same --pointillism background-image
+  // variable so they share the cell pseudo-element slot.
+  const on = !!cubeState.pointillism || !!cubeState.speckles || !!cubeState.calibratedDots;
+  document.body.classList.toggle('pointillism-on', on);
+}
+
+// --- Calibrated-palette pointillism: half the dots match the cell's grey
+// value (uniform background carrier), half use random picks from the 6
+// calibrated wheel anchors (Y/M/C/R/G/B). At viewing distance the chromatic
+// half optically averages toward neutral grey (the 6 anchors balance), but
+// locally the brain has chroma dots to mix with the Munker stripes — the
+// illusion fires harder. Designed to pair with greyscale='uniform' + Munker
+// preset, but works on any base.
+function calibratedDotsGradientFor(xi, yi, zi, baseRgb) {
+  if (!cubeState.calibratedDots) return null;
+  // Grey carrier matches the cell's value so dots blend at distance.
+  const V = Math.max(baseRgb[0], baseRgb[1], baseRgb[2]);
+  const greyStr = `rgba(${V},${V},${V},0.6)`;
+  // Calibrated anchor colors at FULL chroma (not cal.chroma-modified) so the
+  // optical mixing has full chromatic range — the eye averages them down.
+  const anchors = calibratedAnchors();
+  // Deterministic per-cell PRNG so dots don't shimmer between renders.
+  let seed = ((xi + 1) * 374761393 + (yi + 1) * 668265263 + (zi + 1) * 1442695040) | 0;
+  const rand = () => {
+    seed = (seed * 9301 + 49297) & 0x7fffffff;
+    return (seed % 233280) / 233280;
+  };
+  const layers = [];
+  // 12 dots per cell — 6 grey carriers + 6 chromatic. Even distribution
+  // ensures the chromatic half pulls from all 6 anchors so they balance.
+  for (let i = 0; i < 12; i++) {
+    const px = (rand() * 100).toFixed(1);
+    const py = (rand() * 100).toFixed(1);
+    const r  = (1.0 + rand() * 1.4).toFixed(2);
+    let color;
+    if (i < 6) {
+      color = greyStr;
+    } else {
+      // Pick anchor i-6 (covers all 6 anchors, one per chromatic slot)
+      const a = anchors[i - 6].rgb;
+      color = `rgba(${a[0]},${a[1]},${a[2]},0.55)`;
+    }
+    layers.push(`radial-gradient(circle ${r}px at ${px}% ${py}%, ${color}, transparent 72%)`);
+  }
+  return layers.join(', ');
+}
+
+// Compose pointillism + speckles + calibrated dots into a single
+// background-image string. Order: pointillism beneath, speckles in middle,
+// calibrated dots on top (most subtle, designed to register at distance).
+function extrasGradientFor(xi, yi, zi, N, map) {
+  const layers = [];
+  if (cubeState.pointillism) {
+    const pp = pointillismGradientFor(xi, yi, zi, N, map);
+    if (pp && pp !== 'none') layers.push(pp);
+  }
+  const baseRgb = (cubeState.speckles || cubeState.calibratedDots)
+    ? getMapColor(map, xi, yi, zi, N)
+    : null;
+  if (cubeState.speckles && baseRgb) {
+    const sp = speckleGradientFor(xi, yi, zi, baseRgb);
+    if (sp) layers.push(sp);
+  }
+  if (cubeState.calibratedDots && baseRgb) {
+    const cd = calibratedDotsGradientFor(xi, yi, zi, baseRgb);
+    if (cd) layers.push(cd);
+  }
+  return layers.length ? layers.join(', ') : null;
+}
+
+// --- Van Gogh-style speckles: random low-opacity dots that vibrate the cell
+// with its COMPLEMENT colour. Density scales with darkness, so dark areas get
+// dense speckle activation (the "vibrating darks" effect from impressionist
+// portraits and night scenes). Deterministic per-cell seed so dots don't
+// flicker between renders.
+function speckleGradientFor(xi, yi, zi, baseRgb) {
+  if (!cubeState.speckles) return null;
+  // Cell value 0..1 (max channel). Darker = denser speckling.
+  const V = Math.max(baseRgb[0], baseRgb[1], baseRgb[2]) / 255;
+  const darkness = 1 - V;
+  const speckleCount = Math.round(6 + darkness * 18); // 6..24
+  const baseOpacity = 0.25 + darkness * 0.45;          // .25..0.7
+
+  // Speckle colour = complement of cell hue, slightly more saturated/lighter
+  // so it visually "pops" against the dark base.
+  const [h, s, l] = rgbToHsl(baseRgb);
+  const compHue = (h + 180) % 360;
+  const compSat = Math.min(1, s + 0.3);
+  const compLight = Math.min(0.85, Math.max(0.4, l + 0.25));
+  const cRgb = hslToRgb(compHue, compSat, compLight);
+  const cStr = `rgba(${cRgb[0]},${cRgb[1]},${cRgb[2]},${baseOpacity.toFixed(2)})`;
+
+  // Deterministic PRNG seeded by cell coords so speckles don't shimmer.
+  let seed = ((xi + 1) * 73 + (yi + 1) * 137 + (zi + 1) * 211) | 0;
+  const rand = () => {
+    seed = (seed * 9301 + 49297) & 0x7fffffff;
+    return (seed % 233280) / 233280;
+  };
+  const layers = [];
+  for (let i = 0; i < speckleCount; i++) {
+    const px = (rand() * 100).toFixed(1);
+    const py = (rand() * 100).toFixed(1);
+    const r  = (0.6 + rand() * 1.2).toFixed(2);
+    layers.push(`radial-gradient(circle ${r}px at ${px}% ${py}%, ${cStr}, transparent 75%)`);
+  }
+  return layers.join(', ');
+}
+
+// Compose pointillism + speckles into a single background-image string.
+// Order: pointillism beneath speckles (speckles on top, more visible).
+function ambientTint(rgb) {
+  const strength = (cubeState.ambient || 0) / 100;
+  if (strength <= 0) return rgb;
+  const atm = atmosphereInfo().rgb;
+  return [
+    lerp(rgb[0], atm[0], strength),
+    lerp(rgb[1], atm[1], strength),
+    lerp(rgb[2], atm[2], strength),
+  ];
+}
+
+// --- Lighting: atmosphere acts as a true light source, not just a tint.
+// Combines three simultaneous effects, blended by a single strength slider:
+//   1. MULTIPLY  — cell × atm / 255 (atmosphere as a colored filter overlay)
+//   2. ADDITIVE  — cell + atm × 0.4 (atmosphere as direct illumination, capped)
+//   3. TONE SHIFT — scale luminance toward atm luminance (recalibrate baseline)
+// At strength=0, no effect. At 100, full combined lighting applied.
+function applyLighting(rgb) {
+  const s = (cubeState.lighting || 0) / 100;
+  if (s <= 0) return rgb;
+  const atm = atmosphereInfo().rgb;
+
+  // 1. Multiplicative
+  const m0 = rgb[0] * atm[0] / 255;
+  const m1 = rgb[1] * atm[1] / 255;
+  const m2 = rgb[2] * atm[2] / 255;
+
+  // 2. Additive (capped)
+  const a0 = Math.min(255, rgb[0] + atm[0] * 0.4);
+  const a1 = Math.min(255, rgb[1] + atm[1] * 0.4);
+  const a2 = Math.min(255, rgb[2] + atm[2] * 0.4);
+
+  // 3. Tone shift — scale rgb so its luminance moves toward atm's
+  const atmLum  = atm[0] * 0.299 + atm[1] * 0.587 + atm[2] * 0.114;
+  const cellLum = rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114;
+  const targetLum = lerp(cellLum, atmLum, 0.5);
+  const ratio = cellLum > 1 ? targetLum / cellLum : 1;
+  const t0 = clamp(rgb[0] * ratio, 0, 255);
+  const t1 = clamp(rgb[1] * ratio, 0, 255);
+  const t2 = clamp(rgb[2] * ratio, 0, 255);
+
+  // Average of three effects
+  const c0 = (m0 + a0 + t0) / 3;
+  const c1 = (m1 + a1 + t1) / 3;
+  const c2 = (m2 + a2 + t2) / 3;
+
+  // Blend toward combined by strength
+  return [
+    lerp(rgb[0], c0, s),
+    lerp(rgb[1], c1, s),
+    lerp(rgb[2], c2, s),
+  ];
+}
+
+// Convert RGB → grey for the Munker illusion. Two modes:
+//   'value'   — HSV V (max channel). Per-cell value-grey, preserves tonal range.
+//               The painter's exact-value substitution (helps see "what value is this colour").
+//   'uniform' — every cell becomes the SAME mid-grey. This is the configuration
+//               needed for the actual Munker-White illusion: when targets are
+//               identical grey and stripes vary, the brain attributes stripe
+//               colour to the cell. With per-cell value greys (mode='value'),
+//               the brain has too much underlying tonal info — the illusion
+//               misfires. Pair 'uniform' with the Munker preset for the real test.
+function greyscaleHSL(rgb) {
+  if (cubeState.greyscale === 'uniform') {
+    const g = cubeState.uniformGrey | 0;
+    return [g, g, g];
+  }
+  const V = Math.max(rgb[0], rgb[1], rgb[2]);
+  return [V, V, V];
+}
+
+// --- Tinted shadows: instead of letting low-tone cells go to pure black,
+// bias them toward a chosen shadow colour. Painters learning to mix should be
+// pushed away from "just add black" (which deadens chroma) toward "darken with
+// a complement or a neutralised cool/warm" — which is how oil paint actually
+// behaves on a palette. The tint is applied progressively: cells at V=0 get
+// full tint, cells at V≥0.5 are untouched.
+const SHADOW_TINTS = {
+  'cool-blue': '#1a2848',  // deep night-blue (atmospheric shadow)
+  'paynes':    '#1f2a3d',  // Payne's grey (warm-cool balanced, classic landscape)
+  'cool-grey': '#2a3038',  // neutral cool steel
+  'warm-grey': '#3a3032',  // mauve-grey (warm shadow under cool light)
+};
+function applyShadowTint(rgb) {
+  const mode = cubeState.tintedShadows;
+  if (!mode || mode === 'off') return rgb;
+  const tintHex = SHADOW_TINTS[mode];
+  if (!tintHex) return rgb;
+  const tintRgb = hexToRgb(tintHex);
+  const V = Math.max(rgb[0], rgb[1], rgb[2]) / 255;
+  if (V >= 0.5) return rgb;            // only touch the lower half
+  const blend = (1 - V * 2) * 0.7;     // 0 at V=0.5, 0.7 at V=0
+  return [
+    lerp(rgb[0], tintRgb[0], blend),
+    lerp(rgb[1], tintRgb[1], blend),
+    lerp(rgb[2], tintRgb[2], blend),
+  ];
+}
+
+// --- Perspective chroma curve. Bottom of canvas = vivid foreground, top fades
+// toward atmospheric grey. Curve is `1 - t^(1/falloff)` where t=yi/(N-1)
+// (0 at canvas bottom = yi=0, 1 at canvas top = yi=N-1; the hex grid renders
+// high yi at top). falloff comes from TIME_OF_DAY (gentle at noon, sharp at
+// dusk). Returns 0..1 multiplier on the cell's saturation.
+function perspectiveChromaScale(yi, N) {
+  if (N <= 1) return 1;
+  const t = yi / (N - 1);  // 0 at bottom (yi=0), 1 at top (yi=N-1)
+  const falloff = TIME_OF_DAY[cubeState.timeOfDay]?.chromaFalloff || 1;
+  const scale = 1 - Math.pow(t, 1 / falloff);
+  return Math.max(0, Math.min(1, scale));
+}
+
+// Apply perspective chroma to RGB by lerping toward HSV V grey of the cell
+// itself. Preserves the cell's own value (lightness) while reducing saturation.
+function applyPerspectiveChroma(rgb, yi, N) {
+  const scale = perspectiveChromaScale(yi, N);
+  if (scale >= 0.999) return rgb;
+  const V = Math.max(rgb[0], rgb[1], rgb[2]);
+  return [
+    Math.round(lerp(V, rgb[0], scale)),
+    Math.round(lerp(V, rgb[1], scale)),
+    Math.round(lerp(V, rgb[2], scale)),
+  ];
+}
+
+// --- Monet mode: Impressionist tonal compression. Most of the canvas sits in
+// a narrow lightness band (the misty field), with rare chroma-accent cells
+// that punch through at original lightness and boosted saturation (the orange
+// sun in Impression Sunrise, the red flecks in haystacks). The painter's
+// rule: 70-80% of strokes within a 30% tonal band, 15-20% as chroma punches.
+//
+// Cell-position hashing: deterministic per (xi,yi,zi) so accents don't shimmer
+// between renders. Uses splitmix-style integer mixing.
+function isMonetAccent(xi, yi, zi) {
+  if (!cubeState.monetMode) return false;
+  let h = ((xi + 1) * 374761393 + (yi + 1) * 668265263 + (zi + 1) * 1442695040) | 0;
+  h = ((h ^ (h >>> 13)) * 1274126177) | 0;
+  h = h ^ (h >>> 16);
+  const v = ((h >>> 0) % 100000) / 100000;
+  return v < (cubeState.monetAccentRatio / 100);
+}
+
+function applyMonetTonality(rgb, xi, yi, zi) {
+  if (!cubeState.monetMode) return rgb;
+  const [h, s, l] = rgbToHsl(rgb);
+  if (isMonetAccent(xi, yi, zi)) {
+    // Accent cell: punch through. Keep original lightness, boost saturation
+    // hard, shift hue toward complement so it pops against the compressed field.
+    const accentHue = (h + 180) % 360;
+    const accentSat = Math.min(1, s + 0.6);
+    return hslToRgb(accentHue, accentSat, l);
+  }
+  // Non-accent: compress lightness into narrow band centred on 50%.
+  // band=0.30 → cells live in [0.35, 0.65] of L. Saturation also slightly
+  // pulled down (Monet's atmospheric haze) so accents read more strongly.
+  const band = cubeState.monetBandWidth / 100;
+  const halfBand = band / 2;
+  const newL = (0.5 - halfBand) + l * band;  // squeeze 0..1 → centre±halfBand
+  const newS = s * 0.7;
+  return hslToRgb(h, newS, newL);
+}
+
+// --- Distant red → cyan shift. Reds advance perceptually (the eye reads them
+// as near); at extreme distance (back layer + top of canvas) the shift toward
+// cyan-neutral simulates atmospheric desaturation. Cyan is the bright/neon
+// atmospheric pivot — distant warms drift toward it rather than toward green
+// or grey. Strength compounds redProx × zDepth × yHeight, so only top-back
+// reds shift dramatically. Front-row reds stay vivid red.
+function applyRedFade(rgb, xi, yi, zi, N) {
+  const [h, s, l] = rgbToHsl(rgb);
+  if (s < 0.1) return rgb; // grey, nothing to shift
+  // Standard HSL red is at 0/360°. Use direct HSL hue for shift logic.
+  const distFromRed = Math.min(h, 360 - h); // angular distance to 0°
+  if (distFromRed > 60) return rgb; // not red enough — leave alone
+  const redProx = 1 - (distFromRed / 60);
+
+  const zDepth  = N <= 1 ? 0 : 1 - zi / (N - 1);   // 1 at back (zi=0), 0 at front
+  const yHeight = N <= 1 ? 0 : yi / (N - 1);       // 1 at canvas top (yi=N-1), 0 at bottom
+
+  const strength = redProx * zDepth * yHeight; // 0..1
+  if (strength < 0.05) return rgb;
+
+  // Rotate hue toward cyan (180° in standard HSL). At full strength reds become
+  // fully cyan-neutral (atmospheric haze pulling distant warms cool).
+  const newH = h + 180 * strength;
+  const newS = s * (1 - strength * 0.5); // desaturate as it shifts toward neutral
+  return hslToRgb(newH, newS, l);
+}
+
+// Single dispatch point — picks the per-mode color function and applies the
+// ambient wash + lighting on top.
+function cubeColorWithAmbient(xi, yi, zi) {
+  const fn =
+    cubeState.mode === 'atmosphere' ? cubeColorAtm :
+    cubeState.mode === 'warmth'     ? cubeColorWarmth :
+                                      cubeColorFor;
+  let rgb = fn(xi, yi, zi);
+  rgb = ambientTint(rgb);
+  rgb = applyLighting(rgb);
+  // Shadow tint — biases dark cells toward chosen shadow colour (away from
+  // pure black). Applied before perspective so atmospheric effects layer on top.
+  rgb = applyShadowTint(rgb);
+  // Perspective effects — apply BEFORE Monet so atmospheric chroma reduction
+  // happens first, then Monet compresses what's left.
+  if (cubeState.perspective) {
+    const N = cubeStepCount();
+    rgb = applyRedFade(rgb, xi, yi, zi, N);     // distant reds → cyan
+    rgb = applyPerspectiveChroma(rgb, yi, N);   // top of canvas desaturates
+  }
+  // Monet tonal compression — squeezes most cells into a narrow band, lets
+  // accent cells punch through at full chroma. Apply before greyscale so the
+  // value-grey mode can confirm the compression visually.
+  rgb = applyMonetTonality(rgb, xi, yi, zi);
+  // Greyscale conversion is the last step — preserves any lighting effects on the L value.
+  if (cubeState.greyscale && cubeState.greyscale !== 'off') rgb = greyscaleHSL(rgb);
+  return [Math.round(rgb[0]), Math.round(rgb[1]), Math.round(rgb[2])];
+}
+
+// --- Flat slice views (grid + scrub) ---
+// --- Click pulse: brief visual feedback on tap, using the cell's own colour
+// as the glow. Performance-light: one CSS animation, removed after 700ms.
+// For iso hex cells we sample the RIGHT face (the key-lit middle-tone face);
+// for flat cells we sample the cell itself.
+function pulseCell(el) {
+  if (!el) return;
+  const inner = el.querySelector('.hex-face-right') || el;
+  const bg = inner.style.backgroundColor || getComputedStyle(inner).backgroundColor;
+  // Strip any alpha and bump it to ~0.85 for a strong glow
+  let pulseColor = bg.replace(/^rgba?\(/, '').replace(/\)$/, '').split(',').slice(0, 3).join(',');
+  pulseColor = `rgba(${pulseColor},0.85)`;
+  el.style.setProperty('--pulse-color', pulseColor);
+  // Restart animation if mid-pulse
+  el.classList.remove('pulsing');
+  void el.offsetWidth;
+  el.classList.add('pulsing');
+  setTimeout(() => el.classList.remove('pulsing'), 720);
+}
+
+function clickFlatCell(xi, yi, zi) {
+  const N = cubeStepCount();
+  const tone = clippedTone(yi, N);
+  let hueToSelect;
+  if (cubeState.mode === 'atmosphere') {
+    const xFrac = N <= 1 ? 0 : (xi / (N - 1));
+    const arc = signedArc(state.hue, atmosphereInfo().hue);
+    hueToSelect = mod(state.hue + arc * xFrac, 360);
+  } else {
+    hueToSelect = (xi / Math.max(1, N - 1)) * 360;
+  }
+  setHue(hueToSelect, tone);
+}
+
+function renderGridView() {
+  const container = document.getElementById('cubeGridView');
+  if (!container) return;
+  container.innerHTML = '';
+  gridCells.length = 0;
+  const N = cubeStepCount();
+  // Front first so the user reads top-to-bottom = forefront-to-distance
+  for (let zi = N - 1; zi >= 0; zi--) {
+    const panel = document.createElement('div');
+    panel.className = 'cube-slice-panel';
+    const lab = document.createElement('div');
+    lab.className = 'cube-slice-label';
+    const tag = zi === N - 1 ? '· front (forefront)' : zi === 0 ? '· back (distance)' : '';
+    lab.innerHTML = `<span>Slice Z=${zi} ${tag}</span><span>${N}×${N}</span>`;
+    panel.appendChild(lab);
+    const grid = document.createElement('div');
+    grid.className = 'cube-slice-grid';
+    grid.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+    for (let yi = N - 1; yi >= 0; yi--) {
+      for (let xi = 0; xi < N; xi++) {
+        const cell = document.createElement('div');
+        cell.className = 'cube-flat-cell';
+        cell.title = `Z=${zi} Y=${yi} X=${xi}`;
+        cell.addEventListener('click', () => { pulseCell(cell); clickFlatCell(xi, yi, zi); });
+        grid.appendChild(cell);
+        gridCells.push({ el: cell, xi, yi, zi });
+      }
+    }
+    panel.appendChild(grid);
+    container.appendChild(panel);
+  }
+  updateCubeColors();
+}
+
+function renderScrubView() {
+  const slice = document.getElementById('cubeScrubSlice');
+  if (!slice) return;
+  slice.innerHTML = '';
+  scrubCells.length = 0;
+  const N = cubeStepCount();
+  const zSlider = document.getElementById('cubeScrubZ');
+  zSlider.max = N - 1;
+  if (cubeState.scrubZ > N - 1) cubeState.scrubZ = N - 1;
+  zSlider.value = cubeState.scrubZ;
+  const zi = cubeState.scrubZ;
+
+  slice.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+  for (let yi = N - 1; yi >= 0; yi--) {
+    for (let xi = 0; xi < N; xi++) {
+      const cell = document.createElement('div');
+      cell.className = 'cube-flat-cell';
+      cell.title = `Z=${zi} Y=${yi} X=${xi}`;
+      cell.addEventListener('click', () => { pulseCell(cell); clickFlatCell(xi, yi, zi); });
+      slice.appendChild(cell);
+      scrubCells.push({ el: cell, xi, yi, zi });
+    }
+  }
+  updateScrubLabel();
+  updateCubeColors();
+}
+
+function updateScrubLabel() {
+  const lab = document.getElementById('cubeScrubLabel');
+  const N = cubeStepCount();
+  const zi = cubeState.scrubZ;
+  const tag = zi === N - 1 ? ' (front)' : zi === 0 ? ' (back)' : '';
+  if (lab) lab.textContent = `Z ${zi}/${N - 1}${tag}`;
+}
+
+// Apply explode-factor Z spacing to existing 3D cells (no rebuild needed).
+function applyCubeExplode() {
+  if (!cubeBuilt) return;
+  const N = cubeStepCount();
+  const { size, gap } = cubeState;
+  const offset = size + gap;
+  const o = -(N - 1) / 2;
+  const factor = cubeState.viewMode === 'exploded' ? cubeState.explode : 1;
+  for (const c of cubeCells) {
+    const cx =  (c.xi + o) * offset;
+    const cy = -(c.yi + o) * offset;
+    const cz =  (c.zi + o) * offset * factor;
+    c.el.style.transform = `translate3d(${cx}px, ${cy}px, ${cz}px)`;
+  }
+}
+
+function setCubeViewMode(mode) {
+  cubeState.viewMode = mode;
+  const scene = document.getElementById('cubeScene');
+  const gridView = document.getElementById('cubeGridView');
+  const scrubView = document.getElementById('cubeScrubView');
+  const hexView = document.getElementById('cubeHexView');
+  if (!scene || !gridView || !scrubView || !hexView) return;
+  scene.style.display    = (mode === 'cube' || mode === 'exploded') ? '' : 'none';
+  gridView.style.display = mode === 'grid'  ? '' : 'none';
+  scrubView.style.display = mode === 'scrub' ? '' : 'none';
+  hexView.style.display  = mode === 'hex'   ? '' : 'none';
+  // Stop the auto-cycle when leaving hex
+  if (mode !== 'hex') stopLayerCycle();
+  if (mode === 'cube' || mode === 'exploded') {
+    applyCubeExplode();
+  } else if (mode === 'grid') {
+    renderGridView();
+  } else if (mode === 'scrub') {
+    renderScrubView();
+  } else if (mode === 'hex') {
+    renderHexView();
+    if (cubeState.layerReveal === 'cycle') startLayerCycle();
+  }
+}
+
+// --- Hex tiled view (X,Y plane, one Z slice at a time) ---
+function renderHexView() {
+  const grid = document.getElementById('cubeHexGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  hexCells.length = 0;
+  const N = cubeStepCount();
+  // Clamp scrubZ in case N changed
+  if (cubeState.scrubZ > N - 1) cubeState.scrubZ = N - 1;
+  if (cubeState.scrubZ < 0) cubeState.scrubZ = 0;
+  const zi = cubeState.scrubZ;
+
+  // Hex sizing — get computed --hex-size or default
+  const cs = getComputedStyle(grid);
+  const hexW = parseInt(cs.getPropertyValue('--hex-size')) || 44;
+  const hexH = hexW / 0.866; // pointy-top regular aspect
+  const colStep = hexW;
+  const rowStep = hexH * 0.75;
+  const totalW = colStep * N + hexW * 0.5;
+  const totalH = rowStep * (N - 1) + hexH;
+  grid.style.width = totalW + 'px';
+  grid.style.height = totalH + 'px';
+
+  // Top-down: high tone = top of grid (yi = N-1 at top, yi = 0 at bottom)
+  for (let row = 0; row < N; row++) {
+    const yi = N - 1 - row;       // top row = highest yi
+    const offsetX = (row % 2 === 1) ? hexW * 0.5 : 0;
+    const yPx = row * rowStep;
+    for (let xi = 0; xi < N; xi++) {
+      const xPx = xi * colStep + offsetX;
+      const hex = document.createElement('div');
+      hex.className = 'cube-hex';
+      hex.style.left = xPx + 'px';
+      hex.style.top = yPx + 'px';
+      hex.title = `Z=${zi} Y=${yi} X=${xi}`;
+      hex.addEventListener('click', () => { pulseCell(hex); clickHexCell(xi, yi, zi); });
+      // Build 3 isometric cube faces inside the hex container
+      const faceTop   = document.createElement('div'); faceTop.className   = 'hex-face hex-face-top';
+      const faceRight = document.createElement('div'); faceRight.className = 'hex-face hex-face-right';
+      const faceLeft  = document.createElement('div'); faceLeft.className  = 'hex-face hex-face-left';
+      hex.appendChild(faceTop);
+      hex.appendChild(faceRight);
+      hex.appendChild(faceLeft);
+      grid.appendChild(hex);
+      hexCells.push({ el: hex, xi, yi, zi, faceTop, faceRight, faceLeft });
+    }
+  }
+  updateHexLabel();
+  updateCubeColors();
+}
+
+function updateHexLabel() {
+  const lab = document.getElementById('cubeHexLabel');
+  if (!lab) return;
+  const N = cubeStepCount();
+  const zi = cubeState.scrubZ;
+  const tag = zi === N - 1 ? '· front' : zi === 0 ? '· back' : '';
+  lab.textContent = `Z ${zi}/${N - 1} ${tag}`;
+}
+
+function clickHexCell(xi, yi, zi) {
+  if (cubeState.layerReveal === 'drill') {
+    // Drill = tap any hex to step to next Z, wrapping
+    stepLayer(1);
+  } else {
+    // Otherwise, picking a hex selects that hue/tone like flat cells
+    clickFlatCell(xi, yi, zi);
+  }
+}
+
+// --- Layer reveal mechanisms ---
+function stepLayer(delta) {
+  const N = cubeStepCount();
+  cubeState.scrubZ = (cubeState.scrubZ + delta + N) % N;
+  // Defer rebuild so the click event that triggered us finishes cleanly first.
+  // On mobile, destroying the tapped element synchronously can cancel the event.
+  setTimeout(() => {
+    if (cubeState.viewMode === 'hex') renderHexView();
+    else if (cubeState.viewMode === 'scrub') renderScrubView();
+  }, 0);
+}
+
+let _cycleTimer = null;
+function startLayerCycle() {
+  stopLayerCycle();
+  _cycleTimer = setInterval(() => {
+    stepLayer(1);
+  }, 1500);
+  const btn = document.getElementById('cubeHexPlay');
+  if (btn) { btn.textContent = '❚❚ pause'; btn.classList.add('active'); }
+}
+function stopLayerCycle() {
+  if (_cycleTimer) clearInterval(_cycleTimer);
+  _cycleTimer = null;
+  const btn = document.getElementById('cubeHexPlay');
+  if (btn) { btn.textContent = '▶ play'; btn.classList.remove('active'); }
+}
+function toggleLayerCycle() {
+  if (_cycleTimer) stopLayerCycle();
+  else startLayerCycle();
+}
+
+function buildCube() {
+  const scene = document.getElementById('cubeScene');
+  if (!scene) return;
+  scene.innerHTML = '';
+  cubeCells.length = 0;
+  const N = cubeStepCount();
+  const { size, gap } = cubeState;
+  const offset = size + gap;
+  const o = -(N - 1) / 2;
+  scene.style.setProperty('--cube-size', size + 'px');
+
+  const faceClasses = ['front', 'back', 'left', 'right', 'top', 'bottom'];
+
+  for (let zi = 0; zi < N; zi++) {
+    for (let yi = 0; yi < N; yi++) {
+      for (let xi = 0; xi < N; xi++) {
+        const cx =  (xi + o) * offset;
+        const cy = -(yi + o) * offset;
+        const cz =  (zi + o) * offset;
+        const cell = document.createElement('div');
+        cell.className = 'cube-cell';
+        cell.style.setProperty('--cube-size', size + 'px');
+        cell.style.transform = `translate3d(${cx}px, ${cy}px, ${cz}px)`;
+        const faces = [];
+        for (const dir of faceClasses) {
+          const f = document.createElement('div');
+          f.className = 'cube-face ' + dir;
+          cell.appendChild(f);
+          faces.push(f);
+        }
+        const tone = clippedTone(yi, N);
+        cell.title = `xi:${xi} · tone ${Math.round(tone)} · zi:${zi}`;
+        cell.addEventListener('click', () => {
+          if (cubeJustDragged) return;
+          // In atmosphere mode, clicking selects the BLENDED hue at this X
+          let hueToSelect;
+          if (cubeState.mode === 'atmosphere') {
+            const xFrac = N <= 1 ? 0 : (xi / (N - 1));
+            const arc = signedArc(state.hue, atmosphereInfo().hue);
+            hueToSelect = mod(state.hue + arc * xFrac, 360);
+          } else {
+            hueToSelect = (xi / Math.max(1, N - 1)) * 360;
+          }
+          setHue(hueToSelect, tone);
+        });
+        scene.appendChild(cell);
+        cubeCells.push({ el: cell, faces, xi, yi, zi });
+      }
+    }
+  }
+  cubeBuilt = true;
+  _prevCubeN = N;
+  updateCubeColors();
+  applyCubeRotation();
+  applyCubeBackground();
+  // Re-apply current view mode (explode factor, or rebuild flat views)
+  setCubeViewMode(cubeState.viewMode);
+}
+
+function updateCubeColors() {
+  if (!cubeBuilt) return;
+  refreshPointillismClass();
+  const N = cubeStepCount();
+  const is3D = cubeState.viewMode === 'cube' || cubeState.viewMode === 'exploded';
+  // Build full N³ color map so pointillism can sample neighbors
+  const colorMap = buildCubeColorMap();
+
+  if (is3D) {
+    for (const c of cubeCells) {
+      const rgb = colorMap[c.zi * N * N + c.yi * N + c.xi];
+      const a = cubeAlphaFor(c.zi);
+      c.el.style.setProperty('--face-color', `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`);
+      const extras = extrasGradientFor(c.xi, c.yi, c.zi, N, colorMap);
+      if (extras) {
+        c.el.style.setProperty('--pointillism', extras);
+      } else {
+        c.el.style.removeProperty('--pointillism');
+      }
+    }
+  }
+  if (cubeState.viewMode === 'grid')  updateFlatCellsFromMap(gridCells,  colorMap, N);
+  if (cubeState.viewMode === 'scrub') updateFlatCellsFromMap(scrubCells, colorMap, N);
+  if (cubeState.viewMode === 'hex')   updateFlatCellsFromMap(hexCells,   colorMap, N);
+
+  const rd = document.getElementById('cubeReadout');
+  if (rd) {
+    let tag = cubeState.mode === 'atmosphere'
+      ? `${cubeState.mode} · ${TIME_OF_DAY[cubeState.timeOfDay]?.name || ''}`
+      : cubeState.mode;
+    if (cubeState.ambient > 0)  tag += ` · amb ${cubeState.ambient}%`;
+    if (cubeState.lighting > 0) tag += ` · light ${cubeState.lighting}%`;
+    if (cubeState.perspective)  tag += ` · perspective`;
+    if (cubeState.monetMode)    tag += ` · monet ${cubeState.monetBandWidth}/${cubeState.monetAccentRatio}`;
+    if (cubeState.pointillism)  tag += ` · pointillism`;
+    if (cubeState.speckles)     tag += ` · speckles`;
+    if (cubeState.calibratedDots) tag += ` · cal-dots`;
+    if (cubeState.greyscale === 'uniform') tag += ` · uniform-grey`;
+    else if (cubeState.greyscale === 'value') tag += ` · value-grey`;
+    if (cubeState.tintedShadows && cubeState.tintedShadows !== 'off') tag += ` · ${cubeState.tintedShadows}`;
+    rd.textContent = `${cubeCells.length} cells · ${N}³ · ${tag}`;
+  }
+  applyCubeBackground();
+}
+
+// Shared updater for grid / scrub / hex flat cell arrays.
+// Hex cells have 3 sub-faces (top/right/left) tinted for isometric cube illusion.
+function updateFlatCellsFromMap(cells, colorMap, N) {
+  for (const c of cells) {
+    const rgb = colorMap[c.zi * N * N + c.yi * N + c.xi];
+    if (!rgb) continue;
+    const a = cubeAlphaFor(c.zi);
+    if (c.faceTop) {
+      // Hex isometric: paint each of the 3 rhombi with a brightness-tinted variant
+      // EXCEPT in uniform-grey mode, where face tints would break the Munker
+      // illusion (the brain needs identical targets, not 3 greys per hex).
+      let topRgb, rightRgb, leftRgb;
+      if (cubeState.greyscale === 'uniform') {
+        topRgb = rightRgb = leftRgb = rgb;
+      } else {
+        topRgb   = tintFace(rgb, HEX_FACE_MUL.top);
+        rightRgb = tintFace(rgb, HEX_FACE_MUL.right);
+        leftRgb  = tintFace(rgb, HEX_FACE_MUL.left);
+      }
+      // Use backgroundColor + backgroundImage separately so the per-face Munker
+      // pattern can layer on top of the face's base color (otherwise the
+      // shorthand `background:` would clobber the image when we set color).
+      c.faceTop.style.backgroundColor   = `rgba(${topRgb[0]},${topRgb[1]},${topRgb[2]},${a})`;
+      c.faceRight.style.backgroundColor = `rgba(${rightRgb[0]},${rightRgb[1]},${rightRgb[2]},${a})`;
+      c.faceLeft.style.backgroundColor  = `rgba(${leftRgb[0]},${leftRgb[1]},${leftRgb[2]},${a})`;
+      // Per-face Munker stripes — each face gets a stripe orientation matching
+      // its iso-cube perspective (top: 60°, left: 90°, right: 120°). When
+      // Munker is off, clear the inline image so the face is plain colour.
+      if (munker.mode !== 'off') {
+        c.faceTop.style.backgroundImage   = buildMunkerPattern(HEX_FACE_MUNKER_ANGLE.top)   || '';
+        c.faceRight.style.backgroundImage = buildMunkerPattern(HEX_FACE_MUNKER_ANGLE.right) || '';
+        c.faceLeft.style.backgroundImage  = buildMunkerPattern(HEX_FACE_MUNKER_ANGLE.left)  || '';
+      } else {
+        c.faceTop.style.backgroundImage   = '';
+        c.faceRight.style.backgroundImage = '';
+        c.faceLeft.style.backgroundImage  = '';
+      }
+    } else {
+      // Flat grid/scrub cells: single background
+      c.el.style.background = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+    }
+    const extras = extrasGradientFor(c.xi, c.yi, c.zi, N, colorMap);
+    if (extras) {
+      c.el.style.setProperty('--pointillism', extras);
+    } else {
+      c.el.style.removeProperty('--pointillism');
+    }
+  }
+}
+
+function applyCubeBackground() {
+  const stage = document.getElementById('cubeStage');
+  if (!stage) return;
+  const fgRgb = rgbAt(state.hue, state.tone, cal.chroma);
+  const fg = `rgb(${fgRgb[0]},${fgRgb[1]},${fgRgb[2]})`;
+  const atmHex = (TIME_OF_DAY[cubeState.timeOfDay] || TIME_OF_DAY.noon).hex;
+  const groundRgb = hexToRgb('#1a1208'); // generic dark earth
+  const ground = `rgb(${groundRgb[0]},${groundRgb[1]},${groundRgb[2]})`;
+  switch (cubeState.background) {
+    case 'solid-fg':  stage.style.background = fg; break;
+    case 'solid-atm': stage.style.background = atmHex; break;
+    case 'sky':       stage.style.background = `linear-gradient(to bottom, ${atmHex} 0%, ${atmHex} 60%, ${ground} 100%)`; break;
+    case 'munker':    stage.style.background = `repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 6px), repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 6px), #888`; break;
+    default:          stage.style.background = `radial-gradient(ellipse at 50% 40%, #1d1d2a 0%, #0a0a10 75%)`;
+  }
+}
+
+function applyCubeRotation() {
+  const scene = document.getElementById('cubeScene');
+  if (!scene) return;
+  scene.style.transform =
+    `translate(-50%, -50%) rotateX(${cubeState.pitch}deg) rotateY(${cubeState.yaw}deg)`;
+  const yv = document.getElementById('cubeYawv');
+  const pv = document.getElementById('cubePitchv');
+  if (yv) yv.textContent = Math.round(cubeState.yaw);
+  if (pv) pv.textContent = Math.round(cubeState.pitch);
+  const ys = document.getElementById('cubeYaw');
+  const ps = document.getElementById('cubePitch');
+  if (ys && document.activeElement !== ys) ys.value = cubeState.yaw;
+  if (ps && document.activeElement !== ps) ps.value = cubeState.pitch;
+}
+
+let cubeJustDragged = false;
+
+//=========================================================================
+// Wheel rendering
+//=========================================================================
+const wheel = document.getElementById('wheel');
+const wctx = wheel.getContext('2d');
+
+function drawWheel() {
+  const W = wheel.width, H = wheel.height;
+  const cx = W / 2, cy = H / 2;
+  // Reserve outer margin for category labels (pills) drawn outside the donut.
+  const labelMargin = 36;
+  const rOuter = W / 2 - labelMargin;
+  const rInner = rOuter * 0.55;
+  const img = wctx.createImageData(W, H);
+  const data = img.data;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - cx, dy = y - cy;
+      const r = Math.hypot(dx, dy);
+      const i = (y * W + x) * 4;
+      if (r > rOuter || r < rInner) {
+        data[i+3] = 0; continue;
+      }
+      // Angle: 0 at top, increasing CW
+      let ang = Math.atan2(dx, -dy) * 180 / Math.PI;
+      ang = mod(ang, 360);
+      const rgb = rgbAt(ang, 50, cal.chroma);
+      data[i] = rgb[0]; data[i+1] = rgb[1]; data[i+2] = rgb[2]; data[i+3] = 255;
+    }
+  }
+  wctx.clearRect(0, 0, W, H);
+  wctx.putImageData(img, 0, 0);
+
+  // Tick marks + category labels for anchors
+  const anchors = calibratedAnchors();
+  wctx.save();
+  wctx.translate(cx, cy);
+  for (const a of anchors) {
+    const rad = (a.a - 90) * Math.PI / 180;
+    const x1 = Math.cos(rad) * (rInner - 6);
+    const y1 = Math.sin(rad) * (rInner - 6);
+    const x2 = Math.cos(rad) * (rOuter + 6);
+    const y2 = Math.sin(rad) * (rOuter + 6);
+    wctx.strokeStyle = `rgb(${a.rgb[0]},${a.rgb[1]},${a.rgb[2]})`;
+    wctx.lineWidth = 3;
+    wctx.beginPath(); wctx.moveTo(x1, y1); wctx.lineTo(x2, y2); wctx.stroke();
+
+    // Category-coded pill label just outside the outer tick.
+    // Lights (Y/M/C) — pale cream pill (the bright/neon category).
+    // Earths (R/G/B) — deep brown pill (the grounded/material category).
+    const lblR = rOuter + 22;
+    const lx = Math.cos(rad) * lblR;
+    const ly = Math.sin(rad) * lblR;
+    const isLight = a.category === 'Light';
+    const pillBg   = isLight ? 'rgba(245,232,180,0.95)' : 'rgba(60,38,28,0.95)';
+    const pillEdge = isLight ? 'rgba(180,150,80,0.9)'   : 'rgba(120,80,50,0.9)';
+    const inkColor = isLight ? '#1a1a1a' : '#f0e8d0';
+    const pillW = 26, pillH = 22, rPill = 5;
+    // Rounded rectangle for the pill
+    wctx.beginPath();
+    const px = lx - pillW / 2, py = ly - pillH / 2;
+    wctx.moveTo(px + rPill, py);
+    wctx.lineTo(px + pillW - rPill, py);
+    wctx.quadraticCurveTo(px + pillW, py, px + pillW, py + rPill);
+    wctx.lineTo(px + pillW, py + pillH - rPill);
+    wctx.quadraticCurveTo(px + pillW, py + pillH, px + pillW - rPill, py + pillH);
+    wctx.lineTo(px + rPill, py + pillH);
+    wctx.quadraticCurveTo(px, py + pillH, px, py + pillH - rPill);
+    wctx.lineTo(px, py + rPill);
+    wctx.quadraticCurveTo(px, py, px + rPill, py);
+    wctx.closePath();
+    wctx.fillStyle = pillBg; wctx.fill();
+    wctx.strokeStyle = pillEdge; wctx.lineWidth = 1.5; wctx.stroke();
+    // Anchor name (Y/M/C/R/G/B) centred in the pill
+    wctx.fillStyle = inkColor;
+    wctx.font = 'bold 14px ui-monospace, monospace';
+    wctx.textAlign = 'center';
+    wctx.textBaseline = 'middle';
+    wctx.fillText(a.name, lx, ly);
+  }
+  wctx.restore();
+}
+
+function placeMarkers() {
+  const wrap = document.getElementById('wheelWrap');
+  const rect = wrap.getBoundingClientRect();
+  const cx = rect.width / 2, cy = rect.height / 2;
+  // Wheel geometry now leaves an outer label margin (drawWheel uses labelMargin=36 over canvas-width 800).
+  // outerRatio = (400 - 36) / 400 = 0.91, innerRatio = outerRatio * 0.55 ≈ 0.5005.
+  // Mid-band ratio for marker placement: (0.91 + 0.5005) / 2 ≈ 0.705.
+  const midRatio = (0.91 + 0.5005) / 2;
+  const r = rect.width / 2 * midRatio;
+  function pos(deg) {
+    const rad = (deg - 90) * Math.PI / 180;
+    return [cx + Math.cos(rad) * r, cy + Math.sin(rad) * r];
+  }
+  const [ax, ay] = pos(state.hue);
+  const [bx, by] = pos(additiveComplementHue(state.hue));
+  const A = document.getElementById('markerA');
+  const B = document.getElementById('markerB');
+  A.style.left = ax + 'px'; A.style.top = ay + 'px';
+  A.style.background = rgbStr(rgbAt(state.hue, 50));
+  B.style.left = bx + 'px'; B.style.top = by + 'px';
+  B.style.background = rgbStr(rgbAt(additiveComplementHue(state.hue), 50));
+}
+
+//=========================================================================
+// Wheel interaction
+//=========================================================================
+function angleFromEvent(e) {
+  const wrap = document.getElementById('wheelWrap');
+  const rect = wrap.getBoundingClientRect();
+  const cx = rect.width / 2, cy = rect.height / 2;
+  const x = e.clientX - rect.left - cx;
+  const y = e.clientY - rect.top - cy;
+  let ang = Math.atan2(x, -y) * 180 / Math.PI;
+  return mod(ang, 360);
+}
+
+let dragging = false;
+document.getElementById('wheelWrap').addEventListener('pointerdown', e => {
+  dragging = true; setHue(angleFromEvent(e));
+  e.target.setPointerCapture?.(e.pointerId);
+});
+window.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  setHue(angleFromEvent(e));
+});
+window.addEventListener('pointerup', () => dragging = false);
+
+function setHue(h, t) {
+  state.hue = mod(h, 360);
+  if (typeof t === 'number') state.tone = clamp(t, 0, 100);
+  document.getElementById('inH').value = Math.round(state.hue);
+  document.getElementById('inHv').textContent = Math.round(state.hue);
+  document.getElementById('inT').value = Math.round(state.tone);
+  document.getElementById('inTv').textContent = Math.round(state.tone);
+  document.getElementById('hexIn').value = rgbToHex(rgbAt(state.hue, state.tone));
+  renderAll();
+}
+
+//=========================================================================
+// Tonal ramps + grids
+//=========================================================================
+function buildRamp(container, hue) {
+  const steps = cal.steps;
+  container.innerHTML = '';
+  const wrap = document.createElement('div'); wrap.className = 'ramp';
+  const lab = document.createElement('div'); lab.className = 'label';
+  lab.textContent = `${Math.round(hue)}°  ${rgbToHex(rgbAt(hue, 50))}`;
+  const strip = document.createElement('div'); strip.className = 'strip';
+  for (let i = 0; i < steps; i++) {
+    const t = (i / (steps - 1)) * 100;
+    const c = rgbAt(hue, t);
+    const cell = document.createElement('div');
+    cell.style.background = rgbStr(c);
+    cell.title = `tone ${Math.round(t)} · ${rgbToHex(c)}`;
+    cell.addEventListener('click', e => {
+      if (e.shiftKey) pin(rgbToHex(c));
+      else setHue(hue, t);
+    });
+    strip.appendChild(cell);
+  }
+  wrap.appendChild(lab); wrap.appendChild(strip);
+  container.appendChild(wrap);
+}
+
+function buildTonalGrid() {
+  const grid = document.getElementById('tonalGrid');
+  grid.innerHTML = '';
+  const named = [
+    ['Y', [255,255,0]], ['M', [255,0,255]], ['C', [0,255,255]],
+    ['R', [255,0,0]],   ['G', [0,255,0]],   ['B', [0,0,255]],
+  ];
+  const angleOf = rgb => {
+    let best = 0, bestD = Infinity;
+    for (let d = 0; d < 360; d++) {
+      const c = hueAtAngle(d);
+      const dist = (c[0]-rgb[0])**2 + (c[1]-rgb[1])**2 + (c[2]-rgb[2])**2;
+      if (dist < bestD) { bestD = dist; best = d; }
+    }
+    return best;
+  };
+  // Build list of (label, angle) — named CMY+RGB at 6, otherwise evenly-spaced
+  let rows;
+  if (cal.hueRows <= 6) {
+    rows = named.map(([name, rgb]) => {
+      const ang = angleOf(rgb);
+      return { label: `${name}  ${Math.round(ang)}°`, ang };
+    });
+  } else {
+    rows = [];
+    for (let i = 0; i < cal.hueRows; i++) {
+      const ang = (i / cal.hueRows) * 360;
+      rows.push({ label: `${Math.round(ang)}°`, ang });
+    }
+  }
+  for (const { label, ang } of rows) {
+    const row = document.createElement('div'); row.className = 'ramp';
+    const lab = document.createElement('div'); lab.className = 'label';
+    lab.textContent = label;
+    const strip = document.createElement('div'); strip.className = 'strip';
+    for (let i = 0; i < cal.steps; i++) {
+      const t = (i / (cal.steps - 1)) * 100;
+      const c = rgbAt(ang, t);
+      const cell = document.createElement('div');
+      cell.style.background = rgbStr(c);
+      cell.title = `${label.trim()} · tone ${Math.round(t)} · ${rgbToHex(c)}`;
+      cell.addEventListener('click', e => {
+        if (e.shiftKey) pin(rgbToHex(c));
+        else setHue(ang, t);
+      });
+      strip.appendChild(cell);
+    }
+    row.appendChild(lab); row.appendChild(strip);
+    grid.appendChild(row);
+  }
+}
+
+//=========================================================================
+// Overlays
+//=========================================================================
+function renderOverlay() {
+  const a = rgbAt(state.hue, state.tone);
+  const b = rgbAt(additiveComplementHue(state.hue), state.tone);
+  const c = currentCentre();
+  document.getElementById('ovA').style.background = '#000';
+  document.getElementById('ovCircA').setAttribute('fill', rgbStr(a));
+  document.getElementById('ovCircB').setAttribute('fill', rgbStr(b));
+
+  // Stack grid: pair across tone variations, painted as the chosen centre
+  const sg = document.getElementById('stackGrid');
+  sg.innerHTML = '';
+  const stackN = cal.steps;
+  sg.style.display = 'grid';
+  sg.style.gridTemplateColumns = `repeat(${stackN}, 1fr)`;
+  sg.style.gap = stackN > 15 ? '1px' : '2px';
+  for (let i = 0; i < stackN; i++) {
+    for (let j = 0; j < stackN; j++) {
+      const ta = (i / (stackN - 1)) * 100;
+      const tb = (j / (stackN - 1)) * 100;
+      const ca = rgbAt(state.hue, ta);
+      const cb = rgbAt(additiveComplementHue(state.hue), tb);
+      const mid = tonalCentre(ca, cb, state.centreMode, state.centreBias);
+      const cell = document.createElement('div');
+      cell.className = 'stack-cell';
+      cell.style.aspectRatio = '1';
+      cell.style.borderRadius = stackN > 18 ? '1px' : '3px';
+      cell.style.background = rgbStr(mid);
+      cell.title = `A:${Math.round(ta)} · B:${Math.round(tb)} → ${state.centreMode} = ${rgbToHex(mid)}`;
+      sg.appendChild(cell);
+    }
+  }
+
+  // A · centre · B trio
+  const so = document.getElementById('sumOut');
+  so.innerHTML = '';
+  const aDiv = document.createElement('div');
+  aDiv.style.background = rgbStr(a);
+  aDiv.textContent = `A ${rgbToHex(a)}`;
+  const cDiv = document.createElement('div');
+  cDiv.style.background = rgbStr(c);
+  cDiv.textContent = `centre ${rgbToHex(c)}`;
+  const bDiv = document.createElement('div');
+  bDiv.style.background = rgbStr(b);
+  bDiv.textContent = `B ${rgbToHex(b)}`;
+  so.appendChild(aDiv); so.appendChild(cDiv); so.appendChild(bDiv);
+
+  // Converging strips: full-chroma A → centre → full-chroma B at varying tone
+  const cg = document.getElementById('convergeGrid');
+  cg.innerHTML = '';
+  const stops = Math.min(Math.max(cal.steps, 9), 21);
+  const tones = [25, 50, 75];
+  for (const t of tones) {
+    const av = rgbAt(state.hue, t);
+    const bv = rgbAt(additiveComplementHue(state.hue), t);
+    const mid = tonalCentre(av, bv, state.centreMode, state.centreBias);
+    const row = document.createElement('div'); row.className = 'ramp';
+    const lab = document.createElement('div'); lab.className = 'label';
+    lab.textContent = `tone ${t}`;
+    const strip = document.createElement('div'); strip.className = 'strip';
+    const left = gradientFromAtoCentre(av, mid, Math.ceil(stops/2));
+    const right = gradientFromAtoCentre(mid, bv, Math.ceil(stops/2)).slice(1);
+    const all = left.concat(right);
+    for (const c2 of all) {
+      const cell = document.createElement('div');
+      cell.style.background = rgbStr(c2);
+      cell.title = rgbToHex(c2);
+      cell.addEventListener('click', e => {
+        if (e.shiftKey) pin(rgbToHex(c2));
+      });
+      strip.appendChild(cell);
+    }
+    row.appendChild(lab); row.appendChild(strip);
+    cg.appendChild(row);
+  }
+}
+
+//=========================================================================
+// Palette picker (harmony)
+//=========================================================================
+function harmonyAngles(name, h) {
+  switch (name) {
+    case 'comp': return [h, h + 180];
+    case 'split': return [h, h + 150, h + 210];
+    case 'tri': {
+      // Triad = the 3 Light anchors (Y, M, C). Filter by category so it works
+      // regardless of how the angle-sorted array orders them.
+      return calibratedAnchors().filter(x => x.category === 'Light').map(x => x.a);
+    }
+    case 'triRGB': {
+      // Triad = the 3 Earth anchors (R, G, B).
+      return calibratedAnchors().filter(x => x.category === 'Earth').map(x => x.a);
+    }
+    case 'tet': return [h, h + 90, h + 180, h + 270];
+    case 'ana': return [h - 30, h, h + 30];
+    case 'warmcool': {
+      // Warm = R/Y/M side; Cool = C/G/B side. Pick the closest warm + its cool complement.
+      return [h, h + 180, h + 30, h + 210];
+    }
+  }
+  return [h];
+}
+
+function renderPicker() {
+  const opts = ['comp', 'split', 'tri', 'triRGB', 'tet', 'ana', 'warmcool'];
+  const labels = { comp:'Comp', split:'Split', tri:'CMY', triRGB:'RGB', tet:'Tetrad', ana:'Analog', warmcool:'W/C' };
+  const prev = document.getElementById('harmonyPreview');
+  prev.innerHTML = '';
+  for (const o of opts) {
+    const el = document.createElement('div');
+    el.className = 'opt' + (state.harmony === o ? ' active' : '');
+    const pv = document.createElement('div'); pv.className = 'pv';
+    const angs = harmonyAngles(o, state.hue);
+    for (const a of angs) {
+      const sw = document.createElement('div');
+      sw.style.background = rgbStr(rgbAt(a, 50));
+      pv.appendChild(sw);
+    }
+    el.appendChild(pv);
+    const lab = document.createElement('div'); lab.textContent = labels[o];
+    el.appendChild(lab);
+    el.addEventListener('click', () => { state.harmony = o; renderPicker(); renderSuggested(); });
+    prev.appendChild(el);
+  }
+}
+
+function renderSuggested() {
+  const out = document.getElementById('suggested');
+  out.innerHTML = '';
+  const angs = harmonyAngles(state.harmony, state.hue);
+  const centre = currentCentre();
+  // For each hue: deep / mid / full / light + the centre as the row's neutral
+  const tones = [20, 35, 50, 75];
+  for (const a of angs) {
+    for (const t of tones) {
+      const rgb = rgbAt(a, t);
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.style.background = rgbStr(rgb);
+      const hex = document.createElement('div');
+      hex.className = 'hex';
+      hex.textContent = rgbToHex(rgb);
+      cell.appendChild(hex);
+      cell.addEventListener('click', e => {
+        if (e.shiftKey) pin(rgbToHex(rgb));
+        else setHue(a, t);
+      });
+      out.appendChild(cell);
+    }
+    // centre cell at the end of each hue row
+    const cCell = document.createElement('div');
+    cCell.className = 'cell';
+    cCell.style.background = rgbStr(centre);
+    cCell.style.outline = '1px dashed rgba(255,255,255,.25)';
+    cCell.style.outlineOffset = '-3px';
+    const cHex = document.createElement('div');
+    cHex.className = 'hex';
+    cHex.textContent = `· ${rgbToHex(centre)}`;
+    cCell.appendChild(cHex);
+    cCell.addEventListener('click', e => {
+      if (e.shiftKey) pin(rgbToHex(centre));
+    });
+    out.appendChild(cCell);
+  }
+  while (out.children.length % 8 !== 0) {
+    const sp = document.createElement('div');
+    out.appendChild(sp);
+  }
+}
+
+function renderCentreGradients() {
+  const out = document.getElementById('centreGradients');
+  out.innerHTML = '';
+  const angs = harmonyAngles(state.harmony, state.hue);
+  const centre = currentCentre();
+  const stops = 11;
+  for (const a of angs) {
+    const full = rgbAt(a, 50);
+    const grad = gradientFromAtoCentre(full, centre, stops);
+    const row = document.createElement('div'); row.className = 'ramp';
+    const lab = document.createElement('div'); lab.className = 'label';
+    lab.textContent = `${Math.round(mod(a, 360))}° → ·`;
+    const strip = document.createElement('div'); strip.className = 'strip';
+    for (let i = 0; i < grad.length; i++) {
+      const c2 = grad[i];
+      const cell = document.createElement('div');
+      cell.style.background = rgbStr(c2);
+      cell.title = `${rgbToHex(c2)}`;
+      cell.addEventListener('click', e => {
+        if (e.shiftKey) pin(rgbToHex(c2));
+        else if (i === 0) setHue(a, 50);
+      });
+      strip.appendChild(cell);
+    }
+    row.appendChild(lab); row.appendChild(strip);
+    out.appendChild(row);
+  }
+}
+
+function pin(hex) {
+  if (!state.pinned.includes(hex)) state.pinned.push(hex);
+  renderPinned();
+}
+function renderPinned() {
+  const out = document.getElementById('pinned');
+  out.innerHTML = '';
+  for (const hex of state.pinned) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.style.background = hex;
+    const lab = document.createElement('div'); lab.className = 'hex'; lab.textContent = hex;
+    cell.appendChild(lab);
+    cell.addEventListener('click', () => {
+      state.pinned = state.pinned.filter(p => p !== hex);
+      renderPinned();
+    });
+    out.appendChild(cell);
+  }
+  if (typeof renderMinimalPalette === 'function') renderMinimalPalette();
+}
+
+//=========================================================================
+// Inspector
+//=========================================================================
+function renderInspector() {
+  const a = rgbAt(state.hue, state.tone);
+  const bHue = additiveComplementHue(state.hue);
+  const b = rgbAt(bHue, state.tone);
+  const c = currentCentre();
+  document.getElementById('insA').style.background = rgbStr(a);
+  document.getElementById('insA').textContent = rgbToHex(a);
+  document.getElementById('insB').style.background = rgbStr(b);
+  document.getElementById('insB').textContent = rgbToHex(b);
+  document.getElementById('bigA').style.background = rgbStr(a);
+  document.getElementById('bigA').textContent = `A ${rgbToHex(a)}`;
+  document.getElementById('bigC').style.background = rgbStr(c);
+  document.getElementById('bigC').textContent = `· ${rgbToHex(c)}`;
+  document.getElementById('bigB').style.background = rgbStr(b);
+  document.getElementById('bigB').textContent = `B ${rgbToHex(b)}`;
+
+  const fmt = (rgb, h) => `
+    hex   ${rgbToHex(rgb)}<br>
+    rgb   ${rgb.join(', ')}<br>
+    angle ${Math.round(h)}°<br>
+    tone  ${Math.round(state.tone)}<br>
+    chr   ${cal.chroma}%`;
+  document.getElementById('insAdata').innerHTML = fmt(a, state.hue);
+  document.getElementById('insBdata').innerHTML = fmt(b, bHue);
+  const lum = Math.round(0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]);
+  document.getElementById('sumData').innerHTML = `
+    mode  ${state.centreMode}<br>
+    bias  ${state.centreBias}/100<br>
+    hex   ${rgbToHex(c)}<br>
+    rgb   ${c.join(', ')}<br>
+    lum   ${lum}/255`;
+
+  // Centre preview bar at top of centre column
+  const cpA = document.getElementById('cpA');
+  const cpB = document.getElementById('cpB');
+  const cpC = document.getElementById('cpC');
+  if (cpA) {
+    cpA.style.background = rgbStr(a); cpA.textContent = `A ${rgbToHex(a)}`;
+    cpB.style.background = rgbStr(b); cpB.textContent = `B ${rgbToHex(b)}`;
+    cpC.style.background = rgbStr(c); cpC.textContent = `centre · ${state.centreMode} · ${rgbToHex(c)}`;
+  }
+}
+
+//=========================================================================
+// Tabs
+//=========================================================================
+document.querySelectorAll('.tab-bar button').forEach(b => {
+  b.addEventListener('click', () => {
+    state.tab = b.dataset.tab;
+    document.querySelectorAll('.tab-bar button').forEach(x => x.classList.toggle('active', x === b));
+    document.getElementById('tab-tones').style.display = state.tab === 'tones' ? '' : 'none';
+    document.getElementById('tab-overlay').style.display = state.tab === 'overlay' ? '' : 'none';
+    document.getElementById('tab-picker').style.display = state.tab === 'picker' ? '' : 'none';
+    document.getElementById('tab-cube').style.display = state.tab === 'cube' ? '' : 'none';
+    if (state.tab === 'cube' && !cubeBuilt) buildCube();
+  });
+});
+
+//=========================================================================
+// Wiring
+//=========================================================================
+function bindRange(id, valId, prop, after) {
+  const el = document.getElementById(id);
+  const v = document.getElementById(valId);
+  el.addEventListener('input', () => {
+    const n = parseInt(el.value, 10);
+    v.textContent = n;
+    if (prop) cal[prop] = n;
+    after?.(n);
+    renderAll();
+  });
+}
+bindRange('cfgY', 'cfgYv', 'Y');
+bindRange('cfgM', 'cfgMv', 'M');
+bindRange('cfgC', 'cfgCv', 'C');
+bindRange('cfgRot', 'cfgRotv', 'rot');
+bindRange('cfgChroma', 'cfgChromav', 'chroma');
+
+// Helper: when Tones or Hue rows change, ensure the all-hue grid is visible
+// and show a live count so the user feels the change.
+function flashAllHueGrid() {
+  const det = document.getElementById('allHueDetails');
+  if (det && !det.open) det.open = true;
+  const cnt = document.getElementById('allHueCount');
+  if (cnt) cnt.textContent = `· ${cal.hueRows} rows × ${cal.steps} tones`;
+  // Switch to the tones tab if user is elsewhere so they see the live grid
+  if (state.tab !== 'tones') {
+    const btn = document.querySelector('.tab-bar button[data-tab="tones"]');
+    if (btn) btn.click();
+  }
+}
+bindRange('cfgSteps',    'cfgStepsv',    'steps',    flashAllHueGrid);
+bindRange('cfgHueRows',  'cfgHueRowsv',  'hueRows',  flashAllHueGrid);
+
+document.getElementById('inH').addEventListener('input', e => {
+  setHue(parseInt(e.target.value, 10));
+});
+document.getElementById('inT').addEventListener('input', e => {
+  setHue(state.hue, parseInt(e.target.value, 10));
+});
+document.getElementById('hexIn').addEventListener('change', e => {
+  const v = e.target.value.trim();
+  if (/^#?[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v)) {
+    const h = v.startsWith('#') ? v : '#' + v;
+    setHue(angleForHex(h), state.tone);
+  }
+});
+document.getElementById('addPin').addEventListener('click', () => {
+  pin(rgbToHex(rgbAt(state.hue, state.tone)));
+});
+
+document.querySelectorAll('#centreModes button').forEach(b => {
+  b.addEventListener('click', () => {
+    state.centreMode = b.dataset.m;
+    document.querySelectorAll('#centreModes button').forEach(x =>
+      x.classList.toggle('active', x === b));
+    renderAll();
+  });
+});
+document.getElementById('centreW').addEventListener('input', e => {
+  state.centreBias = parseInt(e.target.value, 10);
+  document.getElementById('centreWv').textContent = state.centreBias;
+  renderAll();
+});
+
+// Munker filter wiring
+document.getElementById('munkerMode').addEventListener('change', e => {
+  munker.mode = e.target.value; applyMunker();
+});
+document.getElementById('munkerPattern').addEventListener('change', e => {
+  munker.pattern = e.target.value; applyMunker();
+});
+function bindMunkerRange(id, valId, prop) {
+  const el = document.getElementById(id);
+  const v  = document.getElementById(valId);
+  el.addEventListener('input', () => {
+    const n = parseInt(el.value, 10);
+    v.textContent = n;
+    munker[prop] = n;
+    applyMunker();
+  });
+}
+bindMunkerRange('munkerSpacing', 'munkerSpacingv', 'spacing');
+bindMunkerRange('munkerThick',   'munkerThickv',   'thick');
+bindMunkerRange('munkerOpacity', 'munkerOpacityv', 'opacity');
+bindMunkerRange('munkerSpeed',   'munkerSpeedv',   'speed');
+document.getElementById('munkerAnimate').addEventListener('change', e => {
+  munker.animate = e.target.value;
+  applyMunker();
+});
+
+// Munker illusion preset — auto-config the cube and Munker for the classic
+// Munker-White trick: greyscale targets + alternating opaque colored stripes
+// at full coverage. With grey cells underneath, the brain assimilates the
+// stripe colour into the cell.
+document.getElementById('munkerIllusionPreset').addEventListener('click', () => {
+  // Cube → UNIFORM grey (every cell the same #888). The Munker illusion
+  // requires identical targets — per-cell value-greys give the brain too much
+  // tonal info and the misdirection misfires.
+  cubeState.greyscale = 'uniform';
+  document.getElementById('cubeGreyscale').value = 'uniform';
+  updateCubeColors();
+
+  // Munker → vertical alternating A/B stripes, 8px wide, NO gap, full opacity.
+  // In iso hex view, each face overrides this with its own stripe angle (60°
+  // top, 90° left, 120° right) — but the global pattern still matters for
+  // non-hex surfaces (the wheel, swatches, etc.) where the illusion also fires.
+  munker.mode    = 'v';      document.getElementById('munkerMode').value    = 'v';
+  munker.pattern = 'AB';     document.getElementById('munkerPattern').value = 'AB';
+  munker.spacing = 0;        document.getElementById('munkerSpacing').value = 0;
+  document.getElementById('munkerSpacingv').textContent = '0';
+  munker.thick   = 8;        document.getElementById('munkerThick').value   = 8;
+  document.getElementById('munkerThickv').textContent = '8';
+  munker.opacity = 100;      document.getElementById('munkerOpacity').value = 100;
+  document.getElementById('munkerOpacityv').textContent = '100';
+  // Animation — Brandon noticed scrolling makes the illusion stronger; motion
+  // forces the brain to integrate stripes with cell colour rather than seeing
+  // them as separate. Diagonal pan oscillates all 3 face directions in sync.
+  munker.animate = 'diag';   document.getElementById('munkerAnimate').value = 'diag';
+  munker.speed   = 4;        document.getElementById('munkerSpeed').value   = 4;
+  document.getElementById('munkerSpeedv').textContent = '4';
+  // Calibrated dots — half grey + half palette dots provide chroma material
+  // the brain mixes with the moving stripes. Optical-averaging means the
+  // overall field still reads as uniform grey, but locally the illusion fires.
+  cubeState.calibratedDots = true;
+  document.getElementById('cubeCalibratedDots').value = 'on';
+  applyMunker();
+});
+
+document.getElementById('munkerReset').addEventListener('click', () => {
+  munker.mode='off'; document.getElementById('munkerMode').value='off';
+  munker.pattern='white'; document.getElementById('munkerPattern').value='white';
+  munker.spacing=10; document.getElementById('munkerSpacing').value=10;
+  document.getElementById('munkerSpacingv').textContent='10';
+  munker.thick=5; document.getElementById('munkerThick').value=5;
+  document.getElementById('munkerThickv').textContent='5';
+  munker.opacity=100; document.getElementById('munkerOpacity').value=100;
+  document.getElementById('munkerOpacityv').textContent='100';
+  munker.animate='off'; document.getElementById('munkerAnimate').value='off';
+  applyMunker();
+});
+
+// Cube tone-range sliders — recolor only (no rebuild)
+function bindCubeToneSlider(id, valId, prop) {
+  const el = document.getElementById(id);
+  const v  = document.getElementById(valId);
+  el.addEventListener('input', () => {
+    const n = parseInt(el.value, 10);
+    v.textContent = n;
+    cubeState[prop] = n;
+    updateCubeColors();
+  });
+}
+bindCubeToneSlider('cubeToneMin', 'cubeToneMinv', 'toneMin');
+bindCubeToneSlider('cubeToneMax', 'cubeToneMaxv', 'toneMax');
+
+// Pointillism + greyscale toggles
+document.getElementById('cubePointillism').addEventListener('change', e => {
+  cubeState.pointillism = (e.target.value === 'on');
+  updateCubeColors();
+});
+document.getElementById('cubeSpeckles').addEventListener('change', e => {
+  cubeState.speckles = (e.target.value === 'on');
+  updateCubeColors();
+});
+document.getElementById('cubeCalibratedDots').addEventListener('change', e => {
+  cubeState.calibratedDots = (e.target.value === 'on');
+  updateCubeColors();
+});
+document.getElementById('cubeGreyscale').addEventListener('change', e => {
+  cubeState.greyscale = e.target.value; // 'off' | 'value' | 'uniform'
+  updateCubeColors();
+});
+document.getElementById('cubeTintedShadows').addEventListener('change', e => {
+  cubeState.tintedShadows = e.target.value;
+  updateCubeColors();
+});
+document.getElementById('cubePerspective').addEventListener('change', e => {
+  cubeState.perspective = (e.target.value === 'on');
+  updateCubeColors();
+});
+document.getElementById('cubeMonet').addEventListener('change', e => {
+  cubeState.monetMode = (e.target.value === 'on');
+  updateCubeColors();
+});
+document.getElementById('cubeMonetBand').addEventListener('input', e => {
+  cubeState.monetBandWidth = parseInt(e.target.value, 10);
+  document.getElementById('cubeMonetBandv').textContent = e.target.value;
+  updateCubeColors();
+});
+document.getElementById('cubeMonetAccent').addEventListener('input', e => {
+  cubeState.monetAccentRatio = parseInt(e.target.value, 10);
+  document.getElementById('cubeMonetAccentv').textContent = e.target.value;
+  updateCubeColors();
+});
+
+// Cube control wiring
+function bindCubeRange(id, valId, prop, mode) {
+  // mode: 'rebuild' | 'rotate' | 'resize'
+  const el = document.getElementById(id);
+  const v = document.getElementById(valId);
+  el.addEventListener('input', () => {
+    const n = parseInt(el.value, 10);
+    v.textContent = n;
+    cubeState[prop] = n;
+    if (mode === 'rotate') applyCubeRotation();
+    else buildCube(); // rebuild covers structure + size + gap changes
+  });
+}
+bindCubeRange('cubeSize',    'cubeSizev',    'size',    'rebuild');
+bindCubeRange('cubeGap',     'cubeGapv',     'gap',     'rebuild');
+bindCubeRange('cubeYaw',     'cubeYawv',     'yaw',     'rotate');
+bindCubeRange('cubePitch',   'cubePitchv',   'pitch',   'rotate');
+
+// Alpha needs its own handler since it only re-tints, doesn't rebuild structure
+document.getElementById('cubeAlpha').addEventListener('input', e => {
+  const n = parseInt(e.target.value, 10);
+  document.getElementById('cubeAlphav').textContent = n;
+  cubeState.alpha = n;
+  updateCubeColors();
+});
+
+// Depth mode: chroma vs warmth vs atmosphere — recolor only
+document.getElementById('cubeMode').addEventListener('change', e => {
+  cubeState.mode = e.target.value;
+  updateCubeColors();
+});
+
+// Time of day — recolor only (and refresh background since it can use atm colour)
+document.getElementById('cubeTime').addEventListener('change', e => {
+  cubeState.timeOfDay = e.target.value;
+  _atmCache.key = ''; // invalidate
+  updateCubeColors();
+});
+
+// Background underlay — paint only
+document.getElementById('cubeBg').addEventListener('change', e => {
+  cubeState.background = e.target.value;
+  applyCubeBackground();
+});
+
+// View mode (cube / exploded / grid / scrub)
+document.getElementById('cubeViewMode').addEventListener('change', e => {
+  setCubeViewMode(e.target.value);
+});
+
+// Ambient atmosphere wash — recolor only
+document.getElementById('cubeAmbient').addEventListener('input', e => {
+  const n = parseInt(e.target.value, 10);
+  document.getElementById('cubeAmbientv').textContent = n;
+  cubeState.ambient = n;
+  updateCubeColors();
+});
+
+// Explode factor — only meaningful in 'exploded' view
+document.getElementById('cubeExplode').addEventListener('input', e => {
+  const n = parseInt(e.target.value, 10);
+  document.getElementById('cubeExplodev').textContent = n;
+  cubeState.explode = n / 100;  // 100..500 → 1.0..5.0
+  if (cubeState.viewMode === 'exploded') applyCubeExplode();
+});
+
+// Scrub Z — only used in 'scrub' view
+document.getElementById('cubeScrubZ').addEventListener('input', e => {
+  cubeState.scrubZ = parseInt(e.target.value, 10);
+  if (cubeState.viewMode === 'scrub') {
+    renderScrubView();  // rebuild for new Z (cells now reference different zi)
+  }
+});
+
+// Hex view step / play / next bindings
+document.getElementById('cubeHexPrev').addEventListener('click', () => {
+  stopLayerCycle();
+  stepLayer(-1);
+});
+document.getElementById('cubeHexNext').addEventListener('click', () => {
+  stopLayerCycle();
+  stepLayer(1);
+});
+document.getElementById('cubeHexPlay').addEventListener('click', toggleLayerCycle);
+
+// Layer reveal mode dropdown (only meaningful in hex view)
+document.getElementById('cubeLayerReveal').addEventListener('change', e => {
+  cubeState.layerReveal = e.target.value;
+  // Auto-cycle starts/stops based on selection
+  if (cubeState.viewMode === 'hex') {
+    stopLayerCycle();
+    if (cubeState.layerReveal === 'cycle') startLayerCycle();
+  }
+});
+
+// Lighting strength — recolor only
+document.getElementById('cubeLighting').addEventListener('input', e => {
+  const n = parseInt(e.target.value, 10);
+  document.getElementById('cubeLightingv').textContent = n;
+  cubeState.lighting = n;
+  updateCubeColors();
+});
+
+// Warmth-distance, Yellow boost, Back fade — recolor only
+function bindCubeRecolor(id, valId, prop) {
+  const el = document.getElementById(id);
+  const v  = document.getElementById(valId);
+  el.addEventListener('input', () => {
+    const n = parseInt(el.value, 10);
+    v.textContent = n;
+    cubeState[prop] = n;
+    updateCubeColors();
+  });
+}
+bindCubeRecolor('cubeWarmth',   'cubeWarmthv',   'warmthDepth');
+bindCubeRecolor('cubeYellow',   'cubeYellowv',   'yellowBoost');
+bindCubeRecolor('cubeBackFade', 'cubeBackFadev', 'backFade');
+
+// Preset views
+function setCubeView(yaw, pitch) {
+  cubeState.yaw = yaw; cubeState.pitch = pitch;
+  document.getElementById('cubeYaw').value = yaw;
+  document.getElementById('cubePitch').value = pitch;
+  applyCubeRotation();
+}
+document.getElementById('cubeReset').addEventListener('click', () => setCubeView(30, -22));
+document.getElementById('cubeFront').addEventListener('click', () => setCubeView(0, 0));
+document.getElementById('cubeIso').addEventListener('click',   () => setCubeView(45, -30));
+document.getElementById('cubeTop').addEventListener('click',   () => setCubeView(0, -85));
+
+// Drag-to-orbit removed — was causing lag on mobile. Use Yaw/Pitch sliders or
+// the preset view buttons (Reset / Front-on / Iso / Top-down) instead.
+
+// Marker drag
+['markerA','markerB'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    dragging = true;
+    if (id === 'markerB') {
+      // dragging B sets A as opposite
+      const onMove = ev => setHue(angleFromEvent(ev) + 180);
+      const up = () => { dragging = false; window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', up); };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', up);
+    }
+  });
+});
+
+//=========================================================================
+// Paint Mix · Pigment Solver
+//=========================================================================
+
+// Screen blend (additive light)
+function screenBlend(a, b) {
+  return [
+    Math.round(255 - (255 - a[0]) * (255 - b[0]) / 255),
+    Math.round(255 - (255 - a[1]) * (255 - b[1]) / 255),
+    Math.round(255 - (255 - a[2]) * (255 - b[2]) / 255),
+  ];
+}
+
+// CMY subtractive pigment mix at ratio t (0=all A, 1=all B)
+// Converts both to CMY ink density, adds proportionally, converts back.
+function pigmentMix(a, b, t = 0.5) {
+  // CMY = 1 - RGB/255  (ink density: 0=no ink, 1=full ink)
+  const ac = a.map(v => 1 - v / 255);
+  const bc = b.map(v => 1 - v / 255);
+  const mc = ac.map((av, i) => av * (1 - t) + bc[i] * t);
+  return mc.map(v => Math.round((1 - v) * 255));
+}
+
+// HSV-style chroma: max(R,G,B) - min(R,G,B), normalised 0-1
+function chromaOf([r, g, b]) {
+  return (Math.max(r, g, b) - Math.min(r, g, b)) / 255;
+}
+
+// Mud factor: how much chroma is destroyed by the mix (0=none, 1=total mud)
+function mudFactor(a, b, t = 0.5) {
+  const result = pigmentMix(a, b, t);
+  const inCh = Math.max(chromaOf(a), chromaOf(b));
+  if (inCh === 0) return 0;
+  const resCh = chromaOf(result);
+  return Math.max(0, 1 - resCh / inCh);
+}
+
+// White tint: blend toward [255,255,255]
+function whiteTint(rgb, w) {
+  return rgb.map(c => Math.round(c + (255 - c) * w));
+}
+
+// Hue angle of an RGB colour (degrees, 0=red, goes round)
+function hueAngleOf([r, g, b]) {
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const d = max - min;
+  let h;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0));
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return (h / 6) * 360;
+}
+
+// Wheel-approach solver: find the two calibrated anchor pigments bracketing the
+// target hue, compute the ideal linear mix ratio, and return their swatches.
+function wheelApproachSolver(targetRgb) {
+  // Six calibrated anchor hues as tube pigments
+  const anchors = calibratedAnchors(); // sorted by wheel angle
+  const tHue = hueAngleOf(targetRgb);
+
+  // Find the two adjacent anchors on either side of the target hue
+  let before = anchors[anchors.length - 1];
+  let after  = anchors[0];
+  for (let i = 0; i < anchors.length; i++) {
+    const a = anchors[i];
+    const next = anchors[(i + 1) % anchors.length];
+    const aH = a.a, nH = mod(next.a, 360);
+    // Normalise span handling wrap-around
+    const span = mod(nH - aH, 360);
+    const off  = mod(tHue - aH, 360);
+    if (off <= span) { before = a; after = next; break; }
+  }
+
+  // Mix ratio: t = how far target is between before and after
+  const span = mod(after.a - before.a, 360);
+  const off  = mod(tHue - before.a, 360);
+  const t = span === 0 ? 0.5 : clamp(off / span, 0, 1);
+
+  const p1Rgb = [...before.rgb];
+  const p2Rgb = [...after.rgb];
+  const resultRgb = pigmentMix(p1Rgb, p2Rgb, t);
+  const approachChroma = chromaOf(resultRgb);
+  const targetChroma   = chromaOf(targetRgb);
+  const chromaRatio = targetChroma > 0 ? approachChroma / targetChroma : 1;
+
+  return {
+    p1: { name: before.name, rgb: p1Rgb, pct: Math.round((1 - t) * 100) },
+    p2: { name: after.name,  rgb: p2Rgb, pct: Math.round(t * 100) },
+    result: resultRgb,
+    chromaPct: Math.round(chromaRatio * 100),
+  };
+}
+
+// Angle distance between A and B on the wheel (0-180)
+function wheelAngleDist(a, b) {
+  const d = mod(b - a, 360);
+  return d > 180 ? 360 - d : d;
+}
+
+let pmMode = 'additive'; // 'additive' | 'subtractive'
+
+function renderPaintMix() {
+  const aRgb = rgbAt(state.hue, state.tone);
+  const bHue = additiveComplementHue(state.hue);
+  const bRgb = rgbAt(bHue, state.tone);
+
+  const aHex = rgbToHex(aRgb);
+  const bHex = rgbToHex(bRgb);
+
+  const setColor = (id, rgb, label='') => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.background = rgbToHex(rgb);
+    const lum = 0.2126*rgb[0] + 0.7152*rgb[1] + 0.0722*rgb[2];
+    el.style.color = lum > 140 ? 'rgba(0,0,0,.7)' : 'rgba(255,255,255,.85)';
+    el.textContent = label || rgbToHex(rgb);
+  };
+
+  const setBar = (fillId, valId, pct, label='') => {
+    const f = document.getElementById(fillId);
+    const v = document.getElementById(valId);
+    if (f) f.style.width = clamp(pct, 0, 100) + '%';
+    if (v) v.textContent = label || Math.round(pct) + '%';
+  };
+
+  // ── Additive panel ──
+  if (pmMode === 'additive') {
+    setColor('pm-add-a', aRgb, aHex);
+    setColor('pm-add-b', bRgb, bHex);
+    const screenResult = screenBlend(aRgb, bRgb);
+    setColor('pm-add-result', screenResult, rgbToHex(screenResult));
+
+    const channels = ['r','g','b'];
+    const labels = ['pm-add-rbar','pm-add-gbar','pm-add-bbar'];
+    const vals   = ['pm-add-rv','pm-add-gv','pm-add-bv'];
+    [0,1,2].forEach(i => {
+      const pct = screenResult[i] / 255 * 100;
+      setBar(labels[i], vals[i], pct, screenResult[i]);
+    });
+
+    const note = document.getElementById('pm-add-note');
+    if (note) {
+      const isWhite = screenResult.every(c => c >= 250);
+      note.textContent = isWhite
+        ? '⚪ Complementary pair — screen sum → near white. These are additive opposites.'
+        : `Screen formula: each ch = 255 − (255−A)×(255−B)/255. A hue + its additive complement = white light.`;
+    }
+
+    // Additive ramp: A alone → full screen mix
+    const ramp = document.getElementById('pm-add-ramp');
+    if (ramp) {
+      ramp.innerHTML = '';
+      for (let i = 0; i <= 6; i++) {
+        const t = i / 6;
+        const c = [0,1,2].map(ch => Math.round(255 - (255-aRgb[ch])*(255 - bRgb[ch]*t)/255));
+        const d = document.createElement('div');
+        d.style.background = rgbToHex(c.map(v => clamp(v,0,255)));
+        d.title = rgbToHex(c.map(v => clamp(v,0,255)));
+        ramp.appendChild(d);
+      }
+    }
+  }
+
+  // ── Subtractive panel ──
+  if (pmMode === 'subtractive') {
+    setColor('pm-sub-a', aRgb, aHex);
+    setColor('pm-sub-b', bRgb, bHex);
+
+    const ratioEl = document.getElementById('pmRatio');
+    const t = ratioEl ? parseInt(ratioEl.value) / 100 : 0.5;
+    const subResult = pigmentMix(aRgb, bRgb, t);
+    setColor('pm-sub-result', subResult, rgbToHex(subResult));
+
+    const inCh = Math.max(chromaOf(aRgb), chromaOf(bRgb));
+    const resCh = chromaOf(subResult);
+    const chromaPct = inCh > 0 ? Math.round(resCh / inCh * 100) : 100;
+    const mudPct    = 100 - chromaPct;
+
+    setBar('pm-sub-cbar', 'pm-sub-cv', chromaPct);
+    setBar('pm-sub-mbar', 'pm-sub-mv', mudPct);
+
+    const dist = wheelAngleDist(state.hue, bHue);
+    const warn = document.getElementById('pm-sub-warn');
+    if (warn) {
+      if (dist > 150) warn.textContent = `⚠ ${dist}° apart — near-complement. Direct mix → heavy mud. Use the wheel approach below.`;
+      else if (dist > 90) warn.textContent = `⚡ ${dist}° apart — mixing crosses a secondary. Expect noticeable chroma loss.`;
+      else if (dist < 30) warn.textContent = `✓ ${dist}° apart — adjacent hues. Clean mix with minimal chroma loss.`;
+      else warn.textContent = `${dist}° hue distance. Moderate chroma loss expected.`;
+    }
+    const note = document.getElementById('pm-sub-note');
+    if (note) note.textContent = `Pigment mix: blend in CMY ink-density space, then back to RGB. Ratio slider controls A↔B proportion.`;
+
+    // Wheel approach
+    const approach = wheelApproachSolver(aRgb);
+    setColor('pm-app-p1', approach.p1.rgb);
+    setColor('pm-app-p2', approach.p2.rgb);
+    setColor('pm-app-result', approach.result, rgbToHex(approach.result));
+    setBar('pm-app-cbar', 'pm-app-cv', clamp(approach.chromaPct, 0, 100));
+
+    const recipe = document.getElementById('pm-approach-recipe');
+    if (recipe) {
+      recipe.innerHTML = `
+        <div class="pm-recipe-row">
+          <div class="pm-recipe-sw" style="background:${rgbToHex(approach.p1.rgb)}"></div>
+          <div class="pm-recipe-info"><b>${approach.p1.name}</b> — <span class="pct">${approach.p1.pct}%</span></div>
+        </div>
+        <div class="pm-recipe-row">
+          <div class="pm-recipe-sw" style="background:${rgbToHex(approach.p2.rgb)}"></div>
+          <div class="pm-recipe-info"><b>${approach.p2.name}</b> — <span class="pct">${approach.p2.pct}%</span></div>
+        </div>`;
+    }
+    const appNote = document.getElementById('pm-app-note');
+    if (appNote) appNote.textContent = approach.chromaPct >= 85
+      ? `✓ High chroma preserved — adjacent anchors are close. Near-ideal pigment pair for this hue.`
+      : approach.chromaPct >= 60
+        ? `Moderate chroma. The target hue sits between anchors far enough apart that some gray enters the mix.`
+        : `Low chroma. Target sits far from any single anchor. Consider shifting hue slightly toward nearest anchor, or use a tube pigment closer to the target.`;
+
+    // White tint ramp
+    const tintRamp = document.getElementById('pm-tint-ramp');
+    if (tintRamp) {
+      tintRamp.innerHTML = '';
+      [0, 0.1, 0.25, 0.4, 0.6, 1].forEach(w => {
+        const c = whiteTint(aRgb, w);
+        const d = document.createElement('div');
+        d.style.background = rgbToHex(c);
+        d.title = `+${Math.round(w*100)}% white → ${rgbToHex(c)}`;
+        tintRamp.appendChild(d);
+      });
+    }
+    const tintedAt25 = whiteTint(aRgb, 0.25);
+    const tintChroma = inCh > 0 ? Math.round(chromaOf(tintedAt25) / inCh * 100) : 100;
+    setBar('pm-tint-cbar', 'pm-tint-cv', tintChroma);
+
+    // Complement mud
+    setColor('pm-mud-a', aRgb, aHex);
+    setColor('pm-mud-b', bRgb, bHex);
+    const mudResult = pigmentMix(aRgb, bRgb, 0.5);
+    setColor('pm-mud-result', mudResult, rgbToHex(mudResult));
+    setBar('pm-mud-dbar', 'pm-mud-dv', dist / 180 * 100, `${dist}°`);
+    const mudNote = document.getElementById('pm-mud-note');
+    if (mudNote) {
+      if (dist > 150) mudNote.textContent = 'Complementary pair — 50/50 mix makes near-neutral grey. Use tiny amounts to tone down without mud, or mix from a closer starting hue.';
+      else mudNote.textContent = `${dist}° between A and B. A small drop of B neutralises A's chroma; too much → grey. For shadow glazes this is intentional — complement kill = natural shadow.`;
+    }
+  }
+}
+
+//=========================================================================
+// Minimal Palette Analyzer
+//=========================================================================
+
+function colorDistSq(a, b) {
+  return (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2;
+}
+
+// Perceptual distance — weight luminance channel more
+function colorDistPerceptual(a, b) {
+  const dr = (a[0]-b[0]) * 0.299;
+  const dg = (a[1]-b[1]) * 0.587;
+  const db = (a[2]-b[2]) * 0.114;
+  return Math.sqrt(dr*dr + dg*dg + db*db);
+}
+
+// For a given target RGB, find the best 2-tube pigment mix from a tube array.
+// Tries 21 ratio steps per pair; returns best tubes, ratio t, result rgb, score.
+function bestMixForTarget(targetRgb, tubes) {
+  let bestScore = Infinity, bestI = 0, bestJ = 0, bestT = 0.5, bestResult = targetRgb;
+  for (let i = 0; i < tubes.length; i++) {
+    for (let j = i; j < tubes.length; j++) {
+      for (let r = 0; r <= 20; r++) {
+        const t = r / 20;
+        const mix = pigmentMix(tubes[i].rgb, tubes[j].rgb, t);
+        const score = colorDistPerceptual(mix, targetRgb);
+        if (score < bestScore) {
+          bestScore = score; bestI = i; bestJ = j; bestT = t; bestResult = mix;
+        }
+      }
+    }
+  }
+  return {
+    tube1: tubes[bestI],
+    tube2: tubes[bestJ],
+    t: bestT,
+    result: bestResult,
+    score: bestScore,
+    // chroma of result vs target
+    chromaPct: chromaOf(targetRgb) > 0
+      ? Math.round(chromaOf(bestResult) / chromaOf(targetRgb) * 100)
+      : 100,
+    // value accuracy — how close in lightness
+    valueDist: Math.round(bestScore),
+  };
+}
+
+// Returns an array of tube objects from the 6 calibrated anchors
+function getTubes() {
+  return calibratedAnchors().map(a => ({ name: a.name, rgb: [...a.rgb], category: a.category }));
+}
+
+// Hue-sector coverage: for 24 sectors across the wheel (15° each),
+// compute the best achievable chroma from any 2-tube mix of the current minimal set.
+function computeHueSectorCoverage(tubes) {
+  const sectors = [];
+  for (let s = 0; s < 24; s++) {
+    const hue = s * 15;
+    const fullChromaRgb = hueAtAngle(hue); // ideal full-chroma color at this hue
+    let best = 0;
+    for (let i = 0; i < tubes.length; i++) {
+      for (let j = i; j < tubes.length; j++) {
+        for (let r = 0; r <= 10; r++) {
+          const t = r / 10;
+          const mix = pigmentMix(tubes[i].rgb, tubes[j].rgb, t);
+          // Hue accuracy: penalise for hue deviation
+          const mixHue = hueAngleOf(mix);
+          const hueDev = Math.min(Math.abs(mixHue - hue), 360 - Math.abs(mixHue - hue));
+          const ch = chromaOf(mix) * Math.max(0, 1 - hueDev / 30);
+          if (ch > best) best = ch;
+        }
+      }
+    }
+    const hexColor = rgbToHex(fullChromaRgb);
+    sectors.push({ hue, hexColor, chromaCoverage: best });
+  }
+  return sectors;
+}
+
+// Split-primary analysis: for a given anchor (C, M, or Y), suggest warm/cool split
+// The "split" adds two derived tubes: one biased +20° and one −20° from the anchor.
+// We check if either split improves the worst-scoring target.
+function splitPrimaryHint(targets, tubes) {
+  const hints = [];
+  const cmyAnchors = ['C', 'M', 'Y'];
+  for (const name of cmyAnchors) {
+    const anchor = calibratedAnchors().find(a => a.name === name);
+    if (!anchor) continue;
+    // Warm split: +20° toward R/Y; Cool split: -20°
+    const warmHue = mod(anchor.a + 20, 360);
+    const coolHue = mod(anchor.a - 20, 360);
+    const warmRgb = hueAtAngle(warmHue);
+    const coolRgb = hueAtAngle(coolHue);
+
+    // Check if adding warmRgb or coolRgb to the tube set improves any target
+    const tubesPlus = [...tubes, { name: `${name}warm`, rgb: warmRgb }, { name: `${name}cool`, rgb: coolRgb }];
+    let improved = 0;
+    for (const t of targets) {
+      const baseBest  = bestMixForTarget(t, tubes);
+      const splitBest = bestMixForTarget(t, tubesPlus);
+      if (splitBest.chromaPct > baseBest.chromaPct + 10) improved++;
+    }
+    if (improved > 0) {
+      hints.push({
+        anchor: name,
+        warmHex: rgbToHex(warmRgb),
+        coolHex: rgbToHex(coolRgb),
+        improved,
+      });
+    }
+  }
+  return hints;
+}
+
+function renderMinimalPalette() {
+  const tubes = getTubes();
+  const targets = state.pinned.map(hexToRgb);
+
+  // ── Tube coverage grid ──
+  const tubeRow = document.getElementById('mpa-tubes');
+  if (!tubeRow) return;
+
+  // Compute recipes first so we know which tubes are used
+  const recipes = targets.map(rgb => bestMixForTarget(rgb, tubes));
+  const usedNames = new Set();
+  recipes.forEach(r => { usedNames.add(r.tube1.name); usedNames.add(r.tube2.name); });
+
+  tubeRow.innerHTML = '';
+  tubes.forEach(tube => {
+    const wrap = document.createElement('div');
+    wrap.className = 'mpa-tube';
+    const sw = document.createElement('div');
+    const isUsed = targets.length === 0 || usedNames.has(tube.name);
+    sw.className = 'mpa-tube-sw ' + (isUsed ? 'used' : 'unused');
+    sw.style.background = rgbToHex(tube.rgb);
+    const nm = document.createElement('div');
+    nm.className = 'mpa-tube-name ' + (isUsed ? 'used' : '');
+    nm.textContent = tube.name;
+    wrap.appendChild(sw); wrap.appendChild(nm);
+    tubeRow.appendChild(wrap);
+  });
+
+  // ── Summary ──
+  const summary = document.getElementById('mpa-summary');
+  if (summary) {
+    if (targets.length === 0) {
+      summary.innerHTML = 'Pin colours to your palette — the analyzer will find the minimal tube set to mix them all.';
+    } else {
+      const needed = usedNames.size;
+      const skippable = tubes.filter(t => !usedNames.has(t.name)).map(t => t.name);
+      const avgChroma = Math.round(recipes.reduce((s,r) => s + r.chromaPct, 0) / recipes.length);
+      const poorTargets = recipes.filter(r => r.chromaPct < 60).length;
+      summary.innerHTML =
+        `<b>${needed} of 6 tubes needed</b> for ${targets.length} target colour${targets.length>1?'s':''}. ` +
+        (skippable.length ? `Skippable: <b>${skippable.join(', ')}</b>. ` : '') +
+        `Avg chroma: <b>${avgChroma}%</b>. ` +
+        (poorTargets ? `<span style="color:#e05c5c">${poorTargets} target${poorTargets>1?'s':''} under 60% chroma — see split primary hints.</span>` : `<span style="color:#7ecf60">All targets achievable at good chroma.</span>`);
+    }
+  }
+
+  // ── Hue sector map ──
+  const usedTubes = tubes.filter(t => targets.length === 0 || usedNames.has(t.name));
+  const analysisTubes = usedTubes.length >= 2 ? usedTubes : tubes;
+  const sectors = computeHueSectorCoverage(analysisTubes);
+  const hueMap = document.getElementById('mpa-hue-map');
+  if (hueMap) {
+    hueMap.innerHTML = '';
+    sectors.forEach(s => {
+      const d = document.createElement('div');
+      d.style.background = s.hexColor;
+      d.title = `${s.hue}° — ${Math.round(s.chromaCoverage * 100)}% chroma reachable`;
+      d.className = s.chromaCoverage >= 0.7 ? 'covered' : s.chromaCoverage >= 0.35 ? 'poor' : 'uncovered';
+      hueMap.appendChild(d);
+    });
+  }
+
+  // ── Per-colour recipe cards ──
+  const recipeList = document.getElementById('mpa-recipe-list');
+  if (recipeList) {
+    recipeList.innerHTML = '';
+    if (targets.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'mpa-empty';
+      empty.textContent = 'No pinned colours yet.';
+      recipeList.appendChild(empty);
+    } else {
+      recipes.forEach((r, idx) => {
+        const hex = state.pinned[idx];
+        const card = document.createElement('div');
+        card.className = 'mpa-recipe-card';
+
+        const scoreClass = r.chromaPct >= 75 ? 'good' : r.chromaPct >= 50 ? 'ok' : 'poor';
+        const scoreLabel = r.chromaPct >= 75 ? '✓ Good' : r.chromaPct >= 50 ? '⚡ OK' : '⚠ Low';
+
+        const p1Pct = Math.round((1 - r.t) * 100);
+        const p2Pct = 100 - p1Pct;
+        const sameT = r.tube1.name === r.tube2.name;
+
+        // Tonal match: compare value (brightness)
+        const tRgb = hexToRgb(hex);
+        const targetLum = Math.round(0.2126*tRgb[0] + 0.7152*tRgb[1] + 0.0722*tRgb[2]);
+        const resultLum = Math.round(0.2126*r.result[0] + 0.7152*r.result[1] + 0.0722*r.result[2]);
+        const lumDiff = Math.abs(targetLum - resultLum);
+        const needsWhite = resultLum < targetLum - 20;
+        const needsDarken = resultLum > targetLum + 20;
+
+        card.innerHTML = `
+          <div class="mpa-card-head">
+            <div class="mpa-target-sw" style="background:${hex}"></div>
+            <div class="mpa-card-hex">${hex}</div>
+            <div class="mpa-card-score ${scoreClass}">${scoreLabel} chroma ${r.chromaPct}%</div>
+          </div>
+          <div class="mpa-mix-row">
+            <div class="mpa-mix-sw" style="background:${rgbToHex(r.tube1.rgb)}"></div>
+            <span class="mpa-mix-label">${r.tube1.name} <b>${p1Pct}%</b></span>
+            ${!sameT ? `<div class="pm-op" style="font-size:11px;color:var(--ink-dim)">+</div>
+            <div class="mpa-mix-sw" style="background:${rgbToHex(r.tube2.rgb)}"></div>
+            <span class="mpa-mix-label">${r.tube2.name} <b>${p2Pct}%</b></span>` : ''}
+            <div class="pm-op" style="font-size:11px;color:var(--ink-dim)">→</div>
+            <div class="mpa-mix-result" style="background:${rgbToHex(r.result)}" title="${rgbToHex(r.result)}"></div>
+          </div>
+          ${needsWhite ? `<div class="pm-warn" style="margin-top:4px">+ white to lighten — chroma penalty applies. Use thin washes or dilute medium instead where possible.</div>` : ''}
+          ${needsDarken ? `<div class="pm-note" style="margin-top:4px">Darken: add a small amount of the complement (${r.tube1.name === 'Y' || r.tube2.name === 'Y' ? 'B' : r.tube1.name === 'M' || r.tube2.name === 'M' ? 'G' : 'R'}) or mix toward a darker neighbour hue.</div>` : ''}
+          ${r.chromaPct < 60 ? `<div class="mpa-split-hint">⬡ Low chroma — this hue sits far from the nearest anchor pair. A tube closer to ${Math.round(hueAngleOf(tRgb))}° on the wheel would preserve more chroma.</div>` : ''}
+        `;
+        recipeList.appendChild(card);
+      });
+    }
+  }
+
+  // ── Split primary hints ──
+  const splitNote = document.getElementById('mpa-split-note');
+  if (splitNote && targets.length > 0) {
+    const hints = splitPrimaryHint(targets, tubes);
+    if (hints.length === 0) {
+      splitNote.textContent = '✓ Current 6-anchor set covers all targets well. No split primary needed.';
+    } else {
+      splitNote.innerHTML = hints.map(h =>
+        `<div style="margin-bottom:6px">
+          <b>${h.anchor}</b> split:
+          <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${h.warmHex};vertical-align:-2px;margin:0 2px"></span>warm
+          + <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${h.coolHex};vertical-align:-2px;margin:0 2px"></span>cool
+          → improves <b>${h.improved}</b> target${h.improved>1?'s':''}.<br>
+          <span style="color:var(--ink-dim)">Add a warm-biased and cool-biased version of ${h.anchor} to extend gamut without more mixing steps.</span>
+        </div>`
+      ).join('');
+    }
+  }
+}
+
+// Hook into renderPinned so palette analyzer updates whenever pins change
+const _origRenderPinned = window.renderPinned;
+
+// Paint mode toggle
+document.getElementById('paintModeBar').addEventListener('click', e => {
+  const btn = e.target.closest('[data-pm]');
+  if (!btn) return;
+  pmMode = btn.dataset.pm;
+  document.querySelectorAll('#paintModeBar [data-pm]').forEach(b => b.classList.toggle('active', b === btn));
+  document.getElementById('pm-add').style.display = pmMode === 'additive' ? '' : 'none';
+  document.getElementById('pm-sub').style.display = pmMode === 'subtractive' ? '' : 'none';
+  renderPaintMix();
+});
+
+// Ratio slider
+document.getElementById('pmRatio').addEventListener('input', e => {
+  const v = parseInt(e.target.value);
+  document.getElementById('pmRatiov').textContent = v + '%';
+  renderPaintMix();
+});
+
+
+function renderAll() {
+  drawWheel();
+  placeMarkers();
+  buildRamp(document.getElementById('rampA'), state.hue);
+  buildRamp(document.getElementById('rampB'), additiveComplementHue(state.hue));
+  buildTonalGrid();
+  renderOverlay();
+  renderPicker();
+  renderSuggested();
+  renderCentreGradients();
+  renderInspector();
+  applyMunker();
+  renderPaintMix();
+  renderMinimalPalette();
+  if (cubeBuilt) {
+    const targetN = cubeStepCount();
+    if (targetN !== _prevCubeN) buildCube();
+    else updateCubeColors();
+  }
+}
+
+window.addEventListener('resize', placeMarkers);
+renderAll();
+renderPinned();
+// Seed the all-hue grid count badge
+(function() {
+  const cnt = document.getElementById('allHueCount');
+  if (cnt) cnt.textContent = `· ${cal.hueRows} rows × ${cal.steps} tones`;
+})();
+</script>
+</body>
+</html>
