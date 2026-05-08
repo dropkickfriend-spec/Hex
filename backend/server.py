@@ -230,6 +230,22 @@ def build_tonality_renderer_html() -> str:
     font: 12px ui-monospace, monospace;
   }
   .mh-render-toolbar button { min-height: 44px; }
+  .mh-unified-munker {
+    margin-top: 10px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px;
+    background: rgba(0,0,0,.18);
+    padding: 10px;
+  }
+  .mh-unified-munker-title {
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    color: var(--ink);
+    font: 12px ui-monospace, monospace;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .mh-unified-munker .mh-render-toolbar { margin-top: 6px; }
   .mh-render-toolbar .mh-mini-field {
     min-width: 170px;
     flex: 1;
@@ -238,6 +254,7 @@ def build_tonality_renderer_html() -> str:
     letter-spacing: .02em;
   }
   .mh-render-toolbar .mh-mini-field input { min-width: 120px; width: 100%; margin-top: 5px; }
+  .mh-hidden-original-munker { display: none !important; }
   .mh-painter-tip {
     margin-top: 9px;
     border: 1px solid rgba(255,255,255,.12);
@@ -427,11 +444,53 @@ def build_tonality_renderer_html() -> str:
     <select id="mhGameStyle">
       <option value="hex3plane">Style · top-down 3-plane cube hex ground</option>
     </select>
-    <label class="mh-mini-field">Line thickness <span id="mhLineThicknessv">5</span>px
-      <input id="mhLineThickness" type="range" min="1" max="40" value="5" />
-    </label>
     <button id="mhRenderBtn">Render with this style</button>
-    <button id="mhSyncBtn">Sync Munker controls</button>
+  </div>
+  <div class="mh-unified-munker" id="mhUnifiedMunker">
+    <div class="mh-unified-munker-title">
+      <span>Unified Munker generator</span>
+      <span id="mhAutoState">auto animate · on</span>
+    </div>
+    <div class="mh-render-toolbar">
+      <select id="mhMunkerPreset">
+        <option value="white-ruliad">Auto pattern · white ruliad artefacts</option>
+        <option value="cool-dark-vibration">Auto pattern · cool dark vibration</option>
+        <option value="hex-scanline">Auto pattern · hex cube scanline</option>
+        <option value="palette-crosshatch">Auto pattern · palette crosshatch</option>
+        <option value="thin-web-render">Auto pattern · thin website render</option>
+      </select>
+      <select id="mhUnifiedMode">
+        <option value="diag" selected>Diagonal</option>
+        <option value="grid">Grid cross-hatch</option>
+        <option value="h">Horizontal</option>
+        <option value="v">Vertical</option>
+      </select>
+      <select id="mhUnifiedPattern">
+        <option value="white" selected>White artefact lines</option>
+        <option value="bw">Alternating B / W</option>
+        <option value="AB">Alternating A / B</option>
+        <option value="A">Lines = selected hue</option>
+        <option value="B">Lines = complement hue</option>
+      </select>
+      <select id="mhAutoAnimate">
+        <option value="on" selected>Auto animate on</option>
+        <option value="off">Auto animate off</option>
+      </select>
+    </div>
+    <div class="mh-render-toolbar">
+      <label class="mh-mini-field">Spacing <span id="mhUnifiedSpacingv">10</span>px
+        <input id="mhUnifiedSpacing" type="range" min="0" max="40" value="10" />
+      </label>
+      <label class="mh-mini-field">Line thickness <span id="mhLineThicknessv">5</span>px
+        <input id="mhLineThickness" type="range" min="1" max="40" value="5" />
+      </label>
+      <label class="mh-mini-field">Opacity <span id="mhUnifiedOpacityv">100</span>%
+        <input id="mhUnifiedOpacity" type="range" min="0" max="100" value="100" />
+      </label>
+      <label class="mh-mini-field">Speed <span id="mhUnifiedSpeedv">4</span>s
+        <input id="mhUnifiedSpeed" type="range" min="1" max="16" value="4" />
+      </label>
+    </div>
   </div>
   <div class="mh-painter-tip" id="mhPainterTip">Painter tip: use cool CMY-side dark vibration; avoid cad red in shadows. Let uneven Munker white spacing create optical colour instead of forcing pigment.</div>
   <div class="mh-wheel-readout" id="mhWheelReadout">
@@ -511,6 +570,71 @@ def build_tonality_renderer_html() -> str:
     }
     stage.style.setProperty('--mh-thick', n + 'px');
   }
+  const MUNKER_PRESETS = {
+    'white-ruliad': { mode:'diag', pattern:'white', spacing:3, thickness:13, opacity:96, speed:4, animate:'on' },
+    'cool-dark-vibration': { mode:'grid', pattern:'bw', spacing:2, thickness:7, opacity:88, speed:6, animate:'on' },
+    'hex-scanline': { mode:'v', pattern:'AB', spacing:1, thickness:5, opacity:82, speed:5, animate:'on' },
+    'palette-crosshatch': { mode:'grid', pattern:'AB', spacing:5, thickness:9, opacity:92, speed:7, animate:'on' },
+    'thin-web-render': { mode:'diag', pattern:'white', spacing:8, thickness:3, opacity:74, speed:8, animate:'on' },
+  };
+  function setVal(id, value, dispatch = false){
+    const el = $(id); if (!el) return;
+    el.value = String(value);
+    if (dispatch) el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
+  }
+  function setText(id, value){ const el = $(id); if (el) el.textContent = String(value); }
+  function currentUnifiedMunker(){
+    return {
+      mode: $('mhUnifiedMode')?.value || 'diag',
+      pattern: $('mhUnifiedPattern')?.value || 'white',
+      spacing: parseInt($('mhUnifiedSpacing')?.value || '10', 10),
+      thickness: parseInt($('mhLineThickness')?.value || '5', 10),
+      opacity: parseInt($('mhUnifiedOpacity')?.value || '100', 10),
+      speed: parseInt($('mhUnifiedSpeed')?.value || '4', 10),
+      animate: $('mhAutoAnimate')?.value || 'on',
+    };
+  }
+  function syncUnifiedLabels(){
+    setText('mhUnifiedSpacingv', $('mhUnifiedSpacing')?.value || 10);
+    setText('mhLineThicknessv', $('mhLineThickness')?.value || 5);
+    setText('mhUnifiedOpacityv', $('mhUnifiedOpacity')?.value || 100);
+    setText('mhUnifiedSpeedv', $('mhUnifiedSpeed')?.value || 4);
+    setText('mhAutoState', $('mhAutoAnimate')?.value === 'on' ? 'auto animate · on' : 'auto animate · off');
+  }
+  function pushUnifiedToOriginal(){
+    const u = currentUnifiedMunker();
+    setVal('munkerMode', u.mode);
+    setVal('munkerPattern', u.pattern);
+    setVal('munkerSpacing', u.spacing);
+    setVal('munkerThick', Math.min(20, u.thickness));
+    setVal('munkerOpacity', u.opacity);
+    setVal('munkerSpeed', u.speed);
+    setVal('munkerAnimate', u.animate === 'on' ? (u.mode === 'v' ? 'v' : u.mode === 'h' ? 'h' : 'diag') : 'off');
+    setText('munkerSpacingv', u.spacing);
+    setText('munkerThickv', Math.min(20, u.thickness));
+    setText('munkerOpacityv', u.opacity);
+    setText('munkerSpeedv', u.speed);
+    if (typeof munker !== 'undefined') {
+      munker.mode = u.mode; munker.pattern = u.pattern; munker.spacing = u.spacing;
+      munker.thick = Math.min(20, u.thickness); munker.opacity = u.opacity;
+      munker.animate = u.animate === 'on' ? (u.mode === 'v' ? 'v' : u.mode === 'h' ? 'h' : 'diag') : 'off';
+      munker.speed = u.speed;
+    }
+    syncUnifiedLabels();
+  }
+  function applyMunkerPreset(name){
+    const preset = MUNKER_PRESETS[name] || MUNKER_PRESETS['white-ruliad'];
+    setVal('mhUnifiedMode', preset.mode);
+    setVal('mhUnifiedPattern', preset.pattern);
+    setVal('mhUnifiedSpacing', preset.spacing);
+    setVal('mhLineThickness', preset.thickness);
+    setVal('mhUnifiedOpacity', preset.opacity);
+    setVal('mhUnifiedSpeed', preset.speed);
+    setVal('mhAutoAnimate', preset.animate);
+    pushUnifiedToOriginal();
+    syncMunker();
+    render();
+  }
   function painterTip(p){
     const tip = $('mhPainterTip');
     if (!tip) return;
@@ -552,6 +676,7 @@ def build_tonality_renderer_html() -> str:
       readout.innerHTML = `<span class="mh-wheel-chip">A ${p.aHex} · ${Math.round(p.hue)}°</span><span class="mh-wheel-chip">B ${p.bHex}</span><span class="mh-wheel-chip">centre ${p.cHex}</span><span class="mh-wheel-chip">tone ${Math.round(p.tone)}</span>`;
     }
     painterTip(p);
+    styleWholeWebsiteFrame();
     return p;
   }
   function seededRand(seedText){
@@ -565,8 +690,9 @@ def build_tonality_renderer_html() -> str:
     artifactField.innerHTML = '';
     const rand = seededRand(seedKey + p.aHex + p.bHex + ($('mhLineThickness')?.value || '5'));
     const baseThick = Math.max(1, Math.min(40, parseInt($('mhLineThickness')?.value || '5', 10)));
-    const spacing = Math.max(0, parseInt($('munkerSpacing')?.value || '10', 10));
-    const mode = $('munkerMode') ? $('munkerMode').value : 'diag';
+    const u = currentUnifiedMunker();
+    const spacing = Math.max(0, parseInt(String(u.spacing), 10));
+    const mode = u.mode;
     const angle = mode === 'h' ? '0deg' : mode === 'v' ? '90deg' : mode === 'grid' ? '-18deg' : '-28deg';
     const lines = Math.max(16, Math.min(52, Math.round(430 / Math.max(4, spacing + baseThick)) + 10));
     for (let i = 0; i < lines; i++) {
@@ -690,11 +816,13 @@ def build_tonality_renderer_html() -> str:
     ];
   }
   function syncMunker(){
-    const mode = $('munkerMode') ? $('munkerMode').value : 'diag';
-    const spacing = $('munkerSpacing') ? $('munkerSpacing').value : 10;
-    const thick = $('mhLineThickness') ? $('mhLineThickness').value : ($('munkerThick') ? $('munkerThick').value : 5);
-    const opacity = $('munkerOpacity') ? $('munkerOpacity').value : 100;
-    const speed = $('munkerSpeed') ? $('munkerSpeed').value : 4;
+    pushUnifiedToOriginal();
+    const u = currentUnifiedMunker();
+    const mode = u.mode;
+    const spacing = u.spacing;
+    const thick = u.thickness;
+    const opacity = u.opacity;
+    const speed = u.speed;
     const angles = { h:'90deg', v:'0deg', grid:'45deg', diag:'135deg', off:'135deg' };
     stage.style.setProperty('--mh-angle', angles[mode] || '135deg');
     stage.style.setProperty('--mh-gap', spacing + 'px');
@@ -703,6 +831,34 @@ def build_tonality_renderer_html() -> str:
     stage.style.setProperty('--mh-speed', speed + 's');
     applyRenderPalette();
     buildArtifactField($('mhGame')?.value + ($('mhUrl')?.value || ''));
+  }
+  function styleWholeWebsiteFrame(){
+    if (!frame || !frame.contentDocument || frame.style.display === 'none') return;
+    const doc = frame.contentDocument;
+    const p = getWheelPalette();
+    const u = currentUnifiedMunker();
+    const css = `
+      :root { --mh-a:${p.aHex}; --mh-b:${p.bHex}; --mh-c:${p.cHex}; --mh-centre:${p.cHex}; }
+      html, body { background: #05050a !important; color: var(--mh-c) !important; }
+      body { filter: saturate(1.22) contrast(1.05) hue-rotate(${Math.round(p.hue)}deg); }
+      body * { border-color: color-mix(in srgb, var(--mh-a), var(--mh-b) 35%) !important; }
+      h1,h2,h3,h4,strong,b { color: var(--mh-a) !important; text-shadow: 0 0 12px color-mix(in srgb, var(--mh-a), transparent 55%); }
+      a, button, input, select, textarea { color: var(--mh-b) !important; outline-color: var(--mh-a) !important; }
+      img, video, canvas, svg { mix-blend-mode: screen; filter: saturate(1.25) contrast(1.05); }
+      .mh-site-style-overlay, .mh-site-hex-overlay, .mh-site-ruliad-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 2147483600; }
+      .mh-site-style-overlay { opacity: ${Math.max(0, Math.min(1, u.opacity / 100))}; mix-blend-mode: screen; background: repeating-linear-gradient(${u.mode === 'h' ? '0deg' : u.mode === 'v' ? '90deg' : u.mode === 'grid' ? '45deg' : '-28deg'}, rgba(255,255,255,.88) 0 ${u.thickness}px, transparent ${u.thickness}px ${u.thickness + Math.max(0, u.spacing)}px); animation: mhSitePan ${u.speed}s linear infinite alternate; }
+      .mh-site-hex-overlay { opacity: .34; mix-blend-mode: screen; background-image: linear-gradient(30deg, transparent 24%, ${p.aHex} 25%, ${p.aHex} 26%, transparent 27%, transparent 74%, ${p.bHex} 75%, ${p.bHex} 76%, transparent 77%), linear-gradient(150deg, transparent 24%, ${p.cHex} 25%, ${p.cHex} 26%, transparent 27%, transparent 74%, ${p.aHex} 75%, ${p.aHex} 76%, transparent 77%); background-size: 52px 30px; }
+      .mh-site-ruliad-overlay { opacity: .42; mix-blend-mode: screen; background: radial-gradient(circle at 20% 22%, ${p.aHex}, transparent 1.2%), radial-gradient(circle at 72% 34%, ${p.bHex}, transparent 1.1%), radial-gradient(circle at 46% 78%, ${p.cHex}, transparent 1.3%); background-size: 88px 88px, 110px 110px, 72px 72px; }
+      @keyframes mhSitePan { from { transform: translate3d(-18px,-12px,0); } to { transform: translate3d(18px,12px,0); } }
+    `;
+    let style = doc.getElementById('mh-site-whole-style');
+    if (!style) { style = doc.createElement('style'); style.id = 'mh-site-whole-style'; doc.head.appendChild(style); }
+    style.textContent = css;
+    ['mh-site-style-overlay','mh-site-hex-overlay','mh-site-ruliad-overlay'].forEach(cls => {
+      if (!doc.querySelector('.' + cls)) {
+        const div = doc.createElement('div'); div.className = cls; doc.body.appendChild(div);
+      }
+    });
   }
   function drawGame(kind){
     const p = applyRenderPalette();
@@ -767,9 +923,24 @@ def build_tonality_renderer_html() -> str:
     const el=$(id); if(el) el.addEventListener('input', () => { syncMunker(); applyRenderPalette(); if ($('mhGame').value !== 'website') drawGame($('mhGame').value); });
   });
   document.querySelectorAll('#centreModes button').forEach(btn => btn.addEventListener('click', () => setTimeout(applyRenderPalette, 0)));
-  $('mhLineThickness').addEventListener('input', e => { syncLineThickness(e.target.value, true); syncMunker(); });
+  ['mhUnifiedMode','mhUnifiedPattern','mhAutoAnimate'].forEach(id => {
+    const el = $(id); if (el) el.addEventListener('change', () => { syncMunker(); render(); });
+  });
+  ['mhUnifiedSpacing','mhLineThickness','mhUnifiedOpacity','mhUnifiedSpeed'].forEach(id => {
+    const el = $(id); if (el) el.addEventListener('input', () => { syncUnifiedLabels(); syncMunker(); if ($('mhGame').value !== 'website') drawGame($('mhGame').value); else styleWholeWebsiteFrame(); });
+  });
+  $('mhMunkerPreset').addEventListener('change', e => applyMunkerPreset(e.target.value));
   $('mhRenderBtn').addEventListener('click', render);
-  $('mhSyncBtn').addEventListener('click', syncMunker);
+  if ($('mhSyncBtn')) $('mhSyncBtn').addEventListener('click', syncMunker);
+  frame.addEventListener('load', () => setTimeout(styleWholeWebsiteFrame, 120));
+  function hideDuplicateMunkerControls(){
+    document.querySelectorAll('details').forEach(details => {
+      const summary = details.querySelector('summary');
+      if (summary && summary.textContent && summary.textContent.toLowerCase().includes('munker filter')) {
+        details.classList.add('mh-hidden-original-munker');
+      }
+    });
+  }
   function bindLateRenderSyncControls(){
     if (window.__mhLateRenderSyncBound) return;
     window.__mhLateRenderSyncBound = true;
@@ -785,9 +956,11 @@ def build_tonality_renderer_html() -> str:
     });
   }
   setTimeout(() => {
+    hideDuplicateMunkerControls();
     bindLateRenderSyncControls();
     const cubeBtn = document.querySelector('[data-tab="cube"]');
     if(cubeBtn) cubeBtn.click();
+    applyMunkerPreset('white-ruliad');
     const mode = $('munkerMode'); if(mode) mode.value = 'diag';
     const animate = $('munkerAnimate'); if(animate) animate.value = 'diag';
     if (typeof renderAll === 'function' && !renderAll.__mhPatched) {
@@ -795,7 +968,7 @@ def build_tonality_renderer_html() -> str:
       renderAll = function(){ const result = originalRenderAll.apply(this, arguments); setTimeout(() => { syncMunker(); applyRenderPalette(); }, 0); return result; };
       renderAll.__mhPatched = true;
     }
-    syncLineThickness($('munkerThick') ? $('munkerThick').value : 5, false);
+    syncLineThickness($('mhLineThickness') ? $('mhLineThickness').value : 5, false);
     syncMunker(); render();
   }, 400);
 })();

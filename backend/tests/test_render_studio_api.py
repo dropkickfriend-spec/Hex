@@ -151,7 +151,70 @@ def test_tonality_renderer_contains_original_layout_and_adapter():
     assert 'id="mhRenderAdapter"' in html
     assert "Render target · website/game through original Munker + hex grid" in html
     assert 'id="mhRenderBtn"' in html
-    assert 'id="mhSyncBtn"' in html
+
+
+# Unified Munker section + hidden original details contract checks
+def test_tonality_renderer_contains_unified_munker_and_hides_original_details():
+    base = _require_base_url()
+    response = requests.get(f"{base}/api/tonality-renderer", timeout=20)
+    assert response.status_code == 200
+    html = response.text
+
+    # Unified control section is present
+    assert 'id="mhUnifiedMunker"' in html
+    assert 'id="mhMunkerPreset"' in html
+    assert 'id="mhUnifiedMode"' in html
+    assert 'id="mhUnifiedPattern"' in html
+    assert 'id="mhUnifiedSpacing"' in html
+    assert 'id="mhLineThickness"' in html
+    assert 'id="mhUnifiedOpacity"' in html
+    assert 'id="mhUnifiedSpeed"' in html
+    assert 'id="mhAutoAnimate"' in html
+
+    # Original duplicate details are hidden via adapter behavior
+    assert "mh-hidden-original-munker" in html
+    assert "hideDuplicateMunkerControls" in html
+
+
+# Unified preset mapping + hidden original sync contract checks
+def test_unified_munker_preset_mapping_and_sync_contract_present():
+    base = _require_base_url()
+    response = requests.get(f"{base}/api/tonality-renderer", timeout=20)
+    assert response.status_code == 200
+    html = response.text
+
+    # At least five preset options available
+    assert html.count('Auto pattern ·') >= 5
+    assert "cool-dark-vibration" in html
+
+    # Cool-dark-vibration mapping contract
+    assert "'cool-dark-vibration': { mode:'grid', pattern:'bw', spacing:2, thickness:7, opacity:88, speed:6, animate:'on' }" in html
+
+    # Unified controls sync into original controls
+    assert "setVal('munkerMode', u.mode)" in html
+    assert "setVal('munkerPattern', u.pattern)" in html
+    assert "setVal('munkerSpacing', u.spacing)" in html
+    assert "setVal('munkerThick', Math.min(20, u.thickness))" in html
+    assert "setVal('munkerOpacity', u.opacity)" in html
+    assert "setVal('munkerSpeed', u.speed)" in html
+    assert "setVal('munkerAnimate', u.animate === 'on'" in html
+
+
+# Website proxy render + full-page style overlay injection contract checks
+def test_website_render_proxy_and_overlay_injection_contract_present():
+    base = _require_base_url()
+    response = requests.get(f"{base}/api/tonality-renderer", timeout=20)
+    assert response.status_code == 200
+    html = response.text
+
+    assert "site-html?url=" in html
+    assert "styleWholeWebsiteFrame" in html
+    assert "mh-site-whole-style" in html
+    assert "mh-site-style-overlay" in html
+    assert "mh-site-hex-overlay" in html
+    assert "mh-site-ruliad-overlay" in html
+    assert "applyRenderPalette();" in html
+    assert "styleWholeWebsiteFrame();" in html
 
 
 # Website proxy endpoint checks (/api/site-html)
