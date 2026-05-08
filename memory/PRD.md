@@ -52,6 +52,15 @@ Use the animated Munker render design over the user's hex-grid color-palette con
 - Added generated player/enemy/pickup tokens overlaid on the ground; tokens use the same calibrated palette and Munker render field.
 - Verified: all game modes render cells/tokens, each cell has top/left/bottom faces, cube size updates live to 48px, and calibrated wheel recolors ground/tokens.
 
+## Updated — 2026-05-08 (cool CMY darks + real site render)
+- Van Gogh-style speckles now use cool CMY-side vibration (`cyan/blue/violet`) instead of cad red/complement red-orange logic.
+- Landscape/depth algorithm now shifts depth/shadows toward nearest cool calibrated CMY hue instead of pulling toward red.
+- Added painter-tip interface that gives live colour-mixing advice based on tone, including cool darks and optical white/Munker spacing guidance.
+- Website render now uses `/api/site-html?url=...` to fetch and render website HTML through the local renderer instead of only relying on direct third-party iframe loading.
+- Added ruliad overlay generated inside the hex render area from the live palette.
+- Added uneven Munker white artifact field based on line thickness and spacing to create optical white artefacts over websites/games.
+- QA fixes: speckles option copy updated, initial iframe source is proxy-based, render button touch target is 44px, and `/api/site-html` fetch runs off the event loop.
+
 ## Current Product Notes
 - The current renderer preserves the original uploaded HTML studio and adds a target stage above it.
 - Website rendering attempts to load the URL in-frame and overlays the original Munker/hex style; some sites may block iframe display, so the adapter also keeps a stylized target layer visible.

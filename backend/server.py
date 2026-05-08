@@ -14,6 +14,7 @@ import hashlib
 import json
 from urllib.parse import urlparse
 import requests
+import asyncio
 
 
 ROOT_DIR = Path(__file__).parent
@@ -228,7 +229,7 @@ def build_tonality_renderer_html() -> str:
     padding: 9px 10px;
     font: 12px ui-monospace, monospace;
   }
-  .mh-render-toolbar button { min-height: 38px; }
+  .mh-render-toolbar button { min-height: 44px; }
   .mh-render-toolbar .mh-mini-field {
     min-width: 170px;
     flex: 1;
@@ -440,7 +441,7 @@ def build_tonality_renderer_html() -> str:
   </div>
   <p class="hint" style="margin:8px 0 0">This keeps your original studio below. The target stage uses the same animated Munker controls and hex/cube colour system instead of replacing it.</p>
   <div class="mh-target-stage" id="mhTargetStage">
-    <iframe class="mh-target-frame" id="mhFrame" src="https://example.com" title="Website render target"></iframe>
+    <iframe class="mh-target-frame" id="mhFrame" src="site-html?url=https%3A%2F%2Fexample.com" title="Website render target"></iframe>
     <div class="mh-target-synthetic" id="mhSynthetic">
       <div class="mh-urlbar"><span class="mh-dot"></span><span class="mh-dot"></span><span class="mh-dot"></span><span id="mhHostLabel">example.com</span></div>
       <div class="mh-block"><div class="mh-orb"></div><div class="mh-lines"><div class="mh-line" style="width:86%"></div><div class="mh-line" style="width:62%"></div><div class="mh-line" style="width:74%"></div></div></div>
@@ -814,7 +815,8 @@ async def site_html(url: str):
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise HTTPException(status_code=400, detail="Enter a valid http/https URL")
     try:
-        response = requests.get(
+        response = await asyncio.to_thread(
+            requests.get,
             url,
             timeout=8,
             headers={
