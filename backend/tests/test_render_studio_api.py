@@ -15,6 +15,8 @@ BASE_URL = (
     or os.environ.get("EXPO_PUBLIC_BACKEND_URL")
 )
 
+ORIGINAL_TONALITY_PATH = Path("/app/backend/original_tonality.html")
+
 
 def _require_base_url() -> str:
     if not BASE_URL:
@@ -150,3 +152,38 @@ def test_tonality_renderer_contains_original_layout_and_adapter():
     assert "Render target · website/game through original Munker + hex grid" in html
     assert 'id="mhRenderBtn"' in html
     assert 'id="mhSyncBtn"' in html
+
+
+# Original source file preservation checks
+def test_original_tonality_source_file_exists_with_required_sections():
+    assert ORIGINAL_TONALITY_PATH.exists()
+    original = ORIGINAL_TONALITY_PATH.read_text(encoding="utf-8")
+    assert "Color wheel · CMY axis" in original
+    assert "Hue cube · hue × tone × chroma" in original
+
+
+# Adapter controls and calibrated wheel integration checks
+def test_tonality_renderer_contains_line_thickness_controls_and_live_wheel_hooks():
+    base = _require_base_url()
+    response = requests.get(f"{base}/api/tonality-renderer", timeout=20)
+    assert response.status_code == 200
+    html = response.text
+
+    # Top-level line thickness slider + readout
+    assert 'id="mhLineThickness"' in html
+    assert 'id="mhLineThicknessv"' in html
+    assert "Line thickness" in html
+    assert "--mh-thick" in html
+
+    # Adapter reads original wheel live state/functions
+    assert "typeof state !== 'undefined'" in html
+    assert "typeof rgbAt === 'function'" in html
+    assert "typeof additiveComplementHue === 'function'" in html
+    assert "typeof currentCentre === 'function'" in html
+    assert "typeof calibratedAnchors === 'function'" in html
+
+    # Adapter updates calibrated CSS + labels/cells
+    assert "--mh-a" in html
+    assert "--mh-b" in html
+    assert "mhStageLabel" in html
+    assert "mh-game-cell" in html
