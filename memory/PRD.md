@@ -44,6 +44,14 @@ Use the animated Munker render design over the user's hex-grid color-palette con
 - Preserved the full uploaded original source in `/app/backend/original_tonality.html` and serves it through `/api/tonality-renderer` with the adapter injected above it.
 - Verified with backend regression and mobile UI automation: 8/8 backend checks passed and wheel/thickness/game render flows passed.
 
+## Updated — 2026-05-08 (3-plane hex game renderer)
+- Added a game style selector for `top-down 3-plane cube hex ground`.
+- All retro game modes now render on the user's cube-derived hex ground: arcade invaders, platformer, and maze.
+- Ground uses original cube sizing controls (`cubeSize`, `cubeGap`, `cfgSteps`) so current cube scale drives the game board.
+- Each ground tile is a flat top-down hex with three rendered planes: lit top, left shadow face, and bottom shadow face for the intended 3D illusion.
+- Added generated player/enemy/pickup tokens overlaid on the ground; tokens use the same calibrated palette and Munker render field.
+- Verified: all game modes render cells/tokens, each cell has top/left/bottom faces, cube size updates live to 48px, and calibrated wheel recolors ground/tokens.
+
 ## Current Product Notes
 - The current renderer preserves the original uploaded HTML studio and adds a target stage above it.
 - Website rendering attempts to load the URL in-frame and overlays the original Munker/hex style; some sites may block iframe display, so the adapter also keeps a stylized target layer visible.
