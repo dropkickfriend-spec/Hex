@@ -1,7 +1,7 @@
 from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -15,6 +15,8 @@ import json
 from urllib.parse import urlparse
 import requests
 import asyncio
+from io import BytesIO
+from PIL import Image, ImageDraw
 
 
 ROOT_DIR = Path(__file__).parent
@@ -88,6 +90,24 @@ class RetroGameCard(BaseModel):
     colors: List[str]
     geometry: str
     intensity: int
+
+
+class GifExportPayload(BaseModel):
+    a_hex: str = "#ffff00"
+    b_hex: str = "#0000ff"
+    centre_hex: str = "#808080"
+    colors: List[str] = Field(default_factory=list)
+    hue: int = Field(default=90, ge=0, le=359)
+    tone: int = Field(default=50, ge=0, le=100)
+    preset: str = "white-ruliad"
+    mode: str = "diag"
+    pattern: str = "white"
+    spacing: int = Field(default=3, ge=0, le=40)
+    thickness: int = Field(default=13, ge=1, le=40)
+    opacity: int = Field(default=96, ge=0, le=100)
+    speed: int = Field(default=4, ge=1, le=16)
+    width: int = Field(default=390, ge=240, le=900)
+    height: int = Field(default=430, ge=240, le=900)
 
 
 PALETTE_PRESETS = [
@@ -194,6 +214,129 @@ def build_signature(url: str, palette_id: str, config: RenderConfig) -> str:
 def host_from_url(url: str) -> str:
     return urlparse(url).netloc.replace("www.", "") or "untitled.site"
 
+
+def safe_hex_to_rgb(value: str, fallback: tuple[int, int, int]) -> tuple[int, int, int]:
+    text = (value or "").strip().lstrip("#")
+    if len(text) != 6:
+        return fallback
+    try:
+        return tuple(int(text[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+    except ValueError:
+        return fallback
+
+
+def blend_rgb(a: tuple[int, int, int], b: tuple[int, int, int], t: float) -> tuple[int, int, int]:
+    return (
+        round(a[0] + (b[0] - a[0]) * t),
+        round(a[1] + (b[1] - a[1]) * t),
+        round(a[2] + (b[2] - a[2]) * t),
+    )
+
+
+def draw_hex(draw: ImageDraw.ImageDraw, cx: float, cy: float, size: float, color: tuple[int, int, int]):
+    top = blend_rgb(color, (255, 255, 255), 0.16)
+    left = blend_rgb(color, (0, 0, 0), 0.42)
+    bottom = blend_rgb(color, (0, 0, 0), 0.24)
+    points = [
+        (cx, cy - size),
+        (cx + size * 0.866, cy - size * 0.5),
+        (cx + size * 0.866, cy + size * 0.5),
+        (cx, cy + size),
+        (cx - size * 0.866, cy + size * 0.5),
+        (cx - size * 0.866, cy - size * 0.5),
+    ]
+    draw.polygon([points[0], points[1], (cx, cy), points[5]], fill=top)
+    draw.polygon([points[5], (cx, cy), points[3], points[4]], fill=left)
+    draw.polygon([(cx, cy), points[2], points[3], points[4]], fill=bottom)
+
+
+def create_palette_gif(payload: GifExportPayload) -> bytes:
+    a = safe_hex_to_rgb(payload.a_hex, (255, 255, 0))
+    b = safe_hex_to_rgb(payload.b_hex, (0, 0, 255))
+    c = safe_hex_to_rgb(payload.centre_hex, (128, 128, 128))
+    palette = [safe_hex_to_rgb(color, a) for color in payload.colors[:8]] or [a, b, c]
+    width, height = payload.width, payload.height
+    frames: list[Image.Image] = []
+    bg = blend_rgb(c, (5, 5, 10), 0.72)
+    line_alpha = max(0, min(255, round(payload.opacity * 2.55)))
+    spacing = max(1, payload.spacing + payload.thickness)
+    for frame_idx in range(18):
+        img = Image.new("RGBA", (width, height), bg + (255,))
+        draw = ImageDraw.Draw(img, "RGBA")
+
+        # 3-plane hex ground / palette field.
+        size = max(15, min(34, width / 13))
+        row_step = size * 1.5
+        col_step = size * 1.78
+        y = size * 1.4
+        row = 0
+        while y < height - size:
+            x = size * 1.15 + (row % 2) * col_step / 2
+            col = 0
+            while x < width - size:
+                color = palette[(row + col + frame_idx // 3) % len(palette)]
+                draw_hex(draw, x, y, size * 0.92, color)
+                col += 1
+                x += col_step
+            row += 1
+            y += row_step
+
+        # Ruliad nodes/links.
+        nodes = []
+        for i in range(28):
+            nx = (width * (0.12 + ((i * 37 + frame_idx * 5) % 76) / 100))
+            ny = (height * (0.16 + ((i * 19 + frame_idx * 7) % 68) / 100))
+            nodes.append((nx, ny, palette[i % len(palette)]))
+        for i, node in enumerate(nodes):
+            for j in range(i + 1, min(i + 4, len(nodes))):
+                other = nodes[j]
+                if abs(node[0] - other[0]) + abs(node[1] - other[1]) < width * 0.52:
+                    draw.line([node[:2], other[:2]], fill=palette[(i + j) % len(palette)] + (82,), width=1)
+        for nx, ny, color in nodes:
+            draw.ellipse([nx - 3, ny - 3, nx + 3, ny + 3], fill=color + (180,))
+
+        # Munker / white artifact lines animated by offset.
+        line_color = (255, 255, 255) if payload.pattern in {"white", "bw"} else a
+        offset = (frame_idx * spacing * 0.72) % spacing
+        if payload.mode == "v":
+            x = -width + offset
+            while x < width * 2:
+                draw.rectangle([x, -20, x + payload.thickness, height + 20], fill=line_color + (line_alpha,))
+                x += spacing
+        else:
+            y = -height + offset
+            while y < height * 2:
+                if payload.mode == "h":
+                    draw.rectangle([-20, y, width + 20, y + payload.thickness], fill=line_color + (line_alpha,))
+                else:
+                    draw.line(
+                        [(-width * 0.25, y), (width * 1.25, y + width * 0.52)],
+                        fill=line_color + (line_alpha,),
+                        width=payload.thickness,
+                    )
+                    if payload.mode == "grid":
+                        draw.line(
+                            [(-width * 0.25, height - y), (width * 1.25, height - y - width * 0.52)],
+                            fill=b + (round(line_alpha * 0.7),),
+                            width=max(1, payload.thickness // 2),
+                        )
+                y += spacing
+
+        draw.rectangle([0, 0, width - 1, height - 1], outline=a + (180,), width=2)
+        frames.append(img.convert("P", palette=Image.Palette.ADAPTIVE, colors=128))
+
+    output = BytesIO()
+    frames[0].save(
+        output,
+        format="GIF",
+        save_all=True,
+        append_images=frames[1:],
+        duration=max(50, min(180, payload.speed * 20)),
+        loop=0,
+        optimize=False,
+    )
+    return output.getvalue()
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
@@ -203,6 +346,17 @@ async def root():
 @api_router.get("/health")
 async def health():
     return {"status": "ok", "service": "munkerhex-studio"}
+
+
+@api_router.post("/export-gif")
+async def export_gif(payload: GifExportPayload):
+    gif_bytes = await asyncio.to_thread(create_palette_gif, payload)
+    filename = f"munkerhex-{build_signature(payload.a_hex + payload.b_hex, payload.preset, RenderConfig())}.gif"
+    return Response(
+        content=gif_bytes,
+        media_type="image/gif",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 def build_tonality_renderer_html() -> str:
@@ -265,6 +419,35 @@ def build_tonality_renderer_html() -> str:
     color: var(--ink-dim);
     font: 11px/1.45 ui-monospace, monospace;
   }
+  .mh-export-panel {
+    margin-top: 10px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px;
+    background: rgba(0,0,0,.18);
+    padding: 10px;
+  }
+  .mh-export-title {
+    color: var(--ink);
+    font: 12px ui-monospace, monospace;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .mh-code-box {
+    width: 100%;
+    min-height: 160px;
+    margin-top: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #07070c;
+    color: var(--ink);
+    padding: 10px;
+    font: 11px/1.45 ui-monospace, monospace;
+    resize: vertical;
+    box-sizing: border-box;
+  }
+  .mh-export-status { margin-top: 7px; color: var(--ink-dim); font: 11px ui-monospace, monospace; }
+  .mh-download-link { color: var(--mh-a, #ffff00); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 44px; display: inline-flex; align-items: center; }
   .mh-wheel-readout {
     display: flex;
     gap: 6px;
@@ -493,6 +676,17 @@ def build_tonality_renderer_html() -> str:
     </div>
   </div>
   <div class="mh-painter-tip" id="mhPainterTip">Painter tip: use cool CMY-side dark vibration; avoid cad red in shadows. Let uneven Munker white spacing create optical colour instead of forcing pigment.</div>
+  <div class="mh-export-panel" id="mhExportPanel">
+    <div class="mh-export-title">Website-builder export · exact current palette</div>
+    <div class="mh-render-toolbar">
+      <button id="mhGenerateCodeBtn">Generate embed code</button>
+      <button id="mhCopyCodeBtn">Copy code</button>
+      <button id="mhExportGifBtn">Export animated GIF</button>
+      <a id="mhGifDownload" class="mh-download-link" download="munkerhex-render.gif" style="display:none">Download GIF</a>
+    </div>
+    <textarea id="mhBuilderCode" class="mh-code-box" readonly placeholder="Generated website-builder CSS/JS appears here. Paste it into Webflow, Framer, Shopify, Squarespace custom code, or your site builder header/body embed."></textarea>
+    <div class="mh-export-status" id="mhExportStatus">Ready to export the exact calibrated palette + Munker render.</div>
+  </div>
   <div class="mh-wheel-readout" id="mhWheelReadout">
     <span class="mh-wheel-chip">A #ffff00</span>
     <span class="mh-wheel-chip">B #0000ff</span>
@@ -594,6 +788,102 @@ def build_tonality_renderer_html() -> str:
       animate: $('mhAutoAnimate')?.value || 'on',
     };
   }
+  function exportPayload(){
+    const p = getWheelPalette();
+    const u = currentUnifiedMunker();
+    return {
+      a_hex: p.aHex,
+      b_hex: p.bHex,
+      centre_hex: p.cHex,
+      colors: renderPalette.length ? renderPalette : [p.aHex, p.bHex, p.cHex],
+      hue: Math.round(p.hue),
+      tone: Math.round(p.tone),
+      preset: $('mhMunkerPreset')?.value || 'custom',
+      mode: u.mode,
+      pattern: u.pattern,
+      spacing: u.spacing,
+      thickness: u.thickness,
+      opacity: u.opacity,
+      speed: u.speed,
+      width: 390,
+      height: 430,
+    };
+  }
+  function websiteBuilderCode(){
+    const p = getWheelPalette();
+    const u = currentUnifiedMunker();
+    const angle = u.mode === 'h' ? '0deg' : u.mode === 'v' ? '90deg' : u.mode === 'grid' ? '45deg' : '-28deg';
+    const palette = (renderPalette.length ? renderPalette : [p.aHex, p.bHex, p.cHex]).join(', ');
+    return `<!-- MunkerHex exact palette render for website builders -->
+<style id="munkerhex-builder-style">
+  :root {
+    --mh-a: ${p.aHex};
+    --mh-b: ${p.bHex};
+    --mh-centre: ${p.cHex};
+    --mh-palette: ${palette};
+    --mh-angle: ${angle};
+    --mh-spacing: ${u.spacing}px;
+    --mh-thickness: ${u.thickness}px;
+    --mh-opacity: ${(u.opacity / 100).toFixed(2)};
+    --mh-speed: ${u.speed}s;
+  }
+  html, body { background:#05050a; }
+  body { color: var(--mh-centre); filter: saturate(1.22) contrast(1.05) hue-rotate(${Math.round(p.hue)}deg); }
+  h1,h2,h3,h4,strong,b { color: var(--mh-a); text-shadow: 0 0 12px color-mix(in srgb, var(--mh-a), transparent 55%); }
+  a, button { color: var(--mh-b); }
+  .munkerhex-overlay, .munkerhex-hex, .munkerhex-ruliad { position:fixed; inset:0; pointer-events:none; z-index:2147483000; }
+  .munkerhex-overlay { opacity:var(--mh-opacity); mix-blend-mode:screen; background:repeating-linear-gradient(var(--mh-angle), rgba(255,255,255,.9) 0 var(--mh-thickness), transparent var(--mh-thickness) calc(var(--mh-thickness) + var(--mh-spacing))); animation:munkerhex-pan var(--mh-speed) linear infinite alternate; }
+  .munkerhex-hex { opacity:.34; mix-blend-mode:screen; background-image:linear-gradient(30deg, transparent 24%, var(--mh-a) 25%, var(--mh-a) 26%, transparent 27%, transparent 74%, var(--mh-b) 75%, var(--mh-b) 76%, transparent 77%), linear-gradient(150deg, transparent 24%, var(--mh-centre) 25%, var(--mh-centre) 26%, transparent 27%, transparent 74%, var(--mh-a) 75%, var(--mh-a) 76%, transparent 77%); background-size:52px 30px; }
+  .munkerhex-ruliad { opacity:.42; mix-blend-mode:screen; background:radial-gradient(circle at 20% 22%, var(--mh-a), transparent 1.2%), radial-gradient(circle at 72% 34%, var(--mh-b), transparent 1.1%), radial-gradient(circle at 46% 78%, var(--mh-centre), transparent 1.3%); background-size:88px 88px, 110px 110px, 72px 72px; }
+  @keyframes munkerhex-pan { from { transform:translate3d(-18px,-12px,0); } to { transform:translate3d(18px,12px,0); } }
+</style>
+<script>
+(function(){
+  ['munkerhex-overlay','munkerhex-hex','munkerhex-ruliad'].forEach(function(cls){
+    if(!document.querySelector('.'+cls)){ var el=document.createElement('div'); el.className=cls; document.body.appendChild(el); }
+  });
+})();
+<` + `/script>`;
+  }
+  function updateBuilderCode(){
+    const box = $('mhBuilderCode');
+    if (!box) return;
+    box.value = websiteBuilderCode();
+    const status = $('mhExportStatus');
+    if (status) status.textContent = 'Code generated for exact palette: ' + getWheelPalette().aHex + ' → ' + getWheelPalette().bHex;
+  }
+  async function copyBuilderCode(){
+    updateBuilderCode();
+    const text = $('mhBuilderCode')?.value || '';
+    try {
+      if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      else { $('mhBuilderCode').select(); document.execCommand('copy'); }
+      if ($('mhExportStatus')) $('mhExportStatus').textContent = 'Website-builder code copied.';
+    } catch(e) {
+      if ($('mhExportStatus')) $('mhExportStatus').textContent = 'Copy blocked — select the code and copy manually.';
+    }
+  }
+  async function exportGif(){
+    const status = $('mhExportStatus');
+    try {
+      if (status) status.textContent = 'Rendering animated GIF…';
+      const response = await fetch('export-gif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(exportPayload()),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = $('mhGifDownload');
+      link.href = url;
+      link.style.display = 'inline-flex';
+      link.download = `munkerhex-${Date.now()}.gif`;
+      if (status) status.textContent = 'GIF ready — tap Download GIF.';
+    } catch(e) {
+      if (status) status.textContent = 'GIF export failed: ' + (e.message || e);
+    }
+  }
   function syncUnifiedLabels(){
     setText('mhUnifiedSpacingv', $('mhUnifiedSpacing')?.value || 10);
     setText('mhLineThicknessv', $('mhLineThickness')?.value || 5);
@@ -677,6 +967,7 @@ def build_tonality_renderer_html() -> str:
     }
     painterTip(p);
     styleWholeWebsiteFrame();
+    updateBuilderCode();
     return p;
   }
   function seededRand(seedText){
@@ -931,6 +1222,9 @@ def build_tonality_renderer_html() -> str:
   });
   $('mhMunkerPreset').addEventListener('change', e => applyMunkerPreset(e.target.value));
   $('mhRenderBtn').addEventListener('click', render);
+  $('mhGenerateCodeBtn').addEventListener('click', updateBuilderCode);
+  $('mhCopyCodeBtn').addEventListener('click', copyBuilderCode);
+  $('mhExportGifBtn').addEventListener('click', exportGif);
   if ($('mhSyncBtn')) $('mhSyncBtn').addEventListener('click', syncMunker);
   frame.addEventListener('load', () => setTimeout(styleWholeWebsiteFrame, 120));
   function hideDuplicateMunkerControls(){

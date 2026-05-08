@@ -236,6 +236,37 @@ def test_site_html_proxy_rejects_invalid_scheme():
     assert body["detail"] == "Enter a valid http/https URL"
 
 
+# GIF export endpoint checks (exact palette/munker payload + binary contract)
+def test_export_gif_returns_valid_gif_bytes_with_meaningful_size():
+    base = _require_base_url()
+    payload = {
+        "a_hex": "#ffff00",
+        "b_hex": "#0000ff",
+        "centre_hex": "#808080",
+        "colors": ["#ffff00", "#ff00ff", "#00ffff", "#ff3131", "#39ff14", "#0000ff"],
+        "hue": 120,
+        "tone": 52,
+        "preset": "white-ruliad",
+        "mode": "diag",
+        "pattern": "white",
+        "spacing": 3,
+        "thickness": 13,
+        "opacity": 96,
+        "speed": 4,
+        "width": 390,
+        "height": 430,
+    }
+
+    response = requests.post(f"{base}/api/export-gif", json=payload, timeout=45)
+    assert response.status_code == 200
+    assert response.headers.get("content-type", "").startswith("image/gif")
+    assert "filename=" in response.headers.get("content-disposition", "").lower()
+
+    gif = response.content
+    assert gif[:6] in (b"GIF87a", b"GIF89a")
+    assert len(gif) > 20_000
+
+
 # Original source file preservation checks
 def test_original_tonality_source_file_exists_with_required_sections():
     assert ORIGINAL_TONALITY_PATH.exists()
