@@ -78,6 +78,19 @@ Use the animated Munker render design over the user's hex-grid color-palette con
 - Generated code is intended for website builders such as Webflow, Framer, Shopify, Squarespace custom code, or custom HTML sites.
 - Verified by QA: backend GIF endpoint returns valid GIF bytes; frontend export panel, code generation, hue-updated palette code, and GIF download link all passed.
 
+## Updated — 2026-06-28 (MunkerHex Builder Suite)
+- Added a separate-tab builder suite shell: Web, Game, Character, GIF, QR.
+- Built Webpage Style Designer as the first full module with presets for landing hero, full website theme kit, overlay plugin, creator portfolio, and product/shop launch.
+- Web Designer supports density modes: clean, rich, maximal Munker.
+- Web preview generates palette-calibrated nav, hero, CTA buttons, cards, animated Munker/hex/ruliad background, and export-ready builder code.
+- Website-builder export code now includes preset metadata, exact palette CSS variables, section/card/button styles, and Munker/hex/ruliad overlays.
+- Game tab triggers the existing platformer scene builder using the 3-plane hex ground.
+- Character tab shows palette-derived player/enemy/pickup/boss token cards.
+- GIF tab links into the existing GIF export flow.
+- QR tab added as a placeholder for styled QR plus future extras.
+- Included future extra concepts in UI: palette marketplace/library, social banner/avatar generator, NFT/card-style collectible generator, sticker/poster packs.
+- Verified by QA: backend 16/16 passed; frontend 100% passed for tabs, Web presets, generated code, Game/Character/GIF/QR panels, and core APIs.
+
 ## Current Product Notes
 - The current renderer preserves the original uploaded HTML studio and adds a target stage above it.
 - Website rendering attempts to load the URL in-frame and overlays the original Munker/hex style; some sites may block iframe display, so the adapter also keeps a stylized target layer visible.
