@@ -384,6 +384,49 @@ def build_tonality_renderer_html() -> str:
     font: 12px ui-monospace, monospace;
   }
   .mh-render-toolbar button { min-height: 44px; }
+  .mh-suite-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    margin: 10px 0;
+  }
+  .mh-suite-tab {
+    min-height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: rgba(0,0,0,.22);
+    color: var(--ink-dim);
+    font: 10px ui-monospace, monospace;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .mh-suite-tab.active {
+    color: #05050a;
+    background: var(--mh-a, #ffff00);
+    border-color: var(--mh-a, #ffff00);
+  }
+  .mh-builder-panel { display:none; margin-top:10px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(0,0,0,.18); padding:10px; }
+  .mh-builder-panel.active { display:block; }
+  .mh-builder-title { color:var(--ink); font:12px ui-monospace, monospace; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+  .mh-web-preview { position:relative; min-height:360px; margin-top:10px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#05050a; }
+  .mh-web-preview-inner { position:relative; z-index:1; min-height:360px; padding:18px; background:radial-gradient(circle at 22% 18%, var(--mh-a-soft, rgba(255,255,0,.22)), transparent 28%), radial-gradient(circle at 78% 44%, var(--mh-b-soft, rgba(0,0,255,.18)), transparent 26%), #06060c; color:var(--ink); }
+  .mh-web-nav { display:flex; align-items:center; justify-content:space-between; gap:12px; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:10px 12px; background:rgba(0,0,0,.36); font:11px ui-monospace, monospace; }
+  .mh-web-logo { color:var(--mh-a, #ffff00); font-weight:700; letter-spacing:.14em; }
+  .mh-web-links { display:flex; gap:10px; color:var(--ink-dim); }
+  .mh-web-hero { margin-top:18px; display:grid; gap:14px; }
+  .mh-web-kicker { color:var(--mh-c, #00ffff); font:10px ui-monospace, monospace; letter-spacing:.18em; text-transform:uppercase; }
+  .mh-web-headline { color:#fff; font:700 31px/1.02 ui-monospace, monospace; letter-spacing:.02em; margin:0; }
+  .mh-web-copy { color:var(--ink-dim); font:12px/1.55 ui-monospace, monospace; max-width:42em; }
+  .mh-web-cta-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .mh-web-btn { min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--mh-a, #ffff00); border-radius:999px; padding:0 14px; color:#05050a; background:var(--mh-a, #ffff00); font:12px ui-monospace, monospace; text-decoration:none; }
+  .mh-web-btn.secondary { color:var(--mh-b, #0000ff); background:rgba(0,0,0,.25); border-color:var(--mh-b, #0000ff); }
+  .mh-web-card-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; margin-top:16px; }
+  .mh-web-card { min-height:98px; border:1px solid rgba(255,255,255,.16); border-radius:12px; background:rgba(255,255,255,.045); padding:12px; font:11px/1.45 ui-monospace, monospace; color:var(--ink-dim); }
+  .mh-web-card b { display:block; color:var(--mh-a, #ffff00); margin-bottom:6px; }
+  .mh-extra-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin-top:10px; }
+  .mh-extra-card { border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px; min-height:82px; background:rgba(255,255,255,.035); color:var(--ink-dim); font:11px/1.45 ui-monospace, monospace; }
+  .mh-extra-card b { color:var(--mh-a, #ffff00); display:block; margin-bottom:5px; }
+  @media (max-width:760px){ .mh-suite-tabs { grid-template-columns:repeat(3, minmax(0,1fr)); } .mh-web-card-grid { grid-template-columns:1fr; } }
   .mh-unified-munker {
     margin-top: 10px;
     border: 1px solid rgba(255,255,255,.12);
@@ -616,6 +659,53 @@ def build_tonality_renderer_html() -> str:
 </style>
 <section class="mh-render-adapter" id="mhRenderAdapter">
   <h2>Render target · website/game through original Munker + hex grid</h2>
+  <div class="mh-suite-tabs" id="mhSuiteTabs">
+    <button class="mh-suite-tab active" data-suite-tab="web">Web</button>
+    <button class="mh-suite-tab" data-suite-tab="game">Game</button>
+    <button class="mh-suite-tab" data-suite-tab="character">Character</button>
+    <button class="mh-suite-tab" data-suite-tab="gif">GIF</button>
+    <button class="mh-suite-tab" data-suite-tab="qr">QR</button>
+  </div>
+  <div class="mh-builder-panel active" id="mhBuilderWeb">
+    <div class="mh-builder-title">Webpage style designer · presets + CSS/JS export</div>
+    <div class="mh-render-toolbar">
+      <select id="mhWebPreset">
+        <option value="landing">Preset · landing page hero</option>
+        <option value="theme-kit">Preset · full website theme kit</option>
+        <option value="overlay-plugin">Preset · overlay plugin for existing site</option>
+        <option value="portfolio">Preset · creator portfolio</option>
+        <option value="shop">Preset · product/shop launch</option>
+      </select>
+      <select id="mhWebDensity">
+        <option value="clean">Clean</option>
+        <option value="rich" selected>Rich</option>
+        <option value="maximal">Maximal Munker</option>
+      </select>
+      <button id="mhGenerateWebBtn">Generate webpage style</button>
+    </div>
+    <div class="mh-web-preview" id="mhWebPreview">
+      <div class="mh-web-preview-inner" id="mhWebPreviewInner"></div>
+      <div class="mh-hex-field"></div>
+      <div class="mh-ruliad-field" id="mhWebRuliadField"></div>
+      <div class="mh-artifact-field" id="mhWebArtifactField"></div>
+    </div>
+  </div>
+  <div class="mh-builder-panel" id="mhBuilderGame">
+    <div class="mh-builder-title">Platform game designer · simple playable scene builder</div>
+    <div class="mh-render-toolbar"><button id="mhGameBuilderBtn">Generate scene in render stage</button><span class="mh-export-status">Hex level, player, enemies, collectibles, and Munker ground use current palette.</span></div>
+  </div>
+  <div class="mh-builder-panel" id="mhBuilderCharacter">
+    <div class="mh-builder-title">Character designer · player/enemy tokens</div>
+    <div class="mh-extra-grid" id="mhCharacterPreview"></div>
+  </div>
+  <div class="mh-builder-panel" id="mhBuilderGif">
+    <div class="mh-builder-title">GIF designer · timeline presets</div>
+    <div class="mh-render-toolbar"><button id="mhGifDesignerBtn">Use current render for GIF</button><span class="mh-export-status">Exports through Website-builder export panel below.</span></div>
+  </div>
+  <div class="mh-builder-panel" id="mhBuilderQr">
+    <div class="mh-builder-title">QR code designer · coming next</div>
+    <div class="mh-extra-grid" id="mhQrPreview"><div class="mh-extra-card"><b>Styled QR</b>Palette + Munker-safe QR export will use readable contrast and your ruliad border.</div><div class="mh-extra-card"><b>Extras</b>Palette marketplace/library, social banner/avatar, card collectibles, sticker/poster packs.</div></div>
+  </div>
   <div class="mh-render-toolbar">
     <input id="mhUrl" value="https://example.com" placeholder="https://your-site.com" />
     <select id="mhGame">
@@ -812,9 +902,11 @@ def build_tonality_renderer_html() -> str:
   function websiteBuilderCode(){
     const p = getWheelPalette();
     const u = currentUnifiedMunker();
+    const web = currentWebDesign();
     const angle = u.mode === 'h' ? '0deg' : u.mode === 'v' ? '90deg' : u.mode === 'grid' ? '45deg' : '-28deg';
     const palette = (renderPalette.length ? renderPalette : [p.aHex, p.bHex, p.cHex]).join(', ');
     return `<!-- MunkerHex exact palette render for website builders -->
+<!-- preset:${web.preset}; density:${web.density}; palette:${palette} -->
 <style id="munkerhex-builder-style">
   :root {
     --mh-a: ${p.aHex};
@@ -829,6 +921,9 @@ def build_tonality_renderer_html() -> str:
   }
   html, body { background:#05050a; }
   body { color: var(--mh-centre); filter: saturate(1.22) contrast(1.05) hue-rotate(${Math.round(p.hue)}deg); }
+  .munkerhex-section { min-height:100vh; padding:clamp(32px,8vw,96px); background:radial-gradient(circle at 20% 20%, var(--mh-a), transparent 22%), radial-gradient(circle at 78% 40%, var(--mh-b), transparent 24%), #05050a; color:white; }
+  .munkerhex-card { border:1px solid color-mix(in srgb, var(--mh-a), white 20%); border-radius:18px; background:rgba(255,255,255,.055); padding:24px; backdrop-filter:blur(8px); }
+  .munkerhex-button { display:inline-flex; min-height:44px; align-items:center; border-radius:999px; padding:0 18px; background:var(--mh-a); color:#05050a; text-decoration:none; }
   h1,h2,h3,h4,strong,b { color: var(--mh-a); text-shadow: 0 0 12px color-mix(in srgb, var(--mh-a), transparent 55%); }
   a, button { color: var(--mh-b); }
   .munkerhex-overlay, .munkerhex-hex, .munkerhex-ruliad { position:fixed; inset:0; pointer-events:none; z-index:2147483000; }
@@ -851,6 +946,91 @@ def build_tonality_renderer_html() -> str:
     box.value = websiteBuilderCode();
     const status = $('mhExportStatus');
     if (status) status.textContent = 'Code generated for exact palette: ' + getWheelPalette().aHex + ' → ' + getWheelPalette().bHex;
+  }
+  function currentWebDesign(){
+    return {
+      preset: $('mhWebPreset')?.value || 'landing',
+      density: $('mhWebDensity')?.value || 'rich',
+    };
+  }
+  function webPresetContent(preset){
+    const map = {
+      landing: {
+        kicker:'MUNKERHEX WEBSITE BUILDER', headline:'A live palette render system for impossible web surfaces.',
+        copy:'Generate a hero section, buttons, cards and animated overlays from the exact colour wheel calibration.',
+        cards:['Hero layout','CTA buttons','Animated background']
+      },
+      'theme-kit': {
+        kicker:'FULL WEBSITE THEME KIT', headline:'Navigation, cards, sections and buttons from one calibrated palette.',
+        copy:'Use this as a complete visual kit for Webflow, Framer, Shopify, Squarespace or custom CSS.',
+        cards:['Navigation','Card system','Section backgrounds']
+      },
+      'overlay-plugin': {
+        kicker:'OVERLAY PLUGIN', headline:'Drop the MunkerHex render over an existing website.',
+        copy:'Paste the exported code into a site builder custom-code area and the whole page gets palette/ruliad overlays.',
+        cards:['Global overlay','Hex field','Ruliad nodes']
+      },
+      portfolio: {
+        kicker:'CREATOR PORTFOLIO', headline:'Turn case studies into glowing palette artefacts.',
+        copy:'Portfolio cards, avatar blocks and project tiles follow your live CMY calibration.',
+        cards:['Project cards','Avatar block','Contact CTA']
+      },
+      shop: {
+        kicker:'PRODUCT LAUNCH', headline:'A shop landing page with collectible visual energy.',
+        copy:'Product cards, checkout CTA and banner surfaces inherit the exact MunkerHex palette.',
+        cards:['Product cards','Offer banner','Checkout CTA']
+      }
+    };
+    return map[preset] || map.landing;
+  }
+  function renderWebDesigner(){
+    const p = getWheelPalette();
+    const web = currentWebDesign();
+    const content = webPresetContent(web.preset);
+    const inner = $('mhWebPreviewInner');
+    if (!inner) return;
+    const cardCount = web.density === 'clean' ? 2 : web.density === 'maximal' ? 6 : 3;
+    const cards = Array.from({ length: cardCount }, (_, i) => `<div class="mh-web-card"><b>${content.cards[i % content.cards.length]}</b>${['Palette-calibrated typography','Munker-safe contrast','Ruliad pattern surface','Export-ready CSS','Animated line field','3-plane hex depth'][i % 6]}</div>`).join('');
+    inner.innerHTML = `
+      <nav class="mh-web-nav"><span class="mh-web-logo">MUNKERHEX</span><span class="mh-web-links"><span>Work</span><span>Style</span><span>Export</span></span></nav>
+      <section class="mh-web-hero">
+        <div class="mh-web-kicker">${content.kicker}</div>
+        <h1 class="mh-web-headline">${content.headline}</h1>
+        <p class="mh-web-copy">${content.copy}</p>
+        <div class="mh-web-cta-row"><a class="mh-web-btn">Build style</a><a class="mh-web-btn secondary">Copy code</a></div>
+        <div class="mh-web-card-grid">${cards}</div>
+      </section>`;
+    const webR = $('mhWebRuliadField');
+    const oldR = ruliadField;
+    if (webR) {
+      const save = ruliadField.innerHTML;
+      webR.innerHTML = '';
+      const rand = seededRand('web-designer-' + web.preset + p.aHex + p.bHex);
+      for (let i=0;i<28;i++) {
+        const node = document.createElement('div'); node.className='mh-ruliad-node';
+        node.style.left = (8 + rand()*84) + '%'; node.style.top = (12 + rand()*72) + '%';
+        const color = renderPalette[i % renderPalette.length]; node.style.setProperty('--node-color', color); node.style.color=color; webR.appendChild(node);
+      }
+    }
+    const webA = $('mhWebArtifactField');
+    if (webA) { webA.innerHTML = artifactField.innerHTML; }
+    updateBuilderCode();
+  }
+  function switchSuiteTab(tab){
+    document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
+    ['web','game','character','gif','qr'].forEach(name => {
+      const panel = $('mhBuilder' + name.charAt(0).toUpperCase() + name.slice(1));
+      if (panel) panel.classList.toggle('active', name === tab);
+    });
+    if (tab === 'web') renderWebDesigner();
+    if (tab === 'game') { setVal('mhGame','platformer'); render(); }
+    if (tab === 'character') renderCharacterDesigner();
+    if (tab === 'gif') updateBuilderCode();
+  }
+  function renderCharacterDesigner(){
+    const target = $('mhCharacterPreview'); if (!target) return;
+    const p = getWheelPalette();
+    target.innerHTML = ['Player token','Enemy token','Pickup token','Boss token'].map((label,i) => `<div class="mh-extra-card"><b>${label}</b><span style="display:inline-block;width:42px;height:48px;clip-path:polygon(50% 0%,92% 24%,92% 74%,50% 100%,8% 74%,8% 24%);background:${[p.aHex,p.bHex,p.cHex,renderPalette[2] || p.aHex][i]};box-shadow:0 0 18px ${[p.aHex,p.bHex,p.cHex,renderPalette[2] || p.aHex][i]};"></span><br/>Generated from exact palette + Munker field.</div>`).join('');
   }
   async function copyBuilderCode(){
     updateBuilderCode();
@@ -1225,6 +1405,11 @@ def build_tonality_renderer_html() -> str:
   $('mhGenerateCodeBtn').addEventListener('click', updateBuilderCode);
   $('mhCopyCodeBtn').addEventListener('click', copyBuilderCode);
   $('mhExportGifBtn').addEventListener('click', exportGif);
+  document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.addEventListener('click', () => switchSuiteTab(btn.dataset.suiteTab || 'web')));
+  ['mhWebPreset','mhWebDensity'].forEach(id => { const el=$(id); if(el) el.addEventListener('change', renderWebDesigner); });
+  $('mhGenerateWebBtn').addEventListener('click', renderWebDesigner);
+  $('mhGameBuilderBtn').addEventListener('click', () => { switchSuiteTab('game'); setVal('mhGame','platformer'); render(); });
+  $('mhGifDesignerBtn').addEventListener('click', () => { switchSuiteTab('gif'); exportGif(); });
   if ($('mhSyncBtn')) $('mhSyncBtn').addEventListener('click', syncMunker);
   frame.addEventListener('load', () => setTimeout(styleWholeWebsiteFrame, 120));
   function hideDuplicateMunkerControls(){
@@ -1263,7 +1448,7 @@ def build_tonality_renderer_html() -> str:
       renderAll.__mhPatched = true;
     }
     syncLineThickness($('mhLineThickness') ? $('mhLineThickness').value : 5, false);
-    syncMunker(); render();
+    syncMunker(); render(); renderWebDesigner(); renderCharacterDesigner();
   }, 400);
 })();
 </script>
