@@ -530,8 +530,12 @@ def build_tonality_renderer_html() -> str:
     background: var(--mh-a, #ffff00);
     border-color: var(--mh-a, #ffff00);
   }
-  .mh-builder-panel { display:none; margin-top:10px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(0,0,0,.18); padding:10px; }
+  .mh-builder-panel { display:none; margin-top:10px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(0,0,0,.18); padding:10px; transform-origin:top center; }
   .mh-builder-panel.active { display:block; }
+  .mh-builder-panel.mh-fold-out { display:block; animation:mhFoldOut 0.22s ease-in forwards; pointer-events:none; }
+  .mh-builder-panel.mh-fold-in { animation:mhFoldIn 0.24s ease-out forwards; }
+  @keyframes mhFoldOut { 0%{transform:perspective(900px) rotateX(0deg);opacity:1} 60%{opacity:.28} 100%{transform:perspective(900px) rotateX(-82deg);opacity:0} }
+  @keyframes mhFoldIn  { 0%{transform:perspective(900px) rotateX(80deg);opacity:0} 45%{opacity:.4} 100%{transform:perspective(900px) rotateX(0deg);opacity:1} }
   .mh-builder-title { color:var(--ink); font:12px ui-monospace, monospace; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
   .mh-web-preview { position:relative; min-height:360px; margin-top:10px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#05050a; }
   .mh-web-preview-inner { position:relative; z-index:1; min-height:360px; padding:18px; background:radial-gradient(circle at 22% 18%, var(--mh-a-soft, rgba(255,255,0,.22)), transparent 28%), radial-gradient(circle at 78% 44%, var(--mh-b-soft, rgba(0,0,255,.18)), transparent 26%), #06060c; color:var(--ink); }
@@ -1237,15 +1241,26 @@ def build_tonality_renderer_html() -> str:
   }
   function switchSuiteTab(tab){
     document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
-    ['web','game','character','gif','qr'].forEach(name => {
-      const panel = $('mhBuilder' + name.charAt(0).toUpperCase() + name.slice(1));
-      if (panel) panel.classList.toggle('active', name === tab);
-    });
-    if (tab === 'web') renderWebDesigner();
-    if (tab === 'game') { setVal('mhGame','platformer'); render(); }
-    if (tab === 'character') renderCharacterDesigner();
-    if (tab === 'gif') updateBuilderCode();
-    if (tab === 'qr') { if (typeof generateQr === 'function') setTimeout(generateQr, 80); }
+    const outPanel = document.querySelector('.mh-builder-panel.active');
+    const inPanel = $('mhBuilder' + tab.charAt(0).toUpperCase() + tab.slice(1));
+    if (!inPanel || inPanel === outPanel) return;
+    const DUR = 220;
+    if (outPanel) {
+      outPanel.classList.add('mh-fold-out');
+      setTimeout(() => outPanel.classList.remove('active','mh-fold-out'), DUR);
+    }
+    setTimeout(() => {
+      inPanel.classList.add('active','mh-fold-in');
+      setTimeout(() => inPanel.classList.remove('mh-fold-in'), DUR + 40);
+      if (tab === 'web') renderWebDesigner();
+      if (tab === 'game') { setVal('mhGame','platformer'); render(); }
+      if (tab === 'character') renderCharacterDesigner();
+      if (tab === 'gif') updateBuilderCode();
+      if (tab === 'qr') setTimeout(() => { if (typeof generateQr === 'function') generateQr(); }, 60);
+      if (tab === 'kit' && typeof renderKitGrid === 'function') renderKitGrid();
+      if (tab === 'fonts' && typeof loadFontEffects === 'function') loadFontEffects();
+      if (tab === 'type' && typeof renderTypeScale === 'function') renderTypeScale();
+    }, outPanel ? DUR - 30 : 0);
   }
   function renderCharacterDesigner(){
     const target = $('mhCharacterPreview'); if (!target) return;
@@ -2116,19 +2131,26 @@ window.MH_CONFIG = {{
   // ── HEXFIELD living logo mark ─────────────────────────────────────────────
   function buildHexfieldMark(seed) {
     var rng = (typeof seededRand === 'function') ? seededRand(seed) : Math.random.bind(Math);
-    var COLS=6, ROWS=4, sz=15, hexH=sz/0.866, rowStep=hexH*0.75+2, colStep=sz+2;
-    var p=(typeof getWheelPalette==='function')?getWheelPalette():{aHex:'#ffff00',bHex:'#0077ff',cHex:'#888'};
-    var W=colStep*COLS+sz*0.5, H=rowStep*(ROWS-1)+hexH, cells='';
+    var COLS=9, ROWS=9, sz=16, hexH=sz/0.866, rowStep=hexH*0.75+1.5, colStep=sz+1.5;
+    var p=(typeof getWheelPalette==='function')?getWheelPalette():{aHex:'#ffff00',bHex:'#0077ff',cHex:'#888888'};
+    var W=colStep*COLS+colStep*0.5+4, H=rowStep*(ROWS-1)+hexH+4;
+    var cells='', idx=0, cxm=(COLS-1)*0.5, cym=(ROWS-1)*0.5;
     for(var r=0;r<ROWS;r++){
       var off=r%2?colStep*0.5:0;
       for(var c=0;c<COLS;c++){
-        var dist=Math.abs(c-(COLS-1)/2)/(COLS/2)+Math.abs(r-(ROWS-1)/2)/(ROWS/2);
-        if(rng()>0.9-dist*0.22) continue;
-        var cx=c*colStep+off+sz/2, cy=r*rowStep+hexH/2, pts=[];
-        for(var i=0;i<6;i++){var a=Math.PI/3*i-Math.PI/6;pts.push((cx+sz/2*Math.cos(a)).toFixed(1)+','+(cy+hexH/2*Math.sin(a)).toFixed(1));}
-        var col=(r+c)%3===0?p.aHex:(r+c)%3===1?p.bHex:p.cHex;
-        var op=(0.55+rng()*0.45).toFixed(2);
-        cells+='<polygon points="'+pts.join(' ')+'" fill="'+col+'" opacity="'+op+'"/>';
+        var dist=Math.hypot((c-cxm)/(cxm||1),(r-cym)/(cym||1));
+        var keepP=dist<0.55?0.97:dist<0.82?0.85:dist<1.0?0.55:dist<1.12?0.22:0;
+        if(rng()>keepP) continue;
+        var px=c*colStep+off+sz*0.5+2, py=r*rowStep+hexH*0.5+2, pts=[];
+        for(var i=0;i<6;i++){var a=Math.PI/3*i-Math.PI/6;pts.push((px+sz*0.5*Math.cos(a)).toFixed(1)+','+(py+hexH*0.5*Math.sin(a)).toFixed(1));}
+        var palC=[p.aHex,p.bHex,p.cHex];
+        var ci=(r*13+c*7)%3, col=palC[ci], altC=palC[(ci+1+Math.round(rng()))%3];
+        var oa=(0.12+rng()*0.22).toFixed(2), ob=(0.52+rng()*0.48).toFixed(2);
+        var dur=(2.2+rng()*3.0).toFixed(1), del=(idx*0.11%3.2).toFixed(2);
+        var opA='<animate attributeName="opacity" values="'+oa+';'+ob+';'+oa+'" dur="'+dur+'s" begin="-'+del+'s" repeatCount="indefinite"/>';
+        var flA=rng()>0.52?'<animate attributeName="fill" values="'+col+';'+altC+';'+col+'" dur="'+(parseFloat(dur)*2.3).toFixed(1)+'s" begin="-'+del+'s" repeatCount="indefinite"/>':'';
+        cells+='<polygon points="'+pts.join(' ')+'" fill="'+col+'" opacity="'+oa+'">'+opA+flA+'</polygon>';
+        idx++;
       }
     }
     return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W.toFixed(0)+'" height="'+H.toFixed(0)+'" viewBox="0 0 '+W.toFixed(0)+' '+H.toFixed(0)+'">'+cells+'</svg>';
@@ -2307,13 +2329,7 @@ window.MH_CONFIG = {{
     // Tab switching for new tabs
     [kitBtn, fontsBtn].forEach(function(btn){
       btn.addEventListener('click', function(){
-        document.querySelectorAll('.mh-suite-tab').forEach(function(b){ b.classList.remove('active'); });
-        document.querySelectorAll('.mh-builder-panel').forEach(function(p){ p.classList.remove('active'); });
-        btn.classList.add('active');
-        var panel=document.getElementById('mhBuilder'+btn.dataset.suiteTab.charAt(0).toUpperCase()+btn.dataset.suiteTab.slice(1));
-        if(panel) panel.classList.add('active');
-        if(btn.dataset.suiteTab==='kit'){ renderKitGrid(); }
-        if(btn.dataset.suiteTab==='fonts'){ loadFontEffects(); }
+        if(typeof switchSuiteTab==='function') switchSuiteTab(btn.dataset.suiteTab);
       });
     });
 
@@ -2362,10 +2378,7 @@ window.MH_CONFIG = {{
 
     // Type tab click handler
     typeBtn.addEventListener('click', function(){
-      document.querySelectorAll('.mh-suite-tab').forEach(function(b){ b.classList.remove('active'); });
-      document.querySelectorAll('.mh-builder-panel').forEach(function(p){ p.classList.remove('active'); });
-      typeBtn.classList.add('active'); typePanel.classList.add('active');
-      renderTypeScale();
+      if(typeof switchSuiteTab==='function') switchSuiteTab('type');
     });
 
     // Type sub-tab switching
