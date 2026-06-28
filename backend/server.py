@@ -828,8 +828,31 @@ def build_tonality_renderer_html() -> str:
     <div class="mh-render-toolbar"><button id="mhGifDesignerBtn">Use current render for GIF</button><span class="mh-export-status">Exports through Website-builder export panel below.</span></div>
   </div>
   <div class="mh-builder-panel" id="mhBuilderQr">
-    <div class="mh-builder-title">QR code designer · coming next</div>
-    <div class="mh-extra-grid" id="mhQrPreview"><div class="mh-extra-card"><b>Styled QR</b>Palette + Munker-safe QR export will use readable contrast and your ruliad border.</div><div class="mh-extra-card"><b>Extras</b>Palette marketplace/library, social banner/avatar, card collectibles, sticker/poster packs.</div></div>
+    <div class="mh-builder-title">QR code designer · palette-calibrated + Munker overlay</div>
+    <div class="mh-render-toolbar">
+      <input id="mhQrInput" value="https://munkerhex.com" placeholder="URL or text to encode" style="flex:2" />
+      <select id="mhQrStyle">
+        <option value="palette">Palette · A on dark, B on light</option>
+        <option value="inverse">Inverse · B on dark, A on light</option>
+        <option value="mono-a">Mono A · A colour + black</option>
+        <option value="mono-b">Mono B · B colour + black</option>
+      </select>
+      <select id="mhQrSize">
+        <option value="200">Small 200 px</option>
+        <option value="320" selected>Medium 320 px</option>
+        <option value="480">Large 480 px</option>
+      </select>
+    </div>
+    <div id="mhQrStage" style="position:relative;margin:10px 0;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+      <canvas id="mhQrCanvas" style="border-radius:8px;image-rendering:pixelated;max-width:100%"></canvas>
+      <div id="mhQrInfo" style="font:11px ui-monospace,monospace;color:var(--ink-dim);max-width:220px;line-height:1.6"></div>
+    </div>
+    <div class="mh-render-toolbar">
+      <button id="mhQrGenerateBtn">Generate QR</button>
+      <button id="mhQrDownloadBtn" style="display:none">Download PNG</button>
+      <button id="mhQrSvgBtn" style="display:none">Download SVG</button>
+      <span id="mhQrStatus" class="mh-export-status"></span>
+    </div>
   </div>
   <div class="mh-render-toolbar">
     <input id="mhUrl" value="https://example.com" placeholder="https://your-site.com" />
@@ -1151,11 +1174,85 @@ def build_tonality_renderer_html() -> str:
     if (tab === 'game') { setVal('mhGame','platformer'); render(); }
     if (tab === 'character') renderCharacterDesigner();
     if (tab === 'gif') updateBuilderCode();
+    if (tab === 'qr') { if (typeof generateQr === 'function') setTimeout(generateQr, 80); }
   }
   function renderCharacterDesigner(){
     const target = $('mhCharacterPreview'); if (!target) return;
     const p = getWheelPalette();
     target.innerHTML = ['Player token','Enemy token','Pickup token','Boss token'].map((label,i) => `<div class="mh-extra-card"><b>${label}</b><span style="display:inline-block;width:42px;height:48px;clip-path:polygon(50% 0%,92% 24%,92% 74%,50% 100%,8% 74%,8% 24%);background:${[p.aHex,p.bHex,p.cHex,renderPalette[2] || p.aHex][i]};box-shadow:0 0 18px ${[p.aHex,p.bHex,p.cHex,renderPalette[2] || p.aHex][i]};"></span><br/>Generated from exact palette + Munker field.</div>`).join('');
+  }
+
+  // ── QR Code Generator ─────────────────────────────────────────────────────
+  let _qrSvgCache = '';
+  async function generateQr(){
+    const status = $('mhQrStatus');
+    const canvas = $('mhQrCanvas');
+    const info = $('mhQrInfo');
+    if (!canvas) return;
+    if (!window.QRCode) {
+      if (status) status.textContent = 'Loading QR library…';
+      await new Promise((res,rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    const text = ($('mhQrInput')?.value || 'https://munkerhex.com').trim() || 'https://munkerhex.com';
+    const style = $('mhQrStyle')?.value || 'palette';
+    const size = parseInt($('mhQrSize')?.value || '320', 10);
+    const p = getWheelPalette();
+    const darkMap  = { palette: p.aHex, inverse: p.bHex, 'mono-a': p.aHex, 'mono-b': '#000000' };
+    const lightMap = { palette: p.bHex, inverse: p.aHex, 'mono-a': '#000000', 'mono-b': p.bHex };
+    const darkHex  = darkMap[style]  || p.aHex;
+    const lightHex = lightMap[style] || p.bHex;
+    if (status) status.textContent = 'Generating…';
+    try {
+      await QRCode.toCanvas(canvas, text, {
+        width: size, margin: 2,
+        color: { dark: darkHex, light: lightHex },
+        errorCorrectionLevel: 'M',
+      });
+      // Munker diagonal stripe overlay at low opacity
+      const ctx = canvas.getContext('2d');
+      ctx.save();
+      ctx.globalAlpha = 0.13;
+      ctx.strokeStyle = p.aHex;
+      ctx.lineWidth = 2.5;
+      const sp = 10;
+      for (let i = -size; i < size * 2; i += sp) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + size, size); ctx.stroke();
+      }
+      // Hex-corner border frame
+      ctx.globalAlpha = 0.7;
+      ctx.strokeStyle = p.bHex;
+      ctx.lineWidth = 3;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(2, 2, size - 4, size - 4, 10); ctx.stroke();
+      } else {
+        ctx.strokeRect(3, 3, size - 6, size - 6);
+      }
+      ctx.restore();
+      // Cache SVG for download
+      _qrSvgCache = await QRCode.toString(text, { type: 'svg', color: { dark: darkHex, light: lightHex }, errorCorrectionLevel: 'M' });
+      if (info) info.innerHTML = `<b>Content:</b> ${text.substring(0,60)}${text.length>60?'…':''}<br/><b>Colours:</b> dark <span style="color:${darkHex}">${darkHex}</span> · light <span style="color:${lightHex}">${lightHex}</span><br/><b>Size:</b> ${size}×${size} px`;
+      if ($('mhQrDownloadBtn')) { $('mhQrDownloadBtn').style.display=''; $('mhQrSvgBtn').style.display=''; }
+      if (status) status.textContent = 'QR ready.';
+    } catch(e) {
+      if (status) status.textContent = 'QR error: ' + (e.message || e);
+    }
+  }
+  function downloadQrPng(){
+    const canvas = $('mhQrCanvas'); if (!canvas) return;
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'munkerhex-qr.png'; a.click();
+  }
+  function downloadQrSvg(){
+    if (!_qrSvgCache) return;
+    const blob = new Blob([_qrSvgCache], {type:'image/svg+xml'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'munkerhex-qr.svg'; a.click();
   }
   async function copyBuilderCode(){
     updateBuilderCode();
@@ -1574,6 +1671,15 @@ def build_tonality_renderer_html() -> str:
     }
     syncLineThickness($('mhLineThickness') ? $('mhLineThickness').value : 5, false);
     syncMunker(); render(); renderWebDesigner(); renderCharacterDesigner();
+    const qrGenBtn = $('mhQrGenerateBtn');
+    if (qrGenBtn) {
+      qrGenBtn.addEventListener('click', generateQr);
+      $('mhQrDownloadBtn')?.addEventListener('click', downloadQrPng);
+      $('mhQrSvgBtn')?.addEventListener('click', downloadQrSvg);
+      $('mhQrInput')?.addEventListener('input', () => setTimeout(generateQr, 300));
+      $('mhQrStyle')?.addEventListener('change', generateQr);
+      $('mhQrSize')?.addEventListener('change', generateQr);
+    }
   }, 400);
 })();
 </script>
@@ -1598,7 +1704,8 @@ window.MH_CONFIG = {{
   }}
 }};
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>"""
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>"""
 
     # ── Auth banner + Brand Kit tab + Font Effects tab (appended after render_patch) ──
     auth_and_features_patch = """
@@ -1638,6 +1745,16 @@ window.MH_CONFIG = {{
   .mh-fx-name{font:11px ui-monospace,monospace;color:var(--ink-dim);margin-top:4px}
   .mh-fx-preview-svg{width:100%;height:38px;overflow:hidden}
   #mhFontSvgPreview{width:100%;height:80px;margin-top:8px;border:1px solid var(--line);border-radius:8px;background:#0b0b10;overflow:hidden}
+  /* Typography panel */
+  .mh-type-subtabs{display:flex;gap:6px;margin-bottom:12px}
+  .mh-type-subtab{padding:5px 12px;border:1px solid var(--line);border-radius:6px;background:none;color:var(--ink-dim);cursor:pointer;font:11px ui-monospace,monospace}
+  .mh-type-subtab.active{background:var(--line);color:var(--ink)}
+  .mh-type-subpanel{display:none}
+  .mh-type-subpanel.active{display:block}
+  .mh-type-spacing-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;font:11px ui-monospace,monospace;color:var(--ink-dim)}
+  .mh-type-spacing-row label{display:flex;align-items:center;gap:6px}
+  #mhTypeScaleSvg{width:100%;min-height:260px;border:1px solid var(--line);border-radius:8px;background:#0b0b10;overflow:hidden;margin:8px 0}
+  #mhLogoPreview{width:100%;height:160px;border:1px solid var(--line);border-radius:8px;background:#0b0b10;overflow:hidden;margin:8px 0;display:flex;align-items:center;justify-content:center}
 </style>
 
 <!-- Auth banner (top of page) -->
@@ -1885,6 +2002,121 @@ window.MH_CONFIG = {{
     var a=document.createElement('a'); a.href=url; a.download='munkerhex-'+fx.id+'.svg'; a.click();
   }
 
+  // ── Typography + Logo ──────────────────────────────────────────────────────
+  var FONT_STACKS = [
+    {id:'system-sans',label:'System Sans',stack:'ui-sans-serif,system-ui,-apple-system,sans-serif'},
+    {id:'system-serif',label:'System Serif',stack:'ui-serif,Georgia,"Times New Roman",serif'},
+    {id:'system-mono',label:'System Mono',stack:'ui-monospace,"Cascadia Code","Fira Code",monospace'},
+    {id:'inter',label:'Inter',gfont:'Inter:wght@300;400;700;900',stack:'"Inter",sans-serif'},
+    {id:'playfair',label:'Playfair Display',gfont:'Playfair+Display:wght@400;700;900',stack:'"Playfair Display",serif'},
+    {id:'dm-mono',label:'DM Mono',gfont:'DM+Mono:ital,wght@0,400;0,500;1,400',stack:'"DM Mono",monospace'},
+    {id:'space-grotesk',label:'Space Grotesk',gfont:'Space+Grotesk:wght@300;400;700',stack:'"Space Grotesk",sans-serif'},
+    {id:'bebas',label:'Bebas Neue',gfont:'Bebas+Neue',stack:'"Bebas Neue",sans-serif'},
+  ];
+  function _loadGoogleFont(fontId){
+    var fnt=FONT_STACKS.find(function(f){ return f.id===fontId; });
+    if(!fnt||!fnt.gfont) return;
+    var lid='gf-'+fontId;
+    if(document.getElementById(lid)) return;
+    var link=document.createElement('link'); link.id=lid; link.rel='stylesheet';
+    link.href='https://fonts.googleapis.com/css2?family='+fnt.gfont+'&display=swap';
+    document.head.appendChild(link);
+  }
+  function _getFontStack(fontId){
+    var fnt=FONT_STACKS.find(function(f){ return f.id===fontId; });
+    return fnt ? fnt.stack : 'ui-sans-serif,system-ui,sans-serif';
+  }
+  function renderTypeScale(){
+    var svgEl=document.getElementById('mhTypeScaleSvg'); if(!svgEl) return;
+    var p=(typeof getWheelPalette==='function')?getWheelPalette():{aHex:'#ffff00',bHex:'#0000ff',cHex:'#808080'};
+    var fontId=(document.getElementById('mhTypeFontFamily')||{}).value||'system-sans';
+    var leading=parseInt((document.getElementById('mhTypeLeading')||{}).value||145)/100;
+    var tracking=parseInt((document.getElementById('mhTypeTracking')||{}).value||0);
+    _loadGoogleFont(fontId);
+    var stack=_getFontStack(fontId);
+    var sizes=[{px:52,label:'H1 · Heading',w:900},{px:38,label:'H2 · Display',w:700},{px:28,label:'H3 · Section',w:700},{px:20,label:'Body · Regular',w:400},{px:16,label:'Small · UI',w:400},{px:13,label:'Caption',w:400},{px:11,label:'Micro',w:400}];
+    var cols=[p.aHex,p.bHex,p.cHex,p.cHex+'cc','#8888a8','#6688a0','#556678'];
+    var lsp=(tracking/1000).toFixed(4)+'em';
+    var y=0;
+    var rows=sizes.map(function(s,i){ y+=Math.round(s.px*leading)+6; return {s:s,col:cols[i]||'#556678',y:y}; });
+    var totH=y+20;
+    svgEl.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="'+totH+'" viewBox="0 0 800 '+totH+'">'
+      +rows.map(function(r){
+        return '<text x="16" y="'+r.y+'" font-size="'+r.s.px+'" font-weight="'+r.s.w+'" fill="'+r.col+'" letter-spacing="'+lsp+'" style="font-family:'+stack+'">'+r.s.label+'</text>'
+          +'<text x="784" y="'+r.y+'" text-anchor="end" font-size="10" fill="#556678" style="font-family:ui-monospace,monospace">'+r.s.px+'px</text>';
+      }).join('')+'</svg>';
+  }
+  function copyTypeCss(){
+    var p=(typeof getWheelPalette==='function')?getWheelPalette():{aHex:'#ffff00',bHex:'#0000ff',cHex:'#808080'};
+    var fontId=(document.getElementById('mhTypeFontFamily')||{}).value||'system-sans';
+    var leading=parseInt((document.getElementById('mhTypeLeading')||{}).value||145)/100;
+    var tracking=parseInt((document.getElementById('mhTypeTracking')||{}).value||0);
+    var stack=_getFontStack(fontId);
+    var fnt=FONT_STACKS.find(function(f){ return f.id===fontId; });
+    var css='/* MunkerHex typography tokens */\n';
+    if(fnt&&fnt.gfont) css+='@import url("https://fonts.googleapis.com/css2?family='+fnt.gfont+'&display=swap");\n\n';
+    css+=':root {\n  --font-heading: '+stack+';\n  --font-body: ui-sans-serif,system-ui,sans-serif;\n';
+    css+='  --color-h1: '+p.aHex+';\n  --color-h2: '+p.bHex+';\n  --color-h3: '+p.cHex+';\n  --color-body: #e8e8f0;\n  --color-caption: #8888a8;\n';
+    css+='  --size-h1: 3.25rem; --size-h2: 2.375rem; --size-h3: 1.75rem;\n  --size-body: 1.25rem; --size-small: 1rem; --size-caption: .8125rem; --size-micro: .6875rem;\n';
+    css+='  --leading: '+leading+';\n  --tracking: '+(tracking/1000).toFixed(4)+'em;\n}\n';
+    navigator.clipboard.writeText(css).catch(function(){});
+    var st=document.getElementById('mhTypeCssStatus'); if(st){ st.textContent='Copied!'; setTimeout(function(){ st.textContent=''; },2000); }
+  }
+  function _getLogoSvg(){
+    var p=(typeof getWheelPalette==='function')?getWheelPalette():{aHex:'#ffff00',bHex:'#0000ff',cHex:'#808080'};
+    var fontId=(document.getElementById('mhTypeFontFamily')||{}).value||'system-sans';
+    var stack=_getFontStack(fontId);
+    var text=(document.getElementById('mhLogoText')||{}).value||'MUNKERHEX';
+    var tagline=(document.getElementById('mhLogoTagline')||{}).value||'';
+    var mark=(document.getElementById('mhLogoMark')||{}).value||'hex';
+    var layout=(document.getElementById('mhLogoLayout')||{}).value||'left';
+    var W=480, H=160;
+    function hexMark(cx,cy,r){
+      var pts=[];
+      for(var i=0;i<6;i++){ var a=Math.PI/180*(60*i-30); pts.push((cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1)); }
+      return '<polygon points="'+pts.join(' ')+'" fill="'+p.aHex+'" stroke="'+p.bHex+'" stroke-width="2.5"/>';
+    }
+    function cubeMark(cx,cy,s){
+      var hw=s*0.55,hh=s*0.32,d=s*0.22;
+      var top='<polygon points="'+cx+','+(cy-d)+' '+(cx+hw)+','+(cy-d-hh)+' '+cx+','+(cy-d-hh*2)+' '+(cx-hw)+','+(cy-d-hh)+'" fill="'+p.aHex+'"/>';
+      var left='<polygon points="'+(cx-hw)+','+(cy-d-hh)+' '+cx+','+(cy-d)+' '+cx+','+(cy+d)+' '+(cx-hw)+','+(cy+hh*0.28)+'" fill="'+p.bHex+'" opacity="0.9"/>';
+      var right='<polygon points="'+(cx+hw)+','+(cy-d-hh)+' '+cx+','+(cy-d)+' '+cx+','+(cy+d)+' '+(cx+hw)+','+(cy+hh*0.28)+'" fill="'+p.cHex+'" opacity="0.75"/>';
+      return top+left+right;
+    }
+    var markSvg='', textX=40, textY=H/2+13, tagY=H/2+34, anchor='start';
+    if(layout==='left'&&mark!=='none'){
+      if(mark==='hex') markSvg=hexMark(52,H/2,34); else markSvg=cubeMark(52,H/2,38);
+      textX=102;
+    } else if(layout==='top'){
+      if(mark==='hex') markSvg=hexMark(W/2,42,26); else if(mark!=='none') markSvg=cubeMark(W/2,42,30);
+      textX=W/2; textY=98; tagY=120; anchor='middle';
+    } else {
+      textX=W/2; anchor='middle';
+    }
+    return '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'">'
+      +'<rect width="'+W+'" height="'+H+'" fill="#0b0b10"/>'
+      +markSvg
+      +'<text x="'+textX+'" y="'+textY+'" text-anchor="'+anchor+'" font-family="'+stack+'" font-size="34" font-weight="700" fill="'+p.aHex+'">'+text+'</text>'
+      +(tagline?'<text x="'+textX+'" y="'+tagY+'" text-anchor="'+anchor+'" font-family="'+stack+'" font-size="12" fill="'+p.bHex+'" letter-spacing="0.12em">'+tagline+'</text>':'')
+      +'</svg>';
+  }
+  function renderLogo(){
+    var preview=document.getElementById('mhLogoPreview'); if(!preview) return;
+    preview.innerHTML=_getLogoSvg().replace('<?xml version="1.0" encoding="UTF-8"?>','');
+  }
+  function downloadLogoSvg(){
+    var blob=new Blob([_getLogoSvg()],{type:'image/svg+xml'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download='logo-'+Date.now()+'.svg'; a.click();
+  }
+  function downloadLogoPng(){
+    var svgStr=_getLogoSvg(); var W=480,H=160;
+    var img=new Image(), canvas=document.createElement('canvas'); canvas.width=W*2; canvas.height=H*2;
+    var ctx=canvas.getContext('2d'); ctx.scale(2,2);
+    img.onload=function(){ ctx.drawImage(img,0,0); var url=canvas.toDataURL('image/png'); var a=document.createElement('a'); a.href=url; a.download='logo-'+Date.now()+'.png'; a.click(); };
+    img.src='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svgStr)));
+  }
+
   // ── Inject new tabs after render_patch IIFE runs ───────────────────────────
   setTimeout(function(){
     var tabs=document.getElementById('mhSuiteTabs'); if(!tabs) return;
@@ -1939,6 +2171,81 @@ window.MH_CONFIG = {{
     // Font input live preview
     document.getElementById('mhFontInput')?.addEventListener('input', updateFontPreview);
     document.getElementById('mhExportFontSvgBtn')?.addEventListener('click', exportFontSvg);
+
+    // Type tab button
+    var typeBtn=document.createElement('button');
+    typeBtn.className='mh-suite-tab'; typeBtn.dataset.suiteTab='type'; typeBtn.textContent='Type';
+    tabs.appendChild(typeBtn);
+
+    // Type panel HTML
+    var typePanel=document.createElement('div');
+    typePanel.className='mh-builder-panel'; typePanel.id='mhBuilderType';
+    var typeFontOptions=FONT_STACKS.map(function(f){ return '<option value="'+f.id+'">'+f.label+'</option>'; }).join('');
+    typePanel.innerHTML=''
+      +'<div class="mh-builder-title">Typography · type scale + font pairing + logo</div>'
+      +'<div class="mh-type-subtabs">'
+      +'<button class="mh-type-subtab active" data-type-tab="scale">Type Scale</button>'
+      +'<button class="mh-type-subtab" data-type-tab="logo">Logo Design</button>'
+      +'</div>'
+      +'<div id="mhTypeScalePanel" class="mh-type-subpanel active">'
+      +'<div class="mh-render-toolbar"><select id="mhTypeFontFamily">'+typeFontOptions+'</select></div>'
+      +'<div class="mh-type-spacing-row">'
+      +'<label>Leading <input type="range" id="mhTypeLeading" min="100" max="200" value="145" step="5"/> <span id="mhTypeLeadingVal">1.45</span></label>'
+      +'<label>Tracking <input type="range" id="mhTypeTracking" min="-5" max="20" value="0" step="1"/> <span id="mhTypeTrackingVal">0em</span></label>'
+      +'</div>'
+      +'<div id="mhTypeScaleSvg"></div>'
+      +'<div class="mh-render-toolbar"><button id="mhTypeCssCopyBtn">Copy CSS tokens</button><span id="mhTypeCssStatus" class="mh-export-status"></span></div>'
+      +'</div>'
+      +'<div id="mhTypeLogoPanel" class="mh-type-subpanel">'
+      +'<div class="mh-render-toolbar">'
+      +'<input id="mhLogoText" value="MUNKERHEX" maxlength="24" placeholder="Brand name" style="flex:2"/>'
+      +'<select id="mhLogoMark"><option value="hex">Hex mark</option><option value="cube">Cube mark</option><option value="none">No mark</option></select>'
+      +'<select id="mhLogoLayout"><option value="left">Mark left</option><option value="top">Mark top</option><option value="text">Text only</option></select>'
+      +'</div>'
+      +'<input class="mh-font-text-input" id="mhLogoTagline" value="Palette \xb7 Type \xb7 Optics" placeholder="Tagline" style="margin-top:6px"/>'
+      +'<div id="mhLogoPreview"></div>'
+      +'<div class="mh-render-toolbar"><button id="mhLogoSvgBtn">Download SVG</button><button id="mhLogoPngBtn">Download PNG</button><span id="mhLogoStatus" class="mh-export-status"></span></div>'
+      +'</div>';
+    if(lastPanel) lastPanel.after(typePanel);
+
+    // Type tab click handler
+    typeBtn.addEventListener('click', function(){
+      document.querySelectorAll('.mh-suite-tab').forEach(function(b){ b.classList.remove('active'); });
+      document.querySelectorAll('.mh-builder-panel').forEach(function(p){ p.classList.remove('active'); });
+      typeBtn.classList.add('active'); typePanel.classList.add('active');
+      renderTypeScale();
+    });
+
+    // Type sub-tab switching
+    typePanel.querySelectorAll('.mh-type-subtab').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        typePanel.querySelectorAll('.mh-type-subtab').forEach(function(b){ b.classList.remove('active'); });
+        typePanel.querySelectorAll('.mh-type-subpanel').forEach(function(sp){ sp.style.display='none'; sp.classList.remove('active'); });
+        btn.classList.add('active');
+        var spEl=document.getElementById('mhType'+btn.dataset.typeTab.charAt(0).toUpperCase()+btn.dataset.typeTab.slice(1)+'Panel');
+        if(spEl){ spEl.style.display='block'; spEl.classList.add('active'); }
+        if(btn.dataset.typeTab==='scale') renderTypeScale();
+        if(btn.dataset.typeTab==='logo') renderLogo();
+      });
+    });
+
+    // Type panel live controls
+    document.getElementById('mhTypeFontFamily')?.addEventListener('change', function(){ renderTypeScale(); renderLogo(); });
+    document.getElementById('mhTypeLeading')?.addEventListener('input', function(){
+      var sp=document.getElementById('mhTypeLeadingVal'); if(sp) sp.textContent=(this.value/100).toFixed(2);
+      renderTypeScale();
+    });
+    document.getElementById('mhTypeTracking')?.addEventListener('input', function(){
+      var sp=document.getElementById('mhTypeTrackingVal'); if(sp) sp.textContent=(this.value/1000).toFixed(3)+'em';
+      renderTypeScale();
+    });
+    document.getElementById('mhTypeCssCopyBtn')?.addEventListener('click', copyTypeCss);
+    document.getElementById('mhLogoText')?.addEventListener('input', renderLogo);
+    document.getElementById('mhLogoTagline')?.addEventListener('input', renderLogo);
+    document.getElementById('mhLogoMark')?.addEventListener('change', renderLogo);
+    document.getElementById('mhLogoLayout')?.addEventListener('change', renderLogo);
+    document.getElementById('mhLogoSvgBtn')?.addEventListener('click', downloadLogoSvg);
+    document.getElementById('mhLogoPngBtn')?.addEventListener('click', downloadLogoPng);
 
     // Init auth
     initAuth();
