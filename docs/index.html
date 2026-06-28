@@ -696,8 +696,12 @@
     background: var(--mh-a, #ffff00);
     border-color: var(--mh-a, #ffff00);
   }
-  .mh-builder-panel { display:none; margin-top:10px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(0,0,0,.18); padding:10px; }
+  .mh-builder-panel { display:none; margin-top:10px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(0,0,0,.18); padding:10px; transform-origin:top center; }
   .mh-builder-panel.active { display:block; }
+  .mh-builder-panel.mh-fold-out { display:block; animation:mhFoldOut 0.22s ease-in forwards; pointer-events:none; }
+  .mh-builder-panel.mh-fold-in { animation:mhFoldIn 0.24s ease-out forwards; }
+  @keyframes mhFoldOut { 0%{transform:perspective(900px) rotateX(0deg);opacity:1} 60%{opacity:.28} 100%{transform:perspective(900px) rotateX(-82deg);opacity:0} }
+  @keyframes mhFoldIn  { 0%{transform:perspective(900px) rotateX(80deg);opacity:0} 45%{opacity:.4} 100%{transform:perspective(900px) rotateX(0deg);opacity:1} }
   .mh-builder-title { color:var(--ink); font:12px ui-monospace, monospace; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
   .mh-web-preview { position:relative; min-height:360px; margin-top:10px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#05050a; }
   .mh-web-preview-inner { position:relative; z-index:1; min-height:360px; padding:18px; background:radial-gradient(circle at 22% 18%, var(--mh-a-soft, rgba(255,255,0,.22)), transparent 28%), radial-gradient(circle at 78% 44%, var(--mh-b-soft, rgba(0,0,255,.18)), transparent 26%), #06060c; color:var(--ink); }
@@ -1343,40 +1347,7 @@
     const inner = $('mhWebPreviewInner');
     const bodyHtml = inner ? inner.innerHTML : '';
     const css = `*{box-sizing:border-box;margin:0;padding:0}body{background:#0b0b10;color:#e8e8f0;font-family:ui-sans-serif,system-ui,sans-serif}:root{--mh-a:${p.aHex};--mh-b:${p.bHex};--mh-c:${p.cHex}}nav{display:flex;align-items:center;justify-content:space-between;padding:12px 32px;border-bottom:1px solid #ffffff14}a{text-decoration:none;cursor:pointer}h1{font-size:clamp(24px,5vw,52px);line-height:1.05;font-weight:900}p{line-height:1.7;color:#8888a8}.mh-web-btn{display:inline-flex;align-items:center;padding:12px 24px;border-radius:999px;font-weight:700;background:${p.aHex};color:#05050a;border:none;cursor:pointer;font-size:14px}.mh-web-btn.secondary{background:transparent;color:${p.bHex};border:1.5px solid ${p.bHex}}.mh-web-card{padding:20px;border:1px solid #ffffff18;border-radius:12px;background:rgba(255,255,255,.04)}.mh-web-card b{display:block;color:${p.aHex};margin-bottom:6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase}`;
-    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HEXFIELD Export · ${_webPreset}</title><style>${css}</style></head><body>${bodyHtml}
-<script>
-(function(){
-  var KEY = 'mhDesign';
-  var IDS = ['mhUnifiedMode','mhUnifiedPattern','mhUnifiedSpacing','mhLineThickness',
-    'mhUnifiedOpacity','mhUnifiedSpeed','mhAutoAnimate','mhMunkerPreset',
-    'mhGame','mhUrl','mhWebPreset','mhWebDensity','mhGameStyle'];
-  function save(){
-    var saved = {};
-    IDS.forEach(function(id){
-      var el = document.getElementById(id);
-      if (el) saved[id] = el.value;
-    });
-    try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch(_){}
-  }
-  function restore(){
-    var saved;
-    try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(_){}
-    if (!saved) return;
-    Object.keys(saved).forEach(function(id){
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.value = saved[id];
-      el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
-    });
-  }
-  document.addEventListener('DOMContentLoaded', function(){
-    setTimeout(restore, 700);
-    document.addEventListener('input', save, { passive: true });
-    document.addEventListener('change', save, { passive: true });
-  });
-})();
-</script>
-</body></html>`;
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HEXFIELD Export \xb7 ${_webPreset}</title><style>${css}</style></head><body>${bodyHtml}` + '</' + 'body></' + 'html>';
     const blob = new Blob([html], {type:'text/html'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -1436,15 +1407,26 @@
   }
   function switchSuiteTab(tab){
     document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
-    ['web','game','character','gif','qr'].forEach(name => {
-      const panel = $('mhBuilder' + name.charAt(0).toUpperCase() + name.slice(1));
-      if (panel) panel.classList.toggle('active', name === tab);
-    });
-    if (tab === 'web') renderWebDesigner();
-    if (tab === 'game') { setVal('mhGame','platformer'); render(); }
-    if (tab === 'character') renderCharacterDesigner();
-    if (tab === 'gif') updateBuilderCode();
-    if (tab === 'qr') { if (typeof generateQr === 'function') setTimeout(generateQr, 80); }
+    const outPanel = document.querySelector('.mh-builder-panel.active');
+    const inPanel = $('mhBuilder' + tab.charAt(0).toUpperCase() + tab.slice(1));
+    if (!inPanel || inPanel === outPanel) return;
+    const DUR = 220;
+    if (outPanel) {
+      outPanel.classList.add('mh-fold-out');
+      setTimeout(() => outPanel.classList.remove('active','mh-fold-out'), DUR);
+    }
+    setTimeout(() => {
+      inPanel.classList.add('active','mh-fold-in');
+      setTimeout(() => inPanel.classList.remove('mh-fold-in'), DUR + 40);
+      if (tab === 'web') renderWebDesigner();
+      if (tab === 'game') { setVal('mhGame','platformer'); render(); }
+      if (tab === 'character') renderCharacterDesigner();
+      if (tab === 'gif') updateBuilderCode();
+      if (tab === 'qr') setTimeout(() => { if (typeof generateQr === 'function') generateQr(); }, 60);
+      if (tab === 'kit' && typeof renderKitGrid === 'function') renderKitGrid();
+      if (tab === 'fonts' && typeof loadFontEffects === 'function') loadFontEffects();
+      if (tab === 'type' && typeof renderTypeScale === 'function') renderTypeScale();
+    }, outPanel ? DUR - 30 : 0);
   }
   function renderCharacterDesigner(){
     const target = $('mhCharacterPreview'); if (!target) return;
@@ -5333,6 +5315,39 @@ renderPinned();
 (function() {
   const cnt = document.getElementById('allHueCount');
   if (cnt) cnt.textContent = `· ${cal.hueRows} rows × ${cal.steps} tones`;
+})();
+</script>
+
+<script>
+(function(){
+  var KEY = 'mhDesign';
+  var IDS = ['mhUnifiedMode','mhUnifiedPattern','mhUnifiedSpacing','mhLineThickness',
+    'mhUnifiedOpacity','mhUnifiedSpeed','mhAutoAnimate','mhMunkerPreset',
+    'mhGame','mhUrl','mhWebPreset','mhWebDensity','mhGameStyle'];
+  function save(){
+    var saved = {};
+    IDS.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) saved[id] = el.value;
+    });
+    try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch(_){}
+  }
+  function restore(){
+    var saved;
+    try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(_){}
+    if (!saved) return;
+    Object.keys(saved).forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.value = saved[id];
+      el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(restore, 700);
+    document.addEventListener('input', save, { passive: true });
+    document.addEventListener('change', save, { passive: true });
+  });
 })();
 </script>
 </body>

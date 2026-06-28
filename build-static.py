@@ -156,7 +156,10 @@ LOCAL_STORAGE_SCRIPT = """
 
 # ── Assemble output HTML ──────────────────────────────────────────────────────
 output = original.replace("<body>", "<body>\n" + render_patch, 1)
-output = output.replace("</body>", LOCAL_STORAGE_SCRIPT + "</body>", 1)
+# Use rfind so we target the real closing </body>, not one that may appear
+# inside a JS string literal (e.g. downloadWebHtml's template literal)
+last_body = output.rfind("</body>")
+output = output[:last_body] + LOCAL_STORAGE_SCRIPT + output[last_body:]
 
 # ── Write output ──────────────────────────────────────────────────────────────
 os.makedirs("docs", exist_ok=True)
