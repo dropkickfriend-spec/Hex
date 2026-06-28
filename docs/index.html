@@ -1347,40 +1347,7 @@
     const inner = $('mhWebPreviewInner');
     const bodyHtml = inner ? inner.innerHTML : '';
     const css = `*{box-sizing:border-box;margin:0;padding:0}body{background:#0b0b10;color:#e8e8f0;font-family:ui-sans-serif,system-ui,sans-serif}:root{--mh-a:${p.aHex};--mh-b:${p.bHex};--mh-c:${p.cHex}}nav{display:flex;align-items:center;justify-content:space-between;padding:12px 32px;border-bottom:1px solid #ffffff14}a{text-decoration:none;cursor:pointer}h1{font-size:clamp(24px,5vw,52px);line-height:1.05;font-weight:900}p{line-height:1.7;color:#8888a8}.mh-web-btn{display:inline-flex;align-items:center;padding:12px 24px;border-radius:999px;font-weight:700;background:${p.aHex};color:#05050a;border:none;cursor:pointer;font-size:14px}.mh-web-btn.secondary{background:transparent;color:${p.bHex};border:1.5px solid ${p.bHex}}.mh-web-card{padding:20px;border:1px solid #ffffff18;border-radius:12px;background:rgba(255,255,255,.04)}.mh-web-card b{display:block;color:${p.aHex};margin-bottom:6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase}`;
-    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HEXFIELD Export · ${_webPreset}</title><style>${css}</style></head><body>${bodyHtml}
-<script>
-(function(){
-  var KEY = 'mhDesign';
-  var IDS = ['mhUnifiedMode','mhUnifiedPattern','mhUnifiedSpacing','mhLineThickness',
-    'mhUnifiedOpacity','mhUnifiedSpeed','mhAutoAnimate','mhMunkerPreset',
-    'mhGame','mhUrl','mhWebPreset','mhWebDensity','mhGameStyle'];
-  function save(){
-    var saved = {};
-    IDS.forEach(function(id){
-      var el = document.getElementById(id);
-      if (el) saved[id] = el.value;
-    });
-    try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch(_){}
-  }
-  function restore(){
-    var saved;
-    try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(_){}
-    if (!saved) return;
-    Object.keys(saved).forEach(function(id){
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.value = saved[id];
-      el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
-    });
-  }
-  document.addEventListener('DOMContentLoaded', function(){
-    setTimeout(restore, 700);
-    document.addEventListener('input', save, { passive: true });
-    document.addEventListener('change', save, { passive: true });
-  });
-})();
-</script>
-</body></html>`;
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HEXFIELD Export \xb7 ${_webPreset}</title><style>${css}</style></head><body>${bodyHtml}` + '</' + 'body></' + 'html>';
     const blob = new Blob([html], {type:'text/html'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -5348,6 +5315,39 @@ renderPinned();
 (function() {
   const cnt = document.getElementById('allHueCount');
   if (cnt) cnt.textContent = `· ${cal.hueRows} rows × ${cal.steps} tones`;
+})();
+</script>
+
+<script>
+(function(){
+  var KEY = 'mhDesign';
+  var IDS = ['mhUnifiedMode','mhUnifiedPattern','mhUnifiedSpacing','mhLineThickness',
+    'mhUnifiedOpacity','mhUnifiedSpeed','mhAutoAnimate','mhMunkerPreset',
+    'mhGame','mhUrl','mhWebPreset','mhWebDensity','mhGameStyle'];
+  function save(){
+    var saved = {};
+    IDS.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) saved[id] = el.value;
+    });
+    try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch(_){}
+  }
+  function restore(){
+    var saved;
+    try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(_){}
+    if (!saved) return;
+    Object.keys(saved).forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.value = saved[id];
+      el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(restore, 700);
+    document.addEventListener('input', save, { passive: true });
+    document.addEventListener('change', save, { passive: true });
+  });
 })();
 </script>
 </body>
