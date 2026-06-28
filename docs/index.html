@@ -994,8 +994,31 @@
     <div class="mh-render-toolbar"><button id="mhGifDesignerBtn">Use current render for GIF</button><span class="mh-export-status">Exports through Website-builder export panel below.</span></div>
   </div>
   <div class="mh-builder-panel" id="mhBuilderQr">
-    <div class="mh-builder-title">QR code designer · coming next</div>
-    <div class="mh-extra-grid" id="mhQrPreview"><div class="mh-extra-card"><b>Styled QR</b>Palette + Munker-safe QR export will use readable contrast and your ruliad border.</div><div class="mh-extra-card"><b>Extras</b>Palette marketplace/library, social banner/avatar, card collectibles, sticker/poster packs.</div></div>
+    <div class="mh-builder-title">QR code designer · palette-calibrated + Munker overlay</div>
+    <div class="mh-render-toolbar">
+      <input id="mhQrInput" value="https://munkerhex.com" placeholder="URL or text to encode" style="flex:2" />
+      <select id="mhQrStyle">
+        <option value="palette">Palette · A on dark, B on light</option>
+        <option value="inverse">Inverse · B on dark, A on light</option>
+        <option value="mono-a">Mono A · A colour + black</option>
+        <option value="mono-b">Mono B · B colour + black</option>
+      </select>
+      <select id="mhQrSize">
+        <option value="200">Small 200 px</option>
+        <option value="320" selected>Medium 320 px</option>
+        <option value="480">Large 480 px</option>
+      </select>
+    </div>
+    <div id="mhQrStage" style="position:relative;margin:10px 0;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+      <canvas id="mhQrCanvas" style="border-radius:8px;image-rendering:pixelated;max-width:100%"></canvas>
+      <div id="mhQrInfo" style="font:11px ui-monospace,monospace;color:var(--ink-dim);max-width:220px;line-height:1.6"></div>
+    </div>
+    <div class="mh-render-toolbar">
+      <button id="mhQrGenerateBtn">Generate QR</button>
+      <button id="mhQrDownloadBtn" style="display:none">Download PNG</button>
+      <button id="mhQrSvgBtn" style="display:none">Download SVG</button>
+      <span id="mhQrStatus" class="mh-export-status"></span>
+    </div>
   </div>
   <div class="mh-render-toolbar">
     <input id="mhUrl" value="https://example.com" placeholder="https://your-site.com" />
@@ -1317,11 +1340,85 @@
     if (tab === 'game') { setVal('mhGame','platformer'); render(); }
     if (tab === 'character') renderCharacterDesigner();
     if (tab === 'gif') updateBuilderCode();
+    if (tab === 'qr') { if (typeof generateQr === 'function') setTimeout(generateQr, 80); }
   }
   function renderCharacterDesigner(){
     const target = $('mhCharacterPreview'); if (!target) return;
     const p = getWheelPalette();
     target.innerHTML = ['Player token','Enemy token','Pickup token','Boss token'].map((label,i) => `<div class="mh-extra-card"><b>${label}</b><span style="display:inline-block;width:42px;height:48px;clip-path:polygon(50% 0%,92% 24%,92% 74%,50% 100%,8% 74%,8% 24%);background:${[p.aHex,p.bHex,p.cHex,renderPalette[2] || p.aHex][i]};box-shadow:0 0 18px ${[p.aHex,p.bHex,p.cHex,renderPalette[2] || p.aHex][i]};"></span><br/>Generated from exact palette + Munker field.</div>`).join('');
+  }
+
+  // ── QR Code Generator ─────────────────────────────────────────────────────
+  let _qrSvgCache = '';
+  async function generateQr(){
+    const status = $('mhQrStatus');
+    const canvas = $('mhQrCanvas');
+    const info = $('mhQrInfo');
+    if (!canvas) return;
+    if (!window.QRCode) {
+      if (status) status.textContent = 'Loading QR library…';
+      await new Promise((res,rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    const text = ($('mhQrInput')?.value || 'https://munkerhex.com').trim() || 'https://munkerhex.com';
+    const style = $('mhQrStyle')?.value || 'palette';
+    const size = parseInt($('mhQrSize')?.value || '320', 10);
+    const p = getWheelPalette();
+    const darkMap  = { palette: p.aHex, inverse: p.bHex, 'mono-a': p.aHex, 'mono-b': '#000000' };
+    const lightMap = { palette: p.bHex, inverse: p.aHex, 'mono-a': '#000000', 'mono-b': p.bHex };
+    const darkHex  = darkMap[style]  || p.aHex;
+    const lightHex = lightMap[style] || p.bHex;
+    if (status) status.textContent = 'Generating…';
+    try {
+      await QRCode.toCanvas(canvas, text, {
+        width: size, margin: 2,
+        color: { dark: darkHex, light: lightHex },
+        errorCorrectionLevel: 'M',
+      });
+      // Munker diagonal stripe overlay at low opacity
+      const ctx = canvas.getContext('2d');
+      ctx.save();
+      ctx.globalAlpha = 0.13;
+      ctx.strokeStyle = p.aHex;
+      ctx.lineWidth = 2.5;
+      const sp = 10;
+      for (let i = -size; i < size * 2; i += sp) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + size, size); ctx.stroke();
+      }
+      // Hex-corner border frame
+      ctx.globalAlpha = 0.7;
+      ctx.strokeStyle = p.bHex;
+      ctx.lineWidth = 3;
+      if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(2, 2, size - 4, size - 4, 10); ctx.stroke();
+      } else {
+        ctx.strokeRect(3, 3, size - 6, size - 6);
+      }
+      ctx.restore();
+      // Cache SVG for download
+      _qrSvgCache = await QRCode.toString(text, { type: 'svg', color: { dark: darkHex, light: lightHex }, errorCorrectionLevel: 'M' });
+      if (info) info.innerHTML = `<b>Content:</b> ${text.substring(0,60)}${text.length>60?'…':''}<br/><b>Colours:</b> dark <span style="color:${darkHex}">${darkHex}</span> · light <span style="color:${lightHex}">${lightHex}</span><br/><b>Size:</b> ${size}×${size} px`;
+      if ($('mhQrDownloadBtn')) { $('mhQrDownloadBtn').style.display=''; $('mhQrSvgBtn').style.display=''; }
+      if (status) status.textContent = 'QR ready.';
+    } catch(e) {
+      if (status) status.textContent = 'QR error: ' + (e.message || e);
+    }
+  }
+  function downloadQrPng(){
+    const canvas = $('mhQrCanvas'); if (!canvas) return;
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'munkerhex-qr.png'; a.click();
+  }
+  function downloadQrSvg(){
+    if (!_qrSvgCache) return;
+    const blob = new Blob([_qrSvgCache], {type:'image/svg+xml'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'munkerhex-qr.svg'; a.click();
   }
   async function copyBuilderCode(){
     updateBuilderCode();
@@ -1772,6 +1869,15 @@
     }
     syncLineThickness($('mhLineThickness') ? $('mhLineThickness').value : 5, false);
     syncMunker(); render(); renderWebDesigner(); renderCharacterDesigner();
+    const qrGenBtn = $('mhQrGenerateBtn');
+    if (qrGenBtn) {
+      qrGenBtn.addEventListener('click', generateQr);
+      $('mhQrDownloadBtn')?.addEventListener('click', downloadQrPng);
+      $('mhQrSvgBtn')?.addEventListener('click', downloadQrSvg);
+      $('mhQrInput')?.addEventListener('input', () => setTimeout(generateQr, 300));
+      $('mhQrStyle')?.addEventListener('change', generateQr);
+      $('mhQrSize')?.addEventListener('change', generateQr);
+    }
   }, 400);
 })();
 </script>
