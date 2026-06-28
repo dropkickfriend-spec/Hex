@@ -18,7 +18,7 @@ with open("backend/server.py", encoding="utf-8") as f:
 
 # ── Extract render_patch from server.py ───────────────────────────────────────
 START = '    render_patch = """\n'
-END   = '"""\n    return original.replace'
+END   = '"""\n    # ── Inject server-side config'
 
 s = server_code.index(START) + len(START)
 e = server_code.index(END, s)
