@@ -552,6 +552,19 @@ def build_tonality_renderer_html() -> str:
   .mh-extra-card { border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px; min-height:82px; background:rgba(255,255,255,.035); color:var(--ink-dim); font:11px/1.45 ui-monospace, monospace; }
   .mh-extra-card b { color:var(--mh-a, #ffff00); display:block; margin-bottom:5px; }
   @media (max-width:760px){ .mh-suite-tabs { grid-template-columns:repeat(3, minmax(0,1fr)); } .mh-web-card-grid { grid-template-columns:1fr; } }
+  /* Full-page hex background */
+  #mhPageHexBg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+  .mh-pxhex{position:absolute;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);background:var(--pxc,#444);animation:mhPxPulse 4s ease-in-out infinite alternate}
+  @keyframes mhPxPulse{from{opacity:.03}to{opacity:.09}}
+  /* Template card picker */
+  .mh-tpl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+  .mh-tpl-card{border:1px solid var(--line);border-radius:6px;padding:6px 4px;cursor:pointer;background:#0b0b10;text-align:center;font:9px ui-monospace,monospace;color:var(--ink-dim);transition:border-color .15s;user-select:none}
+  .mh-tpl-card:hover,.mh-tpl-card.active{border-color:var(--accent);color:var(--ink)}
+  .mh-tpl-thumb{width:100%;aspect-ratio:3/2;border-radius:3px;margin-bottom:3px}
+  /* Expanded web preview */
+  .mh-web-preview{min-height:520px !important}
+  .mh-web-preview-inner{min-height:520px !important;padding:0 !important}
+  .mh-web-footer{border-top:1px solid #ffffff18;padding:18px 32px;display:flex;justify-content:space-between;font:10px ui-monospace,monospace;color:#ffffff44}
   .mh-unified-munker {
     margin-top: 10px;
     border: 1px solid rgba(255,255,255,.12);
@@ -792,21 +805,17 @@ def build_tonality_renderer_html() -> str:
     <button class="mh-suite-tab" data-suite-tab="qr">QR</button>
   </div>
   <div class="mh-builder-panel active" id="mhBuilderWeb">
-    <div class="mh-builder-title">Webpage style designer · presets + CSS/JS export</div>
+    <div class="mh-builder-title">HEXFIELD website designer · full-page templates + export</div>
+    <div class="mh-tpl-grid" id="mhTplGrid"></div>
     <div class="mh-render-toolbar">
-      <select id="mhWebPreset">
-        <option value="landing">Preset · landing page hero</option>
-        <option value="theme-kit">Preset · full website theme kit</option>
-        <option value="overlay-plugin">Preset · overlay plugin for existing site</option>
-        <option value="portfolio">Preset · creator portfolio</option>
-        <option value="shop">Preset · product/shop launch</option>
-      </select>
       <select id="mhWebDensity">
         <option value="clean">Clean</option>
         <option value="rich" selected>Rich</option>
-        <option value="maximal">Maximal Munker</option>
+        <option value="maximal">Maximal</option>
       </select>
-      <button id="mhGenerateWebBtn">Generate webpage style</button>
+      <button id="mhGenerateWebBtn">Regenerate</button>
+      <button id="mhSaveWebBtn">Download HTML</button>
+      <button id="mhCopyWebBtn">Copy code</button>
     </div>
     <div class="mh-web-preview" id="mhWebPreview">
       <div class="mh-web-preview-inner" id="mhWebPreviewInner"></div>
@@ -988,6 +997,22 @@ def build_tonality_renderer_html() -> str:
     }
     return { hue, tone, a, b, centre, aHex: toHex(a), bHex: toHex(b), cHex: toHex(centre), colors };
   }
+  function _luma(hex) {
+    if (!hex || hex.length < 7) return 0;
+    const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+    return 0.2126*Math.pow(r,2.2)+0.7152*Math.pow(g,2.2)+0.0722*Math.pow(b,2.2);
+  }
+  function getBestTextColor(bgHex) {
+    const p = getWheelPalette();
+    const bg = _luma(bgHex||'#0b0b10');
+    const candidates = [p.aHex, p.bHex, '#ffffff', '#e8e8f0', p.cHex];
+    let best=candidates[0], bestC=0;
+    candidates.forEach(c => {
+      const l=_luma(c), ratio=l>bg?(l+.05)/(bg+.05):(bg+.05)/(l+.05);
+      if(ratio>bestC){bestC=ratio;best=c;}
+    });
+    return best;
+  }
   function syncLineThickness(value, updateOriginal){
     const n = Math.max(1, Math.min(40, parseInt(value || '5', 10)));
     const top = $('mhLineThickness');
@@ -1095,41 +1120,70 @@ def build_tonality_renderer_html() -> str:
     const status = $('mhExportStatus');
     if (status) status.textContent = 'Code generated for exact palette: ' + getWheelPalette().aHex + ' → ' + getWheelPalette().bHex;
   }
+  let _webPreset = 'landing';
   function currentWebDesign(){
-    return {
-      preset: $('mhWebPreset')?.value || 'landing',
-      density: $('mhWebDensity')?.value || 'rich',
-    };
+    return { preset: _webPreset, density: $('mhWebDensity')?.value || 'rich' };
   }
   function webPresetContent(preset){
     const map = {
       landing: {
-        kicker:'MUNKERHEX WEBSITE BUILDER', headline:'A live palette render system for impossible web surfaces.',
-        copy:'Generate a hero section, buttons, cards and animated overlays from the exact colour wheel calibration.',
-        cards:['Hero layout','CTA buttons','Animated background']
+        kicker:'HEXFIELD STUDIO', headline:'A live palette calibration system for impossible web surfaces.',
+        copy:'Generate hero sections, buttons, cards and animated Munker overlays from the exact colour wheel calibration. Every element inherits your palette.',
+        cards:['Hero layout','CTA buttons','Animated background','Hex overlay','Type system','Colour tokens']
       },
       'theme-kit': {
         kicker:'FULL WEBSITE THEME KIT', headline:'Navigation, cards, sections and buttons from one calibrated palette.',
-        copy:'Use this as a complete visual kit for Webflow, Framer, Shopify, Squarespace or custom CSS.',
-        cards:['Navigation','Card system','Section backgrounds']
+        copy:'A complete visual kit for Webflow, Framer, Shopify or custom CSS. Export all tokens and drop them in.',
+        cards:['Navigation','Card system','Section backgrounds','Type scale','Colour tokens','Dark/light modes']
       },
       'overlay-plugin': {
-        kicker:'OVERLAY PLUGIN', headline:'Drop the MunkerHex render over an existing website.',
-        copy:'Paste the exported code into a site builder custom-code area and the whole page gets palette/ruliad overlays.',
-        cards:['Global overlay','Hex field','Ruliad nodes']
+        kicker:'OVERLAY PLUGIN', headline:'Drop the HEXFIELD render over any existing website.',
+        copy:'Paste the exported snippet into a site builder custom-code area — the whole page gets palette-driven Munker overlays and hex fields.',
+        cards:['Global overlay','Hex field','Ruliad nodes','Line artifacts','Opacity control','Blend modes']
       },
       portfolio: {
         kicker:'CREATOR PORTFOLIO', headline:'Turn case studies into glowing palette artefacts.',
-        copy:'Portfolio cards, avatar blocks and project tiles follow your live CMY calibration.',
-        cards:['Project cards','Avatar block','Contact CTA']
+        copy:'Portfolio cards, avatar blocks and project tiles follow your live CMY calibration. Your work, your colours.',
+        cards:['Project cards','Avatar block','Contact CTA','Gallery grid','Skills section','Download CV']
       },
       shop: {
         kicker:'PRODUCT LAUNCH', headline:'A shop landing page with collectible visual energy.',
-        copy:'Product cards, checkout CTA and banner surfaces inherit the exact MunkerHex palette.',
-        cards:['Product cards','Offer banner','Checkout CTA']
+        copy:'Product cards, checkout CTAs and banner surfaces inherit the exact HEXFIELD palette. Built for conversion.',
+        cards:['Product cards','Offer banner','Checkout CTA','Trust badges','Review section','Price table']
       }
     };
     return map[preset] || map.landing;
+  }
+  function buildTplGrid(){
+    const grid = $('mhTplGrid'); if (!grid) return;
+    const p = getWheelPalette();
+    const TPL = [
+      { id:'landing',         label:'Landing',   bg:p.aHex },
+      { id:'theme-kit',       label:'Theme Kit', bg:p.bHex },
+      { id:'overlay-plugin',  label:'Overlay',   bg:p.cHex },
+      { id:'portfolio',       label:'Portfolio', bg:p.aHex },
+      { id:'shop',            label:'Shop',      bg:p.bHex },
+    ];
+    grid.innerHTML = TPL.map(t =>
+      `<div class="mh-tpl-card${t.id===_webPreset?' active':''}" data-tpl="${t.id}">` +
+      `<div class="mh-tpl-thumb" style="background:linear-gradient(135deg,${t.bg}30 0%,transparent 70%),#0b0b10"></div>${t.label}</div>`
+    ).join('');
+    grid.querySelectorAll('.mh-tpl-card').forEach(el => {
+      el.addEventListener('click', () => { _webPreset = el.dataset.tpl; buildTplGrid(); renderWebDesigner(); });
+    });
+  }
+  function downloadWebHtml(){
+    const p = getWheelPalette();
+    const inner = $('mhWebPreviewInner');
+    const bodyHtml = inner ? inner.innerHTML : '';
+    const css = `*{box-sizing:border-box;margin:0;padding:0}body{background:#0b0b10;color:#e8e8f0;font-family:ui-sans-serif,system-ui,sans-serif}:root{--mh-a:${p.aHex};--mh-b:${p.bHex};--mh-c:${p.cHex}}nav{display:flex;align-items:center;justify-content:space-between;padding:12px 32px;border-bottom:1px solid #ffffff14}a{text-decoration:none;cursor:pointer}h1{font-size:clamp(24px,5vw,52px);line-height:1.05;font-weight:900}p{line-height:1.7;color:#8888a8}.mh-web-btn{display:inline-flex;align-items:center;padding:12px 24px;border-radius:999px;font-weight:700;background:${p.aHex};color:#05050a;border:none;cursor:pointer;font-size:14px}.mh-web-btn.secondary{background:transparent;color:${p.bHex};border:1.5px solid ${p.bHex}}.mh-web-card{padding:20px;border:1px solid #ffffff18;border-radius:12px;background:rgba(255,255,255,.04)}.mh-web-card b{display:block;color:${p.aHex};margin-bottom:6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase}`;
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HEXFIELD Export · ${_webPreset}</title><style>${css}</style></head><body>${bodyHtml}</body></html>`;
+    const blob = new Blob([html], {type:'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `hexfield-${_webPreset}-${Date.now()}.html`;
+    a.click();
+    const st = $('mhExportStatus'); if (st) { st.textContent = 'HTML downloaded.'; setTimeout(() => st.textContent='', 2000); }
   }
   function renderWebDesigner(){
     const p = getWheelPalette();
@@ -1137,21 +1191,38 @@ def build_tonality_renderer_html() -> str:
     const content = webPresetContent(web.preset);
     const inner = $('mhWebPreviewInner');
     if (!inner) return;
-    const cardCount = web.density === 'clean' ? 2 : web.density === 'maximal' ? 6 : 3;
-    const cards = Array.from({ length: cardCount }, (_, i) => `<div class="mh-web-card"><b>${content.cards[i % content.cards.length]}</b>${['Palette-calibrated typography','Munker-safe contrast','Ruliad pattern surface','Export-ready CSS','Animated line field','3-plane hex depth'][i % 6]}</div>`).join('');
+    const cardCount = web.density === 'clean' ? 3 : web.density === 'maximal' ? 6 : 4;
+    const cardDetails = ['Palette-calibrated typography','Munker-safe contrast ratios','Ruliad pattern surface','Export-ready CSS tokens','Animated line field','3-plane hex depth','Google Fonts pairing','Dark mode variables'];
+    const cards = Array.from({ length: cardCount }, (_, i) =>
+      `<div class="mh-web-card" style="border-color:${renderPalette[i%renderPalette.length]}44"><b style="color:${renderPalette[i%renderPalette.length]}">${content.cards[i%content.cards.length]}</b>${cardDetails[i%cardDetails.length]}</div>`
+    ).join('');
+    const textCol = getBestTextColor ? getBestTextColor('#0b0b10') : '#e8e8f0';
+    inner.style.background = `radial-gradient(ellipse at 20% 15%,${p.aHex}18 0%,transparent 45%),radial-gradient(ellipse at 80% 60%,${p.bHex}14 0%,transparent 40%),#06060c`;
     inner.innerHTML = `
-      <nav class="mh-web-nav"><span class="mh-web-logo">MUNKERHEX</span><span class="mh-web-links"><span>Work</span><span>Style</span><span>Export</span></span></nav>
-      <section class="mh-web-hero">
-        <div class="mh-web-kicker">${content.kicker}</div>
-        <h1 class="mh-web-headline">${content.headline}</h1>
-        <p class="mh-web-copy">${content.copy}</p>
-        <div class="mh-web-cta-row"><a class="mh-web-btn">Build style</a><a class="mh-web-btn secondary">Copy code</a></div>
-        <div class="mh-web-card-grid">${cards}</div>
-      </section>`;
+      <nav class="mh-web-nav" style="padding:14px 32px">
+        <span class="mh-web-logo" style="color:${p.aHex};letter-spacing:.18em">HEXFIELD</span>
+        <span class="mh-web-links" style="gap:20px"><span>Work</span><span>Studio</span><span>Exports</span></span>
+        <a class="mh-web-btn" style="padding:8px 18px;font-size:11px;min-height:0">Sign in</a>
+      </nav>
+      <section style="padding:72px 32px 56px;max-width:680px;margin:0 auto;text-align:left">
+        <div class="mh-web-kicker" style="color:${p.bHex};margin-bottom:16px">${content.kicker}</div>
+        <h1 class="mh-web-headline" style="color:${p.aHex};margin-bottom:20px;font-size:clamp(22px,4vw,40px)">${content.headline}</h1>
+        <p class="mh-web-copy" style="color:${textCol}cc;max-width:520px;margin-bottom:32px">${content.copy}</p>
+        <div class="mh-web-cta-row" style="gap:12px">
+          <a class="mh-web-btn">Get started free</a>
+          <a class="mh-web-btn secondary">View demo →</a>
+        </div>
+      </section>
+      <div style="height:1px;background:linear-gradient(90deg,transparent,${p.aHex}88,${p.bHex}88,transparent);margin:0 32px"></div>
+      <section style="padding:48px 32px 40px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;max-width:800px;margin:0 auto">
+        ${cards}
+      </section>
+      <footer class="mh-web-footer">
+        <span style="color:${p.aHex}aa">HEXFIELD · ${content.kicker}</span>
+        <span>Palette ${p.aHex} / ${p.bHex}</span>
+      </footer>`;
     const webR = $('mhWebRuliadField');
-    const oldR = ruliadField;
     if (webR) {
-      const save = ruliadField.innerHTML;
       webR.innerHTML = '';
       const rand = seededRand('web-designer-' + web.preset + p.aHex + p.bHex);
       for (let i=0;i<28;i++) {
@@ -1370,6 +1441,8 @@ def build_tonality_renderer_html() -> str:
     painterTip(p);
     styleWholeWebsiteFrame();
     updateBuilderCode();
+    if (typeof buildPageHexBg === 'function') buildPageHexBg();
+    if (typeof buildTplGrid === 'function') buildTplGrid();
     return p;
   }
   function seededRand(seedText){
@@ -1444,6 +1517,25 @@ def build_tonality_renderer_html() -> str:
       node.style.color = n.color;
       ruliadField.appendChild(node);
     });
+  }
+  function buildPageHexBg() {
+    let bg = document.getElementById('mhPageHexBg');
+    if (!bg) { bg = document.createElement('div'); bg.id = 'mhPageHexBg'; document.body.prepend(bg); }
+    const p = getWheelPalette();
+    const sz = 46, hexH = sz / 0.866, rowStep = hexH * 0.75 + 2, colStep = sz + 2;
+    const cols = Math.ceil(window.innerWidth / colStep) + 2;
+    const rows = Math.ceil((window.innerHeight + 200) / rowStep) + 2;
+    const pal = [p.aHex, p.bHex, p.cHex, ...p.colors];
+    const maxDelay = 2.4;
+    let h = '';
+    for (let r = 0; r < rows; r++) {
+      const off = r % 2 ? (colStep * 0.5).toFixed(0) : 0;
+      for (let c = 0; c < cols; c++) {
+        const delay = Math.min(maxDelay, ((r + c) * 0.04)).toFixed(2);
+        h += `<div class="mh-pxhex" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};animation-delay:-${delay}s"></div>`;
+      }
+    }
+    bg.innerHTML = h;
   }
   function groundMetrics(){
     let size = 34, gap = 3, N = 7;
@@ -1670,6 +1762,11 @@ def build_tonality_renderer_html() -> str:
       renderAll.__mhPatched = true;
     }
     syncLineThickness($('mhLineThickness') ? $('mhLineThickness').value : 5, false);
+    buildPageHexBg();
+    buildTplGrid();
+    window.addEventListener('resize', () => { clearTimeout(window._mhBgTimer); window._mhBgTimer = setTimeout(buildPageHexBg, 220); });
+    $('mhSaveWebBtn')?.addEventListener('click', downloadWebHtml);
+    $('mhCopyWebBtn')?.addEventListener('click', copyBuilderCode);
     syncMunker(); render(); renderWebDesigner(); renderCharacterDesigner();
     const qrGenBtn = $('mhQrGenerateBtn');
     if (qrGenBtn) {
@@ -1710,6 +1807,12 @@ window.MH_CONFIG = {{
     # ── Auth banner + Brand Kit tab + Font Effects tab (appended after render_patch) ──
     auth_and_features_patch = """
 <style id="mh-auth-features">
+  /* HEXFIELD hero */
+  #mhHero{position:relative;padding:52px 24px 36px;text-align:center;overflow:hidden;border-bottom:1px solid var(--line);background:radial-gradient(ellipse at 50% 0%,rgba(255,255,0,.06) 0%,transparent 60%)}
+  #mhHeroMark{display:flex;justify-content:center;margin-bottom:18px;gap:2px}
+  #mhHeroWord{font:900 44px/1 ui-monospace,monospace;letter-spacing:.18em;color:var(--mh-a,#ffff00);text-shadow:0 0 48px var(--mh-a,#ffff00)55;text-transform:uppercase}
+  #mhHeroTag{font:11px ui-monospace,monospace;letter-spacing:.28em;color:var(--ink-dim);margin-top:10px;text-transform:uppercase}
+  #mhHeroSub{font:13px/1.6 ui-monospace,monospace;color:var(--ink-dim);max-width:400px;margin:14px auto 0}
   #mhAuthBanner{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 14px;background:rgba(12,12,20,.96);border-bottom:1px solid var(--line);font:12px ui-monospace,monospace;color:var(--ink-dim);flex-wrap:wrap}
   #mhAuthBanner a{color:var(--accent);cursor:pointer;text-decoration:none}
   .mh-tier-badge{padding:2px 8px;border-radius:20px;font:bold 10px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;background:var(--line);color:var(--ink)}
@@ -1756,6 +1859,14 @@ window.MH_CONFIG = {{
   #mhTypeScaleSvg{width:100%;min-height:260px;border:1px solid var(--line);border-radius:8px;background:#0b0b10;overflow:hidden;margin:8px 0}
   #mhLogoPreview{width:100%;height:160px;border:1px solid var(--line);border-radius:8px;background:#0b0b10;overflow:hidden;margin:8px 0;display:flex;align-items:center;justify-content:center}
 </style>
+
+<!-- HEXFIELD hero -->
+<div id="mhHero">
+  <div id="mhHeroMark"></div>
+  <div id="mhHeroWord">HEXFIELD</div>
+  <div id="mhHeroTag">Palette &middot; Optics &middot; Motion</div>
+  <div id="mhHeroSub">A live calibration studio for graphic designers. Tune the colour wheel &rarr; everything moves.</div>
+</div>
 
 <!-- Auth banner (top of page) -->
 <div id="mhAuthBanner">
@@ -2002,6 +2113,31 @@ window.MH_CONFIG = {{
     var a=document.createElement('a'); a.href=url; a.download='munkerhex-'+fx.id+'.svg'; a.click();
   }
 
+  // ── HEXFIELD living logo mark ─────────────────────────────────────────────
+  function buildHexfieldMark(seed) {
+    var rng = (typeof seededRand === 'function') ? seededRand(seed) : Math.random.bind(Math);
+    var COLS=6, ROWS=4, sz=15, hexH=sz/0.866, rowStep=hexH*0.75+2, colStep=sz+2;
+    var p=(typeof getWheelPalette==='function')?getWheelPalette():{aHex:'#ffff00',bHex:'#0077ff',cHex:'#888'};
+    var W=colStep*COLS+sz*0.5, H=rowStep*(ROWS-1)+hexH, cells='';
+    for(var r=0;r<ROWS;r++){
+      var off=r%2?colStep*0.5:0;
+      for(var c=0;c<COLS;c++){
+        var dist=Math.abs(c-(COLS-1)/2)/(COLS/2)+Math.abs(r-(ROWS-1)/2)/(ROWS/2);
+        if(rng()>0.9-dist*0.22) continue;
+        var cx=c*colStep+off+sz/2, cy=r*rowStep+hexH/2, pts=[];
+        for(var i=0;i<6;i++){var a=Math.PI/3*i-Math.PI/6;pts.push((cx+sz/2*Math.cos(a)).toFixed(1)+','+(cy+hexH/2*Math.sin(a)).toFixed(1));}
+        var col=(r+c)%3===0?p.aHex:(r+c)%3===1?p.bHex:p.cHex;
+        var op=(0.55+rng()*0.45).toFixed(2);
+        cells+='<polygon points="'+pts.join(' ')+'" fill="'+col+'" opacity="'+op+'"/>';
+      }
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W.toFixed(0)+'" height="'+H.toFixed(0)+'" viewBox="0 0 '+W.toFixed(0)+' '+H.toFixed(0)+'">'+cells+'</svg>';
+  }
+  function refreshHeroMark() {
+    var hm=document.getElementById('mhHeroMark'); if(!hm) return;
+    hm.innerHTML=buildHexfieldMark(new Date().toDateString());
+  }
+
   // ── Typography + Logo ──────────────────────────────────────────────────────
   var FONT_STACKS = [
     {id:'system-sans',label:'System Sans',stack:'ui-sans-serif,system-ui,-apple-system,sans-serif'},
@@ -2066,37 +2202,53 @@ window.MH_CONFIG = {{
     var p=(typeof getWheelPalette==='function')?getWheelPalette():{aHex:'#ffff00',bHex:'#0000ff',cHex:'#808080'};
     var fontId=(document.getElementById('mhTypeFontFamily')||{}).value||'system-sans';
     var stack=_getFontStack(fontId);
-    var text=(document.getElementById('mhLogoText')||{}).value||'MUNKERHEX';
+    var text=(document.getElementById('mhLogoText')||{}).value||'HEXFIELD';
     var tagline=(document.getElementById('mhLogoTagline')||{}).value||'';
     var mark=(document.getElementById('mhLogoMark')||{}).value||'hex';
     var layout=(document.getElementById('mhLogoLayout')||{}).value||'left';
     var W=480, H=160;
-    function hexMark(cx,cy,r){
+    var textCol=(typeof getBestTextColor==='function')?getBestTextColor('#0b0b10'):p.aHex;
+    /* Negative-space hex mark: outer outline hex + small inner honeycomb cells as fill, gaps = background shows through */
+    function hexPts(cx,cy,r){
       var pts=[];
-      for(var i=0;i<6;i++){ var a=Math.PI/180*(60*i-30); pts.push((cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1)); }
-      return '<polygon points="'+pts.join(' ')+'" fill="'+p.aHex+'" stroke="'+p.bHex+'" stroke-width="2.5"/>';
+      for(var i=0;i<6;i++){var a=Math.PI/180*(60*i-30);pts.push((cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1));}
+      return pts.join(' ');
+    }
+    function hexMark(cx,cy,R){
+      /* outer outline in palette A */
+      var outer='<polygon points="'+hexPts(cx,cy,R)+'" fill="none" stroke="'+p.aHex+'" stroke-width="2.5"/>';
+      /* inner mini-hex honeycomb — 7 cells: centre + 6 around */
+      var mini=R*0.28, gap=mini*0.18;
+      var offsets=[[0,0],[0,-(mini*2+gap)],[mini*1.73+gap,-(mini+gap*0.5)],[mini*1.73+gap,mini+gap*0.5],[0,mini*2+gap],[-(mini*1.73+gap),mini+gap*0.5],[-(mini*1.73+gap),-(mini+gap*0.5)]];
+      var cells='';
+      offsets.forEach(function(off,idx){
+        var col=idx===0?p.cHex:idx%2===0?p.aHex:p.bHex;
+        cells+='<polygon points="'+hexPts(cx+off[0],cy+off[1],mini)+'" fill="'+col+'" opacity="'+(idx===0?'0.9':'0.75')+'"/>';
+      });
+      return outer+cells;
     }
     function cubeMark(cx,cy,s){
       var hw=s*0.55,hh=s*0.32,d=s*0.22;
-      var top='<polygon points="'+cx+','+(cy-d)+' '+(cx+hw)+','+(cy-d-hh)+' '+cx+','+(cy-d-hh*2)+' '+(cx-hw)+','+(cy-d-hh)+'" fill="'+p.aHex+'"/>';
-      var left='<polygon points="'+(cx-hw)+','+(cy-d-hh)+' '+cx+','+(cy-d)+' '+cx+','+(cy+d)+' '+(cx-hw)+','+(cy+hh*0.28)+'" fill="'+p.bHex+'" opacity="0.9"/>';
-      var right='<polygon points="'+(cx+hw)+','+(cy-d-hh)+' '+cx+','+(cy-d)+' '+cx+','+(cy+d)+' '+(cx+hw)+','+(cy+hh*0.28)+'" fill="'+p.cHex+'" opacity="0.75"/>';
-      return top+left+right;
+      /* negative space: outer outline only for top face, filled sides */
+      var top='<polygon points="'+cx+','+(cy-d)+' '+(cx+hw)+','+(cy-d-hh)+' '+cx+','+(cy-d-hh*2)+' '+(cx-hw)+','+(cy-d-hh)+'" fill="none" stroke="'+p.aHex+'" stroke-width="2"/>';
+      var left='<polygon points="'+(cx-hw)+','+(cy-d-hh)+' '+cx+','+(cy-d)+' '+cx+','+(cy+d)+' '+(cx-hw)+','+(cy+hh*0.28)+'" fill="'+p.bHex+'" opacity="0.7"/>';
+      var right='<polygon points="'+(cx+hw)+','+(cy-d-hh)+' '+cx+','+(cy-d)+' '+cx+','+(cy+d)+' '+(cx+hw)+','+(cy+hh*0.28)+'" fill="'+p.aHex+'" opacity="0.5"/>';
+      return left+right+top;
     }
     var markSvg='', textX=40, textY=H/2+13, tagY=H/2+34, anchor='start';
     if(layout==='left'&&mark!=='none'){
-      if(mark==='hex') markSvg=hexMark(52,H/2,34); else markSvg=cubeMark(52,H/2,38);
-      textX=102;
+      if(mark==='hex') markSvg=hexMark(54,H/2,36); else markSvg=cubeMark(54,H/2,40);
+      textX=106;
     } else if(layout==='top'){
-      if(mark==='hex') markSvg=hexMark(W/2,42,26); else if(mark!=='none') markSvg=cubeMark(W/2,42,30);
-      textX=W/2; textY=98; tagY=120; anchor='middle';
+      if(mark==='hex') markSvg=hexMark(W/2,44,28); else if(mark!=='none') markSvg=cubeMark(W/2,44,32);
+      textX=W/2; textY=100; tagY=122; anchor='middle';
     } else {
       textX=W/2; anchor='middle';
     }
-    return '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'">'
-      +'<rect width="'+W+'" height="'+H+'" fill="#0b0b10"/>'
+    /* transparent background — animated hex tiles show through */
+    return '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" style="overflow:visible">'
       +markSvg
-      +'<text x="'+textX+'" y="'+textY+'" text-anchor="'+anchor+'" font-family="'+stack+'" font-size="34" font-weight="700" fill="'+p.aHex+'">'+text+'</text>'
+      +'<text x="'+textX+'" y="'+textY+'" text-anchor="'+anchor+'" font-family="'+stack+'" font-size="34" font-weight="700" fill="'+textCol+'">'+text+'</text>'
       +(tagline?'<text x="'+textX+'" y="'+tagY+'" text-anchor="'+anchor+'" font-family="'+stack+'" font-size="12" fill="'+p.bHex+'" letter-spacing="0.12em">'+tagline+'</text>':'')
       +'</svg>';
   }
@@ -2246,6 +2398,14 @@ window.MH_CONFIG = {{
     document.getElementById('mhLogoLayout')?.addEventListener('change', renderLogo);
     document.getElementById('mhLogoSvgBtn')?.addEventListener('click', downloadLogoSvg);
     document.getElementById('mhLogoPngBtn')?.addEventListener('click', downloadLogoPng);
+
+    // Living logo + palette hook
+    refreshHeroMark();
+    if (typeof applyRenderPalette === 'function' && !applyRenderPalette.__mhHeroHooked) {
+      var _origARP = applyRenderPalette;
+      applyRenderPalette = function() { var r=_origARP.apply(this,arguments); refreshHeroMark(); return r; };
+      applyRenderPalette.__mhHeroHooked = true;
+    }
 
     // Init auth
     initAuth();
