@@ -1,13 +1,13 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Header, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, JSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
 from pydantic import AnyHttpUrl, BaseModel, Field
-from typing import List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 import uuid
 from datetime import datetime, timezone
 import hashlib
@@ -17,6 +17,7 @@ import requests
 import asyncio
 from io import BytesIO
 from PIL import Image, ImageDraw
+import stripe
 
 
 ROOT_DIR = Path(__file__).parent
@@ -27,6 +28,9 @@ ORIGINAL_TONALITY_PATH = ROOT_DIR / "original_tonality.html"
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+# Stripe
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -108,6 +112,127 @@ class GifExportPayload(BaseModel):
     speed: int = Field(default=4, ge=1, le=16)
     width: int = Field(default=390, ge=240, le=900)
     height: int = Field(default=430, ge=240, le=900)
+
+
+class BrandKitCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    palette: Dict[str, Any]
+    munker_config: Dict[str, Any] = Field(default_factory=dict)
+
+
+class BrandKit(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    palette: Dict[str, Any]
+    munker_config: Dict[str, Any]
+    created_at: str
+
+
+class FontEffect(BaseModel):
+    id: str
+    name: str
+    css: str
+    svg_filter: str
+    preview_label: str
+    is_premium: bool
+    author_id: Optional[str] = None
+
+
+class GalleryItemCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    config: Dict[str, Any]
+
+
+class GalleryItem(BaseModel):
+    id: str
+    user_id: str
+    title: str
+    config: Dict[str, Any]
+    likes: int = 0
+    created_at: str
+
+
+FONT_EFFECTS_SEED: List[Dict[str, Any]] = [
+    # ── Free effects ───────────────────────────────────────────────────────────
+    {"id": "munker-pulse", "name": "Munker Pulse", "is_premium": False,
+     "preview_label": "Optical beat",
+     "css": "@keyframes mhPulse{0%,100%{opacity:.55}50%{opacity:1}} .mh-ftext{animation:mhPulse 1.2s ease-in-out infinite;fill:var(--mh-a);filter:url(#mhStripeF)}",
+     "svg_filter": "<feColorMatrix type='saturate' values='2.2'/>"},
+    {"id": "stripe-reveal", "name": "Stripe Reveal", "is_premium": False,
+     "preview_label": "Munker lines",
+     "css": "@keyframes mhReveal{0%{clip-path:inset(0 100% 0 0)}100%{clip-path:inset(0 0% 0 0)}} .mh-ftext{animation:mhReveal 2s cubic-bezier(.77,0,.18,1) forwards;fill:var(--mh-b)}",
+     "svg_filter": "<feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='1' result='n'/><feDisplacementMap in='SourceGraphic' in2='n' scale='4'/>"},
+    {"id": "hex-glow", "name": "Hex Glow", "is_premium": False,
+     "preview_label": "Illusion edge",
+     "css": "@keyframes mhGlow{0%,100%{filter:drop-shadow(0 0 4px var(--mh-a))}50%{filter:drop-shadow(0 0 18px var(--mh-b))}} .mh-ftext{animation:mhGlow 2s ease-in-out infinite;fill:var(--mh-a)}",
+     "svg_filter": ""},
+    {"id": "wave-trace", "name": "Wave Trace", "is_premium": False,
+     "preview_label": "Sine motion",
+     "css": "@keyframes mhWave{0%{transform:translateY(0)}25%{transform:translateY(-6px)}75%{transform:translateY(6px)}100%{transform:translateY(0)}} .mh-ftext{animation:mhWave 1.8s ease-in-out infinite;fill:var(--mh-centre)}",
+     "svg_filter": "<feGaussianBlur stdDeviation='0.6' result='b'/><feMerge><feMergeNode in='b'/><feMergeNode in='SourceGraphic'/></feMerge>"},
+    {"id": "color-shift", "name": "Colour Shift", "is_premium": False,
+     "preview_label": "CMY cycle",
+     "css": "@keyframes mhShift{0%{fill:var(--mh-a)}33%{fill:var(--mh-b)}66%{fill:var(--mh-centre)}100%{fill:var(--mh-a)}} .mh-ftext{animation:mhShift 3s linear infinite}",
+     "svg_filter": ""},
+    {"id": "diagonal-crawl", "name": "Diagonal Crawl", "is_premium": False,
+     "preview_label": "Munker diagonal",
+     "css": "@keyframes mhCrawl{0%{stroke-dashoffset:200}100%{stroke-dashoffset:0}} .mh-ftext{fill:none;stroke:var(--mh-a);stroke-width:1.5;stroke-dasharray:200;animation:mhCrawl 2.5s linear infinite}",
+     "svg_filter": ""},
+    {"id": "grid-flash", "name": "Grid Flash", "is_premium": False,
+     "preview_label": "Strobe grid",
+     "css": "@keyframes mhFlash{0%,49%{opacity:1}50%,100%{opacity:.2}} .mh-ftext{animation:mhFlash .6s step-end infinite;fill:var(--mh-b);filter:url(#mhStripeF)}",
+     "svg_filter": "<feColorMatrix type='matrix' values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 18 -7'/>"},
+    {"id": "centre-fade", "name": "Centre Fade", "is_premium": False,
+     "preview_label": "Tonal dissolve",
+     "css": "@keyframes mhFade{0%{opacity:0;letter-spacing:.3em}100%{opacity:1;letter-spacing:0}} .mh-ftext{animation:mhFade 2s ease-out forwards;fill:var(--mh-centre)}",
+     "svg_filter": ""},
+    # ── Premium effects (Designer+) ────────────────────────────────────────────
+    {"id": "cmy-split", "name": "CMY Split", "is_premium": True,
+     "preview_label": "Chromatic aberration",
+     "css": "@keyframes mhSplit{0%,100%{text-shadow:-3px 0 var(--mh-a),3px 0 var(--mh-b)}50%{text-shadow:-6px 0 var(--mh-a),6px 0 var(--mh-b)}} .mh-ftext{animation:mhSplit 1.5s ease-in-out infinite;fill:var(--mh-centre)}",
+     "svg_filter": ""},
+    {"id": "iso-extrude", "name": "Isometric Extrude", "is_premium": True,
+     "preview_label": "3-plane hex depth",
+     "css": "@keyframes mhExtrude{0%{transform:translate(0,0) skewX(-18deg)}100%{transform:translate(-8px,8px) skewX(-18deg)}} .mh-ftext{animation:mhExtrude 2s alternate ease-in-out infinite;fill:var(--mh-a);stroke:var(--mh-b);stroke-width:.5}",
+     "svg_filter": ""},
+    {"id": "ruliad-trace", "name": "Ruliad Trace", "is_premium": True,
+     "preview_label": "Node network",
+     "css": "@keyframes mhTrace{0%{stroke-dashoffset:600;opacity:.3}100%{stroke-dashoffset:0;opacity:1}} .mh-ftext{fill:none;stroke:var(--mh-a);stroke-width:2;stroke-dasharray:600;animation:mhTrace 3s ease-in-out infinite alternate}",
+     "svg_filter": "<feTurbulence type='turbulence' baseFrequency='0.02' numOctaves='3' result='n'/><feDisplacementMap in='SourceGraphic' in2='n' scale='6'/>"},
+    {"id": "variable-weight", "name": "Variable Weight", "is_premium": True,
+     "preview_label": "Type mass pulse",
+     "css": "@keyframes mhVW{0%,100%{font-variation-settings:'wght' 100}50%{font-variation-settings:'wght' 900}} .mh-ftext{animation:mhVW 2s ease-in-out infinite;fill:var(--mh-a)}",
+     "svg_filter": ""},
+    {"id": "munker-scanline", "name": "Munker Scanline", "is_premium": True,
+     "preview_label": "CRT optical",
+     "css": "@keyframes mhScan{0%{background-position:0 0}100%{background-position:0 100%}} .mh-ftext-wrap{background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0px,rgba(0,0,0,.18) 1px,transparent 1px,transparent 3px);animation:mhScan 1s linear infinite} .mh-ftext{fill:var(--mh-a)}",
+     "svg_filter": ""},
+    {"id": "hex-morph", "name": "Hex Morph", "is_premium": True,
+     "preview_label": "Polygon letterform",
+     "css": "@keyframes mhMorph{0%,100%{clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}50%{clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%)}} .mh-ftext{animation:mhMorph 2s ease-in-out infinite;fill:var(--mh-b)}",
+     "svg_filter": ""},
+    {"id": "stripe-mask", "name": "Stripe Mask", "is_premium": True,
+     "preview_label": "Munker stripe cutout",
+     "css": "@keyframes mhMask{0%{mask-position:0 0}100%{mask-position:40px 0}} .mh-ftext{animation:mhMask 1s linear infinite;mask-image:repeating-linear-gradient(45deg,#000 0px,#000 4px,transparent 4px,transparent 10px);fill:var(--mh-a)}",
+     "svg_filter": ""},
+    {"id": "tonal-echo", "name": "Tonal Echo", "is_premium": True,
+     "preview_label": "Depth shadow layers",
+     "css": "@keyframes mhEcho{0%{text-shadow:2px 2px 0 var(--mh-b),4px 4px 0 var(--mh-centre)}100%{text-shadow:6px 6px 0 var(--mh-b),12px 12px 0 var(--mh-centre)}} .mh-ftext{animation:mhEcho 2s alternate ease-in-out infinite;fill:var(--mh-a)}",
+     "svg_filter": ""},
+    {"id": "optical-flicker", "name": "Optical Flicker", "is_premium": True,
+     "preview_label": "Munker edge shimmer",
+     "css": "@keyframes mhFlicker{0%{opacity:1;filter:url(#mhStripeF) brightness(1.2)}33%{opacity:.7;filter:url(#mhStripeF) brightness(.8)}66%{opacity:.9;filter:url(#mhStripeF) brightness(1.5)}100%{opacity:1;filter:url(#mhStripeF) brightness(1)}} .mh-ftext{animation:mhFlicker .9s ease-in-out infinite;fill:var(--mh-a)}",
+     "svg_filter": "<feColorMatrix type='saturate' values='3'/>"},
+    {"id": "chromatic-bloom", "name": "Chromatic Bloom", "is_premium": True,
+     "preview_label": "Lens flare diffuse",
+     "css": "@keyframes mhBloom{0%,100%{filter:drop-shadow(0 0 2px var(--mh-a)) drop-shadow(0 0 6px var(--mh-b)) brightness(1)}50%{filter:drop-shadow(0 0 12px var(--mh-a)) drop-shadow(0 0 24px var(--mh-b)) brightness(1.3)}} .mh-ftext{animation:mhBloom 2.5s ease-in-out infinite;fill:var(--mh-centre)}",
+     "svg_filter": ""},
+    {"id": "pixel-dither", "name": "Pixel Dither", "is_premium": True,
+     "preview_label": "Retro game palette",
+     "css": "@keyframes mhDither{0%,100%{filter:url(#mhStripeF) contrast(20) brightness(.8)}50%{filter:url(#mhStripeF) contrast(20) brightness(1.3)}} .mh-ftext{animation:mhDither .4s step-end infinite;fill:var(--mh-a)}",
+     "svg_filter": "<feColorMatrix type='matrix' values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 8 -4'/>"},
+]
 
 
 PALETTE_PRESETS = [
@@ -1453,7 +1578,378 @@ def build_tonality_renderer_html() -> str:
 })();
 </script>
 """
-    return original.replace("<body>", f"<body>\n{render_patch}", 1)
+    # ── Inject server-side config ──────────────────────────────────────────────
+    supabase_url      = os.environ.get("SUPABASE_URL", "")
+    supabase_anon_key = os.environ.get("SUPABASE_ANON_KEY", "")
+    public_url        = os.environ.get("PUBLIC_URL", "")
+    price_designer    = os.environ.get("STRIPE_PRICE_DESIGNER", "")
+    price_studio      = os.environ.get("STRIPE_PRICE_STUDIO", "")
+    price_agency      = os.environ.get("STRIPE_PRICE_AGENCY", "")
+
+    config_script = f"""<script>
+window.MH_CONFIG = {{
+  supabaseUrl: "{supabase_url}",
+  supabaseAnonKey: "{supabase_anon_key}",
+  publicUrl: "{public_url}",
+  stripePrices: {{
+    designer: "{price_designer}",
+    studio: "{price_studio}",
+    agency: "{price_agency}"
+  }}
+}};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>"""
+
+    # ── Auth banner + Brand Kit tab + Font Effects tab (appended after render_patch) ──
+    auth_and_features_patch = """
+<style id="mh-auth-features">
+  #mhAuthBanner{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 14px;background:rgba(12,12,20,.96);border-bottom:1px solid var(--line);font:12px ui-monospace,monospace;color:var(--ink-dim);flex-wrap:wrap}
+  #mhAuthBanner a{color:var(--accent);cursor:pointer;text-decoration:none}
+  .mh-tier-badge{padding:2px 8px;border-radius:20px;font:bold 10px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;background:var(--line);color:var(--ink)}
+  .mh-tier-badge.designer{background:#7c3aed;color:#fff}
+  .mh-tier-badge.studio{background:#0ea5e9;color:#fff}
+  .mh-tier-badge.agency{background:#f59e0b;color:#000}
+  #mhAuthModal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);align-items:center;justify-content:center}
+  #mhAuthModal.open{display:flex}
+  .mh-auth-box{background:#14141c;border:1px solid var(--line);border-radius:14px;padding:28px;width:340px;max-width:92vw}
+  .mh-auth-box h3{margin:0 0 16px;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+  .mh-auth-box input{width:100%;background:#0b0b10;border:1px solid var(--line);border-radius:8px;padding:10px;color:var(--ink);font:13px ui-monospace,monospace;margin-bottom:10px;box-sizing:border-box}
+  .mh-auth-tabs{display:flex;gap:6px;margin-bottom:16px}
+  .mh-auth-tab{flex:1;padding:7px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--ink-dim);cursor:pointer;font:12px ui-monospace,monospace}
+  .mh-auth-tab.active{background:var(--line);color:var(--ink)}
+  .mh-auth-err{color:#f87171;font:11px ui-monospace,monospace;margin-top:4px;min-height:16px}
+  .mh-upgrade-banner{background:linear-gradient(90deg,rgba(124,58,237,.18),rgba(14,165,233,.18));border:1px solid #7c3aed44;border-radius:8px;padding:10px 14px;margin:8px 0;font:12px ui-monospace,monospace;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .mh-upgrade-banner a{color:var(--accent);cursor:pointer}
+  /* Brand Kit panel */
+  .mh-kit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px;max-height:220px;overflow-y:auto}
+  .mh-kit-card{border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;background:#0b0b10;transition:border-color .15s}
+  .mh-kit-card:hover{border-color:var(--accent)}
+  .mh-kit-swatches{display:flex;gap:3px;margin-bottom:5px}
+  .mh-kit-swatch{width:18px;height:18px;border-radius:3px;flex-shrink:0}
+  .mh-kit-name{font:11px ui-monospace,monospace;color:var(--ink-dim);word-break:break-word}
+  /* Font Effects panel */
+  .mh-font-controls{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+  .mh-font-text-input{background:#0b0b10;border:1px solid var(--line);border-radius:8px;padding:9px 10px;color:var(--ink);font:14px ui-monospace,monospace;width:100%;box-sizing:border-box}
+  .mh-fx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:200px;overflow-y:auto;margin-top:8px}
+  .mh-fx-card{border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;background:#0b0b10;transition:border-color .15s;position:relative}
+  .mh-fx-card:hover,.mh-fx-card.selected{border-color:var(--accent)}
+  .mh-fx-card.locked{opacity:.55}
+  .mh-fx-card.locked::after{content:'★ Pro';position:absolute;top:4px;right:4px;font:bold 9px ui-monospace,monospace;color:var(--accent);background:#0b0b10;padding:1px 4px;border-radius:4px}
+  .mh-fx-name{font:11px ui-monospace,monospace;color:var(--ink-dim);margin-top:4px}
+  .mh-fx-preview-svg{width:100%;height:38px;overflow:hidden}
+  #mhFontSvgPreview{width:100%;height:80px;margin-top:8px;border:1px solid var(--line);border-radius:8px;background:#0b0b10;overflow:hidden}
+</style>
+
+<!-- Auth banner (top of page) -->
+<div id="mhAuthBanner">
+  <span style="color:var(--ink)">MunkerHex Studio</span>
+  <span id="mhAuthStatus" style="display:flex;align-items:center;gap:8px">
+    <span id="mhTierBadge" class="mh-tier-badge" style="display:none"></span>
+    <span id="mhUserEmail" style="display:none"></span>
+    <a id="mhSignInBtn">Sign in</a>
+    <a id="mhSignOutBtn" style="display:none">Sign out</a>
+    <a id="mhUpgradeBtn" style="display:none;color:#a78bfa">Upgrade</a>
+  </span>
+</div>
+
+<!-- Auth modal -->
+<div id="mhAuthModal">
+  <div class="mh-auth-box">
+    <h3>MunkerHex · Account</h3>
+    <div class="mh-auth-tabs">
+      <button class="mh-auth-tab active" id="mhTabLogin">Log in</button>
+      <button class="mh-auth-tab" id="mhTabSignup">Sign up</button>
+    </div>
+    <input type="email" id="mhAuthEmail" placeholder="Email" autocomplete="email" />
+    <input type="password" id="mhAuthPass" placeholder="Password" autocomplete="current-password" />
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button id="mhAuthSubmit" style="flex:1;min-height:40px">Log in</button>
+      <button id="mhAuthClose" style="min-height:40px;background:none;border-color:var(--line)">✕</button>
+    </div>
+    <div class="mh-auth-err" id="mhAuthErr"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var _sb = null;
+  var _session = null;
+  var _tier = 'free';
+  var _kits = [];
+  var _effects = [];
+  var _selFx = null;
+
+  function sbClient(){
+    if(_sb) return _sb;
+    var cfg = window.MH_CONFIG || {};
+    if(!cfg.supabaseUrl || !window.supabase) return null;
+    _sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    return _sb;
+  }
+
+  function authToken(){ return _session?.access_token || null; }
+  function isLoggedIn(){ return !!_session; }
+  function hasFeature(minTier){
+    var ranks = {free:0,designer:1,studio:2,agency:3};
+    return (ranks[_tier]||0) >= (ranks[minTier]||0);
+  }
+
+  function refreshBanner(){
+    var email = _session?.user?.email || '';
+    document.getElementById('mhUserEmail').textContent = email;
+    document.getElementById('mhUserEmail').style.display = email ? '' : 'none';
+    document.getElementById('mhSignInBtn').style.display = isLoggedIn() ? 'none' : '';
+    document.getElementById('mhSignOutBtn').style.display = isLoggedIn() ? '' : 'none';
+    var badge = document.getElementById('mhTierBadge');
+    badge.textContent = _tier;
+    badge.className = 'mh-tier-badge ' + _tier;
+    badge.style.display = isLoggedIn() ? '' : 'none';
+    document.getElementById('mhUpgradeBtn').style.display = isLoggedIn() && _tier==='free' ? '' : 'none';
+  }
+
+  async function loadTier(){
+    if(!isLoggedIn()) return;
+    try{
+      var r = await fetch('/api/brand-kits', {headers:{Authorization:'Bearer '+authToken()}});
+      if(r.status === 403){ _tier='free'; }
+    }catch(e){}
+    try{
+      var tr = await fetch('/api/user/tier', {headers:{Authorization:'Bearer '+authToken()}});
+      if(tr.ok){ var d = await tr.json(); _tier = d.tier || 'free'; }
+    }catch(e){}
+  }
+
+  async function initAuth(){
+    var sb = sbClient(); if(!sb) return;
+    var {data:{session}} = await sb.auth.getSession();
+    _session = session;
+    await loadTier();
+    refreshBanner();
+    sb.auth.onAuthStateChange(async(_,s)=>{
+      _session = s;
+      await loadTier();
+      refreshBanner();
+      if(s) loadKits();
+    });
+    if(isLoggedIn()) loadKits();
+  }
+
+  // ── Auth modal ─────────────────────────────────────────────────────────────
+  function openModal(){ document.getElementById('mhAuthModal').classList.add('open'); }
+  function closeModal(){ document.getElementById('mhAuthModal').classList.remove('open'); document.getElementById('mhAuthErr').textContent=''; }
+  var _mode = 'login';
+  document.getElementById('mhTabLogin').addEventListener('click',function(){
+    _mode='login';
+    document.getElementById('mhTabLogin').classList.add('active');
+    document.getElementById('mhTabSignup').classList.remove('active');
+    document.getElementById('mhAuthSubmit').textContent='Log in';
+  });
+  document.getElementById('mhTabSignup').addEventListener('click',function(){
+    _mode='signup';
+    document.getElementById('mhTabSignup').classList.add('active');
+    document.getElementById('mhTabLogin').classList.remove('active');
+    document.getElementById('mhAuthSubmit').textContent='Sign up';
+  });
+  document.getElementById('mhSignInBtn').addEventListener('click', openModal);
+  document.getElementById('mhAuthClose').addEventListener('click', closeModal);
+  document.getElementById('mhAuthModal').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
+  document.getElementById('mhUpgradeBtn').addEventListener('click', function(){
+    var prices = (window.MH_CONFIG||{}).stripePrices||{};
+    var price = prices.designer; if(!price) return;
+    if(!isLoggedIn()){ openModal(); return; }
+    fetch('/api/stripe/checkout',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken()},body:JSON.stringify({price_id:price})})
+      .then(r=>r.json()).then(d=>{ if(d.url) window.location.href=d.url; });
+  });
+  document.getElementById('mhAuthSubmit').addEventListener('click', async function(){
+    var sb=sbClient(); if(!sb) return;
+    var email=document.getElementById('mhAuthEmail').value.trim();
+    var pass=document.getElementById('mhAuthPass').value;
+    var err=document.getElementById('mhAuthErr');
+    err.textContent='';
+    try{
+      var res = _mode==='signup'
+        ? await sb.auth.signUp({email,password:pass})
+        : await sb.auth.signInWithPassword({email,password:pass});
+      if(res.error) throw res.error;
+      closeModal();
+    }catch(e){ err.textContent = e.message || 'Auth error'; }
+  });
+  document.getElementById('mhSignOutBtn').addEventListener('click', async function(){
+    var sb=sbClient(); if(!sb) return;
+    await sb.auth.signOut();
+    _kits=[]; renderKitGrid();
+  });
+
+  // ── Brand Kit tab ──────────────────────────────────────────────────────────
+  async function loadKits(){
+    if(!isLoggedIn()) return;
+    try{
+      var r = await fetch('/api/brand-kits',{headers:{Authorization:'Bearer '+authToken()}});
+      if(r.ok) _kits = await r.json();
+      renderKitGrid();
+    }catch(e){}
+  }
+
+  function renderKitGrid(){
+    var grid = document.getElementById('mhKitGrid'); if(!grid) return;
+    if(!isLoggedIn()){ grid.innerHTML='<p style="color:var(--ink-dim);font:12px monospace">Sign in to save and load brand kits.</p>'; return; }
+    if(!_kits.length){ grid.innerHTML='<p style="color:var(--ink-dim);font:12px monospace">No saved kits yet — save your current palette.</p>'; return; }
+    grid.innerHTML = _kits.map(function(k){
+      var swatches=(k.palette.colors||[k.palette.a_hex,k.palette.b_hex,k.palette.centre_hex]).slice(0,5).map(function(c){ return '<div class="mh-kit-swatch" style="background:'+c+'"></div>'; }).join('');
+      return '<div class="mh-kit-card" data-kit-id="'+k.id+'"><div class="mh-kit-swatches">'+swatches+'</div><div class="mh-kit-name">'+k.name+'</div></div>';
+    }).join('');
+    grid.querySelectorAll('.mh-kit-card').forEach(function(el){
+      el.addEventListener('click',function(){
+        var kit=_kits.find(function(k){ return k.id===el.dataset.kitId; });
+        if(!kit) return;
+        restoreKit(kit);
+      });
+    });
+  }
+
+  function restoreKit(kit){
+    var p=kit.palette, u=kit.munker_config||{};
+    if(typeof setVal==='function'){
+      if(p.a_hex) setVal('munkerMode',u.mode||'diag');
+      if(u.spacing) setVal('munkerSpacing',u.spacing);
+      if(u.thickness) setVal('munkerThick',Math.min(20,u.thickness));
+      if(u.opacity) setVal('munkerOpacity',u.opacity);
+      if(u.speed) setVal('munkerSpeed',u.speed);
+      if(typeof pushUnifiedToOriginal==='function') pushUnifiedToOriginal();
+      if(u.mode) setVal('mhUnifiedMode',u.mode,true);
+      if(u.pattern) setVal('mhUnifiedPattern',u.pattern,true);
+    }
+  }
+
+  async function saveKit(){
+    if(!isLoggedIn()){ openModal(); return; }
+    if(!hasFeature('free') && _kits.length>=3){ alert('Upgrade to save more than 3 kits.'); return; }
+    var name=prompt('Name this palette kit:','My palette '+(Date.now()%1000));
+    if(!name) return;
+    var payload={};
+    if(typeof exportPayload==='function') payload=exportPayload();
+    var u={};
+    if(typeof currentUnifiedMunker==='function') u=currentUnifiedMunker();
+    try{
+      var r=await fetch('/api/brand-kits',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken()},body:JSON.stringify({name,palette:payload,munker_config:u})});
+      if(r.ok){ var kit=await r.json(); _kits.unshift(kit); renderKitGrid(); }
+      else{ var e=await r.json(); alert(e.detail||'Save failed'); }
+    }catch(e){ alert('Save failed: '+e.message); }
+  }
+
+  // ── Font Effects tab ───────────────────────────────────────────────────────
+  async function loadFontEffects(){
+    try{
+      var headers=isLoggedIn()?{Authorization:'Bearer '+authToken()}:{};
+      var r=await fetch('/api/font-library',{headers});
+      if(r.ok){ _effects=await r.json(); renderFxGrid(); }
+    }catch(e){}
+  }
+
+  function renderFxGrid(){
+    var grid=document.getElementById('mhFxGrid'); if(!grid||!_effects.length) return;
+    var p = (typeof getWheelPalette==='function') ? getWheelPalette() : {aHex:'#ffff00',bHex:'#0000ff',cHex:'#808080'};
+    grid.innerHTML=_effects.map(function(fx){
+      var locked=fx.is_premium&&!hasFeature('designer');
+      return '<div class="mh-fx-card'+(locked?' locked':'')+(fx.id===(_selFx&&_selFx.id)?' selected':'')'" data-fx-id="'+fx.id+'"><div class="mh-fx-name">'+fx.name+'</div><div style="font:10px monospace;color:var(--ink-dim)">'+fx.preview_label+'</div></div>';
+    }).join('');
+    grid.querySelectorAll('.mh-fx-card:not(.locked)').forEach(function(el){
+      el.addEventListener('click',function(){
+        _selFx=_effects.find(function(f){ return f.id===el.dataset.fxId; });
+        renderFxGrid(); updateFontPreview();
+      });
+    });
+    grid.querySelectorAll('.mh-fx-card.locked').forEach(function(el){
+      el.addEventListener('click',function(){ document.getElementById('mhUpgradeBtn').click(); });
+    });
+  }
+
+  function updateFontPreview(){
+    var text=(document.getElementById('mhFontInput')||{}).value||'MUNKERHEX';
+    var preview=document.getElementById('mhFontSvgPreview'); if(!preview) return;
+    var p=(typeof getWheelPalette==='function')?getWheelPalette():{aHex:'#ffff00',bHex:'#0000ff',cHex:'#808080'};
+    var fx=_selFx||{css:'',svg_filter:'',id:'none'};
+    var styleEl=document.getElementById('mhFxActiveStyle');
+    if(!styleEl){styleEl=document.createElement('style');styleEl.id='mhFxActiveStyle';document.head.appendChild(styleEl);}
+    styleEl.textContent=fx.css.replace(/var\(--mh-a\)/g,p.aHex).replace(/var\(--mh-b\)/g,p.bHex).replace(/var\(--mh-centre\)/g,p.cHex);
+    preview.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80" style="--mh-a:'+p.aHex+';--mh-b:'+p.bHex+';--mh-centre:'+p.cHex+'"><defs>'+(fx.svg_filter?'<filter id="mhStripeF">'+fx.svg_filter+'</filter>':'')+'</defs><text class="mh-ftext" x="50%" y="56" text-anchor="middle" dominant-baseline="middle" font-family="ui-monospace,monospace" font-size="28" font-weight="700">'+text.substring(0,18)+'</text></svg>';
+  }
+
+  function exportFontSvg(){
+    var text=(document.getElementById('mhFontInput')||{}).value||'MUNKERHEX';
+    var p=(typeof getWheelPalette==='function')?getWheelPalette():{aHex:'#ffff00',bHex:'#0000ff',cHex:'#808080'};
+    var fx=_selFx||{css:'',svg_filter:'',id:'none',name:'text'};
+    var svg='<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="600" height="160"><defs><style>'+fx.css+'</style>'+(fx.svg_filter?'<filter id="mhStripeF">'+fx.svg_filter+'</filter>':'')+'</defs><rect width="600" height="160" fill="#0b0b10"/><text class="mh-ftext" x="300" y="95" text-anchor="middle" dominant-baseline="middle" font-family="ui-monospace,monospace" font-size="52" font-weight="700" style="--mh-a:'+p.aHex+';--mh-b:'+p.bHex+';--mh-centre:'+p.cHex+'">'+text+'</text></svg>';
+    var blob=new Blob([svg],{type:'image/svg+xml'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download='munkerhex-'+fx.id+'.svg'; a.click();
+  }
+
+  // ── Inject new tabs after render_patch IIFE runs ───────────────────────────
+  setTimeout(function(){
+    var tabs=document.getElementById('mhSuiteTabs'); if(!tabs) return;
+
+    // Kit tab button
+    var kitBtn=document.createElement('button');
+    kitBtn.className='mh-suite-tab'; kitBtn.dataset.suiteTab='kit'; kitBtn.textContent='Kit';
+    tabs.appendChild(kitBtn);
+
+    // Fonts tab button
+    var fontsBtn=document.createElement('button');
+    fontsBtn.className='mh-suite-tab'; fontsBtn.dataset.suiteTab='fonts'; fontsBtn.textContent='Fonts';
+    tabs.appendChild(fontsBtn);
+
+    // Kit panel
+    var kitPanel=document.createElement('div');
+    kitPanel.className='mh-builder-panel'; kitPanel.id='mhBuilderKit';
+    kitPanel.innerHTML='<div class="mh-builder-title">Brand Kit · saved palettes &amp; Munker configs</div>'
+      +'<div class="mh-render-toolbar"><button id="mhSaveKitBtn">Save current palette as kit</button></div>'
+      +'<div class="mh-kit-grid" id="mhKitGrid"></div>';
+    tabs.closest('.mh-render-adapter').insertBefore(kitPanel, tabs.nextSibling.nextSibling || null);
+    // Append after the last existing panel
+    var lastPanel=tabs.closest('.mh-render-adapter').querySelector('#mhBuilderQr');
+    if(lastPanel) lastPanel.after(kitPanel);
+
+    // Fonts panel
+    var fontsPanel=document.createElement('div');
+    fontsPanel.className='mh-builder-panel'; fontsPanel.id='mhBuilderFonts';
+    fontsPanel.innerHTML='<div class="mh-builder-title">Font Effects · Munker-aware animated type</div>'
+      +'<div class="mh-font-controls"><input class="mh-font-text-input" id="mhFontInput" value="MUNKERHEX" maxlength="24" placeholder="Your text here" /></div>'
+      +'<div id="mhFontSvgPreview"></div>'
+      +'<div class="mh-fx-grid" id="mhFxGrid"><p style="color:var(--ink-dim);font:12px monospace">Loading effects…</p></div>'
+      +'<div class="mh-render-toolbar" style="margin-top:8px"><button id="mhExportFontSvgBtn">Export SVG</button><span id="mhFontStatus" class="mh-export-status"></span></div>';
+    if(lastPanel) lastPanel.after(fontsPanel);
+
+    // Tab switching for new tabs
+    [kitBtn, fontsBtn].forEach(function(btn){
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('.mh-suite-tab').forEach(function(b){ b.classList.remove('active'); });
+        document.querySelectorAll('.mh-builder-panel').forEach(function(p){ p.classList.remove('active'); });
+        btn.classList.add('active');
+        var panel=document.getElementById('mhBuilder'+btn.dataset.suiteTab.charAt(0).toUpperCase()+btn.dataset.suiteTab.slice(1));
+        if(panel) panel.classList.add('active');
+        if(btn.dataset.suiteTab==='kit'){ renderKitGrid(); }
+        if(btn.dataset.suiteTab==='fonts'){ loadFontEffects(); }
+      });
+    });
+
+    // Save kit button
+    document.getElementById('mhSaveKitBtn')?.addEventListener('click', saveKit);
+
+    // Font input live preview
+    document.getElementById('mhFontInput')?.addEventListener('input', updateFontPreview);
+    document.getElementById('mhExportFontSvgBtn')?.addEventListener('click', exportFontSvg);
+
+    // Init auth
+    initAuth();
+  }, 600);
+})();
+</script>
+"""
+
+    output = original.replace("</head>", config_script + "\n</head>", 1)
+    output = output.replace("<body>", f"<body>\n{render_patch}\n{auth_and_features_patch}", 1)
+    return output
 
 
 @api_router.get("/tonality-renderer", response_class=HTMLResponse)
@@ -1548,6 +2044,154 @@ async def create_status_check(input: StatusCheckCreate):
 async def get_status_checks():
     status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
     return [StatusCheck(**status_check) for status_check in status_checks]
+
+
+# ── Auth helpers ──────────────────────────────────────────────────────────────
+from auth import UserContext, get_current_user, require_tier, TIER_LIMITS
+
+
+async def _get_user(authorization: Optional[str] = Header(default=None)) -> UserContext:
+    return await get_current_user(authorization=authorization, db=db)
+
+
+@api_router.get("/user/tier")
+async def get_user_tier(user: UserContext = Depends(_get_user)):
+    if not user.user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {"tier": user.tier, "limits": TIER_LIMITS.get(user.tier, TIER_LIMITS["free"])}
+
+
+# ── Brand Kits ────────────────────────────────────────────────────────────────
+@api_router.get("/brand-kits")
+async def list_brand_kits(user: UserContext = Depends(_get_user)):
+    if not user.user_id:
+        raise HTTPException(status_code=401, detail="Sign in to access brand kits")
+    docs = await db.brand_kits.find({"user_id": user.user_id}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return docs
+
+
+@api_router.post("/brand-kits", response_model=BrandKit)
+async def create_brand_kit(payload: BrandKitCreate, user: UserContext = Depends(_get_user)):
+    if not user.user_id:
+        raise HTTPException(status_code=401, detail="Sign in to save brand kits")
+    count = await db.brand_kits.count_documents({"user_id": user.user_id})
+    limit = user.limit("brand_kits")
+    if count >= limit:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Your plan allows {limit} saved kits. Upgrade to save more."
+        )
+    kit = BrandKit(
+        id=str(uuid.uuid4()),
+        user_id=user.user_id,
+        name=payload.name,
+        palette=payload.palette,
+        munker_config=payload.munker_config,
+        created_at=datetime.now(timezone.utc).isoformat(),
+    )
+    await db.brand_kits.insert_one(kit.model_dump())
+    return kit
+
+
+@api_router.delete("/brand-kits/{kit_id}")
+async def delete_brand_kit(kit_id: str, user: UserContext = Depends(_get_user)):
+    if not user.user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    result = await db.brand_kits.delete_one({"id": kit_id, "user_id": user.user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Kit not found")
+    return {"deleted": kit_id}
+
+
+# ── Font Library ──────────────────────────────────────────────────────────────
+async def _seed_font_effects():
+    count = await db.font_effects.count_documents({})
+    if count == 0:
+        await db.font_effects.insert_many([dict(fx) for fx in FONT_EFFECTS_SEED])
+
+
+@api_router.get("/font-library")
+async def list_font_effects(user: UserContext = Depends(_get_user)):
+    await _seed_font_effects()
+    docs = await db.font_effects.find({}, {"_id": 0}).to_list(100)
+    # Mark premium effects as locked for free users
+    for doc in docs:
+        doc["locked"] = doc.get("is_premium", False) and not user.has_tier("designer")
+    return docs
+
+
+@api_router.post("/font-library")
+async def save_font_effect(payload: Dict[str, Any], user: UserContext = Depends(_get_user)):
+    if not user.has_tier("studio"):
+        raise HTTPException(status_code=403, detail="Studio plan required to save custom font effects")
+    effect = FontEffect(
+        id=str(uuid.uuid4()),
+        name=payload.get("name", "Custom effect"),
+        css=payload.get("css", ""),
+        svg_filter=payload.get("svg_filter", ""),
+        preview_label=payload.get("preview_label", "Custom"),
+        is_premium=True,
+        author_id=user.user_id,
+    )
+    await db.font_effects.insert_one(effect.model_dump())
+    return effect
+
+
+# ── Gallery ───────────────────────────────────────────────────────────────────
+@api_router.get("/gallery/public")
+async def list_gallery(page: int = 1, per_page: int = 20):
+    skip = (page - 1) * per_page
+    docs = await db.gallery_items.find(
+        {"public": True}, {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(per_page).to_list(per_page)
+    return docs
+
+
+@api_router.post("/gallery")
+async def publish_to_gallery(payload: GalleryItemCreate, user: UserContext = Depends(_get_user)):
+    if not user.has_tier("designer"):
+        raise HTTPException(status_code=403, detail="Designer plan required to publish to gallery")
+    item = GalleryItem(
+        id=str(uuid.uuid4()),
+        user_id=user.user_id,
+        title=payload.title,
+        config=payload.config,
+        created_at=datetime.now(timezone.utc).isoformat(),
+    )
+    doc = item.model_dump()
+    doc["public"] = True
+    await db.gallery_items.insert_one(doc)
+    return item
+
+
+# ── Stripe ────────────────────────────────────────────────────────────────────
+@api_router.post("/stripe/checkout")
+async def stripe_checkout(payload: Dict[str, Any], user: UserContext = Depends(_get_user)):
+    if not user.user_id:
+        raise HTTPException(status_code=401, detail="Sign in before subscribing")
+    price_id = payload.get("price_id", "")
+    if not price_id:
+        raise HTTPException(status_code=400, detail="price_id required")
+    public_url = os.environ.get("PUBLIC_URL", "http://localhost")
+    try:
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=f"{public_url}/?sub=success",
+            cancel_url=f"{public_url}/?sub=cancel",
+            customer_email=user.email or None,
+            metadata={"user_id": user.user_id},
+        )
+        return {"url": session.url}
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@api_router.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    from stripe_webhooks import handle_webhook
+    return await handle_webhook(request, db)
+
 
 # Include the router in the main app
 app.include_router(api_router)
