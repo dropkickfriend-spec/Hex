@@ -1193,6 +1193,22 @@
   .mh-mode-btn { background:rgba(255,255,255,.06); border:none; border-radius:8px; color:var(--ink-dim,#9090a8); font:10px 'Space Mono',monospace; letter-spacing:.06em; padding:6px 10px; min-height:0; cursor:pointer; transition:background .12s,color .12s; }
   .mh-mode-btn:hover { background:rgba(255,255,255,.12); color:var(--ink,#dddde8); }
   .mh-mode-btn.active { background:rgba(255,255,255,.14); color:var(--mh-a,#ffff00); box-shadow:0 0 8px var(--mh-a,#ffff00); }
+  /* ── Tone-coloured dark backgrounds (negative space from palette hue) ── */
+  html, body { background: var(--mh-dark, #030308) !important; }
+  .mh-render-adapter { background: rgba(var(--mh-dark-rgb, 3,3,8), .88); }
+  .mh-builder-panel  { background: rgba(var(--mh-dark-rgb, 3,3,8), .82); }
+  .mh-splash-card    { background: rgba(var(--mh-dark-rgb, 3,3,8), .92); }
+  .mh-unified-munker { background: rgba(var(--mh-dark-rgb, 3,3,8), .76); }
+  .mh-export-panel   { background: rgba(var(--mh-dark-rgb, 3,3,8), .76); }
+  .mh-painter-tip    { background: rgba(var(--mh-dark-rgb, 3,3,8), .68); }
+  /* ── Range sliders: palette-A thumb with glow ── */
+  input[type="range"] { -webkit-appearance:none; appearance:none; height:5px; border-radius:99px; background:rgba(255,255,255,.16); outline:none; cursor:pointer; }
+  input[type="range"]::-webkit-slider-runnable-track { height:5px; border-radius:99px; background:rgba(255,255,255,.16); }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--mh-a,#ffff00); box-shadow:0 0 10px var(--mh-a,#ffff00),0 0 22px var(--mh-a,#ffff00); margin-top:-6px; cursor:pointer; border:2px solid rgba(0,0,0,.5); }
+  input[type="range"]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; border:2px solid rgba(0,0,0,.5); background:var(--mh-a,#ffff00); box-shadow:0 0 10px var(--mh-a,#ffff00); }
+  /* ── Max-contrast floating text ── */
+  label, .field { text-shadow:0 1px 5px rgba(0,0,0,.98),0 0 10px rgba(0,0,0,.85) !important; }
+  .val, .mh-sc-desc, .mh-splash-sub { text-shadow:0 1px 5px rgba(0,0,0,.98),0 0 10px rgba(0,0,0,.85) !important; }
 </style>
 <div id="mhPageFold"></div>
 <div id="mhSplash">
@@ -2073,8 +2089,8 @@
     stage.style.setProperty('--mh-b', p.bHex);
     stage.style.setProperty('--mh-c', p.cHex);
     const _inkHue = (p.hue + 180) % 360;
-    const _inkHex = _hslToHex(_inkHue, 45, 88);
-    const _inkDimHex = _hslToHex(_inkHue, 22, 70);
+    const _inkHex = _hslToHex(_inkHue, 45, 95);
+    const _inkDimHex = _hslToHex(_inkHue, 22, 78);
     document.documentElement.style.setProperty('--ink', _inkHex);
     document.documentElement.style.setProperty('--ink-dim', _inkDimHex);
     stage.style.setProperty('--mh-a-soft', rgba(p.a, .25));
@@ -2083,6 +2099,10 @@
     stage.style.setProperty('--mh-a-grid', rgba(p.a, .46));
     stage.style.setProperty('--mh-b-grid', rgba(p.b, .46));
     stage.style.setProperty('--mh-c-grid', rgba(p.centre, .42));
+    const _darkHex = _hslToHex(p.hue, 42, 5);
+    const _dn = parseInt(_darkHex.replace('#',''), 16);
+    document.documentElement.style.setProperty('--mh-dark', _darkHex);
+    document.documentElement.style.setProperty('--mh-dark-rgb', `${(_dn>>16)&255},${(_dn>>8)&255},${_dn&255}`);
     document.querySelectorAll('.mh-dot').forEach((el, i) => { el.style.background = [p.aHex, p.cHex, p.bHex][i % 3]; });
     document.querySelectorAll('.mh-line').forEach((el, i) => {
       const color = [p.aHex, p.bHex, p.cHex][i % 3];
