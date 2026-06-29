@@ -1061,16 +1061,27 @@ def build_tonality_renderer_html() -> str:
     const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
     return 0.2126*Math.pow(r,2.2)+0.7152*Math.pow(g,2.2)+0.0722*Math.pow(b,2.2);
   }
+  function _hexToHSL(hex) {
+    if (!hex || hex.length < 7) return [0, 0, 100];
+    let r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b), l=(max+min)/2;
+    if (max===min) return [0, 0, l*100];
+    const d=max-min, s=l>0.5?d/(2-max-min):d/(max+min);
+    const h=max===r?(g-b)/d+(g<b?6:0):max===g?(b-r)/d+2:(r-g)/d+4;
+    return [h*60, s*100, l*100];
+  }
+  function _hslToHex(h, s, l) {
+    h=((h%360)+360)%360; s/=100; l/=100;
+    const a=s*Math.min(l,1-l);
+    const f=n=>{const k=(n+h/30)%12,c=l-a*Math.max(Math.min(k-3,9-k,1),-1);return Math.round(c*255).toString(16).padStart(2,'0');};
+    return '#'+f(0)+f(8)+f(4);
+  }
   function getBestTextColor(bgHex) {
     const p = getWheelPalette();
-    const bg = _luma(bgHex||'#0b0b10');
-    const candidates = [p.aHex, p.bHex, '#ffffff', '#e8e8f0', p.cHex];
-    let best=candidates[0], bestC=0;
-    candidates.forEach(c => {
-      const l=_luma(c), ratio=l>bg?(l+.05)/(bg+.05):(bg+.05)/(l+.05);
-      if(ratio>bestC){bestC=ratio;best=c;}
-    });
-    return best;
+    const bgLum = _luma(bgHex || '#0b0b10');
+    const oppHue = (p.hue + 180) % 360;
+    const textL = bgLum < 0.18 ? 88 : bgLum > 0.5 ? 12 : bgLum < 0.35 ? 80 : 20;
+    return _hslToHex(oppHue, 72, textL);
   }
   function syncLineThickness(value, updateOriginal){
     const n = Math.max(1, Math.min(40, parseInt(value || '5', 10)));
@@ -1499,6 +1510,11 @@ def build_tonality_renderer_html() -> str:
     stage.style.setProperty('--mh-a', p.aHex);
     stage.style.setProperty('--mh-b', p.bHex);
     stage.style.setProperty('--mh-c', p.cHex);
+    const _inkHue = (p.hue + 180) % 360;
+    const _inkHex = _hslToHex(_inkHue, 72, 88);
+    const _inkDimHex = _hslToHex(_inkHue, 36, 60);
+    document.documentElement.style.setProperty('--ink', _inkHex);
+    document.documentElement.style.setProperty('--ink-dim', _inkDimHex);
     stage.style.setProperty('--mh-a-soft', rgba(p.a, .25));
     stage.style.setProperty('--mh-b-soft', rgba(p.b, .22));
     stage.style.setProperty('--mh-c-soft', rgba(p.centre, .24));
