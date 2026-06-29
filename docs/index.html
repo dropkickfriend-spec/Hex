@@ -1193,14 +1193,19 @@
   .mh-mode-btn { background:rgba(255,255,255,.06); border:none; border-radius:8px; color:var(--ink-dim,#9090a8); font:10px 'Space Mono',monospace; letter-spacing:.06em; padding:6px 10px; min-height:0; cursor:pointer; transition:background .12s,color .12s; }
   .mh-mode-btn:hover { background:rgba(255,255,255,.12); color:var(--ink,#dddde8); }
   .mh-mode-btn.active { background:rgba(255,255,255,.14); color:var(--mh-a,#ffff00); box-shadow:0 0 8px var(--mh-a,#ffff00); }
-  /* ── Tone-coloured dark backgrounds (negative space from palette hue) ── */
+  /* ── No panel backgrounds: content floats on the hex cube field ── */
   html, body { background: var(--mh-dark, #030308) !important; }
-  .mh-render-adapter { background: rgba(var(--mh-dark-rgb, 3,3,8), .88); }
-  .mh-builder-panel  { background: rgba(var(--mh-dark-rgb, 3,3,8), .82); }
-  .mh-splash-card    { background: rgba(var(--mh-dark-rgb, 3,3,8), .92); }
-  .mh-unified-munker { background: rgba(var(--mh-dark-rgb, 3,3,8), .76); }
-  .mh-export-panel   { background: rgba(var(--mh-dark-rgb, 3,3,8), .76); }
-  .mh-painter-tip    { background: rgba(var(--mh-dark-rgb, 3,3,8), .68); }
+  .mh-render-adapter, .mh-builder-panel, .mh-unified-munker,
+  .mh-export-panel, .mh-painter-tip { background: none !important; }
+  .mh-splash-card { background: rgba(var(--mh-dark-rgb, 3,3,8), .82); }
+  /* ── Broad text contrast for floating UI elements ── */
+  .mh-render-adapter *, .mh-builder-panel *, .mh-unified-munker *,
+  .mh-export-panel *, .mh-painter-tip *, .mh-splash-card * {
+    text-shadow:
+      -1px -1px 0 var(--mh-dark,#030308), 1px -1px 0 var(--mh-dark,#030308),
+      -1px  1px 0 var(--mh-dark,#030308), 1px  1px 0 var(--mh-dark,#030308),
+      0 0 10px rgba(0,0,0,.7) !important;
+  }
   /* ── Range sliders: palette-A thumb with glow ── */
   input[type="range"] { -webkit-appearance:none; appearance:none; height:5px; border-radius:99px; background:rgba(255,255,255,.16); outline:none; cursor:pointer; }
   input[type="range"]::-webkit-slider-runnable-track { height:5px; border-radius:99px; background:rgba(255,255,255,.16); }
@@ -1212,33 +1217,33 @@
   select, textarea, .mh-web-preview *, .mh-spr * {
     -webkit-text-stroke:0 !important; paint-order:normal !important;
   }
-  /* ── Pill tabs: bg cubes carry the hex aesthetic, tabs are lightweight neon labels ── */
-  .mh-ctab-cube { display:none !important; }
-  .mh-suite-tabs { gap:5px !important; }
+  /* ── Hex-face cube tabs: cube blocks with label printed on left isometric face ── */
+  .mh-ctab-cube { display:block !important; }
+  .mh-suite-tabs { gap:8px !important; align-items:flex-end !important; }
   .mh-suite-tab {
-    height:auto !important; padding:7px 15px !important;
-    background:rgba(var(--mh-dark-rgb,3,3,8),.88) !important;
-    border:1px solid rgba(255,255,255,.14) !important;
-    border-radius:999px !important; clip-path:none !important;
-    filter:none !important; transform:none !important;
-    transition:border-color .14s,box-shadow .14s,background .14s !important;
+    position:relative; display:block;
+    width:76px; height:76px !important; padding:0 !important;
+    border:none !important; background:transparent !important;
+    border-radius:0 !important; clip-path:none !important;
+    filter:drop-shadow(0 7px 14px rgba(0,0,0,.55)) !important;
+    transition:filter .14s, transform .14s cubic-bezier(.2,.8,.35,1.3) !important;
   }
-  .mh-suite-tab:hover {
-    background:rgba(var(--mh-dark-rgb,3,3,8),.96) !important;
-    border-color:rgba(255,255,255,.3) !important;
-    filter:none !important; transform:translateY(-2px) !important;
+  .mh-suite-tab:hover { transform:translateY(-4px) !important; filter:drop-shadow(0 10px 18px rgba(0,0,0,.7)) brightness(1.18) !important; }
+  .mh-suite-tab.active { transform:translateY(-6px) scale(1.04) !important; filter:drop-shadow(0 14px 24px rgba(0,0,0,.85)) brightness(1.3) !important; }
+  .mh-ctab-f { position:absolute; inset:0; background:var(--pxc, var(--mh-b,#0040ff)); }
+  .mh-ctab-t { clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%); filter:brightness(1.55); }
+  .mh-ctab-r { clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%); filter:brightness(0.88); }
+  .mh-ctab-l { clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%); filter:brightness(0.46); }
+  .mh-ctab-lbl {
+    position:absolute; left:3px; top:44%; width:46%; height:52%;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ink,#f0f0f8) !important;
+    font:bold 7px 'Space Mono',monospace !important;
+    letter-spacing:.07em; text-transform:uppercase;
+    transform:skewY(27deg) scaleX(0.82) !important;
+    transform-origin:left center; white-space:nowrap;
+    text-shadow:0 1px 4px rgba(0,0,0,.95); pointer-events:none;
   }
-  .mh-suite-tab.active {
-    background:var(--mh-a,#ffff00) !important; border-color:var(--mh-a,#ffff00) !important;
-    box-shadow:0 0 14px var(--mh-a,#ffff00),0 0 28px var(--mh-a,#ffff00) !important;
-    filter:none !important; transform:none !important; animation:none !important;
-  }
-  .mh-suite-tab .mh-ctab-lbl {
-    position:static !important; transform:none !important; left:auto !important; top:auto !important;
-    color:var(--ink,#f0f0f8) !important; font:bold 10px 'Space Mono',monospace !important;
-    text-shadow:none !important; letter-spacing:.1em !important;
-  }
-  .mh-suite-tab.active .mh-ctab-lbl { color:var(--ink-on-a,#000) !important; }
   /* ── Neon mode ── */
   @keyframes mhNeonFlicker {
     0%,18%,22%,25%,53%,57%,100%{
@@ -1426,6 +1431,8 @@
       <select id="mhLogoMarkLogo"><option value="hex">Hex mark</option><option value="cube">Cube mark</option><option value="none">Text only</option></select>
       <select id="mhLogoLayoutLogo"><option value="left">Mark left</option><option value="top">Mark top</option><option value="text">Text only</option></select>
     </div>
+    <input id="mhLogoCategoryLogo" maxlength="40" value="" placeholder="Category  ·  e.g.  Tech · Design · Sport"
+      style="margin-top:4px;width:100%;box-sizing:border-box" />
     <input class="mh-font-text-input" id="mhLogoTaglineLogo" value="Palette · Optics · Motion" placeholder="Tagline" style="margin-top:6px;width:100%;box-sizing:border-box" />
     <div id="mhLogoPreviewLogo" style="margin-top:14px;text-align:center"></div>
   </div>
@@ -1926,43 +1933,67 @@
     for(let i=0;i<W*H;i++) mask[i]=d[i*4]<128?1:0;
     return mask;
   }
-  class LogoSimGrid {
+  class BilliardsLogoSim {
     constructor(W,H,mask){
-      this.W=W; this.H=H; this.N=W*H; this.mask=mask;
-      this.u=new Float32Array(this.N).fill(1);
-      this.v=new Float32Array(this.N).fill(0);
-      this.f=0.037; this.k=0.060;
-      // seed random spots OUTSIDE the letter
-      for(let i=0;i<14;i++){
-        const px=2+Math.floor(Math.random()*(W-4));
-        const py=2+Math.floor(Math.random()*(H-4));
-        for(let dy=-3;dy<=3;dy++) for(let dx=-3;dx<=3;dx++){
-          const idx=((py+dy+H)%H)*W+((px+dx+W)%W);
-          if(!mask[idx]){this.u[idx]=0.25; this.v[idx]=0.5;}
-        }
-      }
+      this.W=W; this.H=H; this.mask=mask;
+      this.tick=0; this.trails=[]; this.visited=new Set();
+      this.outsideTotal=0;
+      for(let i=0;i<W*H;i++) if(!mask[i]) this.outsideTotal++;
+      this.expanded=false;
+      const N=6;
+      this.balls=Array.from({length:N},(_,i)=>{
+        let x,y,att=0;
+        do{ x=2+Math.random()*(W-4); y=2+Math.random()*(H-4); att++; }
+        while(mask[Math.round(y)*W+Math.round(x)] && att<120);
+        const ang=Math.random()*Math.PI*2, spd=2+Math.random();
+        return {x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+                sx:x,sy:y,life:0,hue:(i/N)*360,trail:[]};
+      });
+    }
+    _wall(x,y){
+      const xi=Math.round(x),yi=Math.round(y);
+      if(xi<0||xi>=this.W||yi<0||yi>=this.H) return true;
+      if(!this.expanded && this.mask[yi*this.W+xi]) return true;
+      return false;
     }
     step(){
-      const W=this.W,H=this.H,u=this.u,v=this.v,m=this.mask;
-      const nu=new Float32Array(this.N),nv=new Float32Array(this.N);
-      const f=this.f,k=this.k;
-      for(let r=0;r<H;r++){
-        for(let c=0;c<W;c++){
-          const i=r*W+c;
-          const ui=u[i],vi=v[i];
-          const Lu=u[r*W+((c-1+W)%W)]+u[r*W+((c+1)%W)]+u[((r-1+H)%H)*W+c]+u[((r+1)%H)*W+c]-4*ui;
-          const Lv=v[r*W+((c-1+W)%W)]+v[r*W+((c+1)%W)]+v[((r-1+H)%H)*W+c]+v[((r+1)%H)*W+c]-4*vi;
-          const uvv=ui*vi*vi;
-          const inside=m[i];
-          // inside letter: slower diffusion + different f/k → labyrinthine pattern
-          const du=inside?0.12:0.20, dv=inside?0.06:0.10;
-          const ff=inside?0.040:f, fk=inside?0.058:k;
-          nu[i]=Math.max(0,Math.min(1,ui+du*Lu-uvv+ff*(1-ui)));
-          nv[i]=Math.max(0,Math.min(1,vi+dv*Lv+uvv-(ff+fk)*vi));
+      this.tick++;
+      if(!this.expanded && this.visited.size/Math.max(1,this.outsideTotal)>0.60)
+        this.expanded=true;
+      for(const b of this.balls){
+        b.life++;
+        let nx=b.x+b.vx, ny=b.y+b.vy;
+        const hX=this._wall(nx,b.y), hY=this._wall(b.x,ny);
+        if(hX){b.vx*=-1; nx=b.x;}
+        if(hY){b.vy*=-1; ny=b.y;}
+        if(hX||hY){
+          const ang=Math.atan2(b.vy,b.vx)+(Math.random()-.5)*.5;
+          const spd=Math.hypot(b.vx,b.vy);
+          b.vx=Math.cos(ang)*spd; b.vy=Math.sin(ang)*spd;
         }
+        if(b.life>30 && Math.hypot(nx-b.sx,ny-b.sy)<6){
+          const ang=Math.atan2(ny-b.sy,nx-b.sx)+Math.PI+(Math.random()-.5)*1.4;
+          const spd=Math.hypot(b.vx,b.vy);
+          b.vx=Math.cos(ang)*spd; b.vy=Math.sin(ang)*spd;
+          nx=b.x; ny=b.y;
+        }
+        b.x=Math.max(0,Math.min(this.W-1,nx));
+        b.y=Math.max(0,Math.min(this.H-1,ny));
+        b.hue=(b.hue+0.6)%360;
+        const pi=Math.round(b.y)*this.W+Math.round(b.x);
+        this.visited.add(pi);
+        const pt={x:b.x,y:b.y,h:b.hue,t:this.tick};
+        b.trail.push(pt); if(b.trail.length>140) b.trail.shift();
+        this.trails.push(pt);
       }
-      this.u=nu; this.v=nv;
+      if(this.trails.length>this.balls.length*300)
+        this.trails.splice(0,this.balls.length*60);
     }
+  }
+  async function _logBilliards(sim){
+    const sb=sbClient(); if(!sb) return;
+    const pts=sim.trails.slice(-sim.balls.length*20).map(p=>({x:Math.round(p.x),y:Math.round(p.y),h:Math.round(p.h)}));
+    try{ await sb.from('billiards_trails').insert({tick:sim.tick,points:pts,coverage:sim.visited.size,expanded:sim.expanded,ts:new Date().toISOString()}); }catch(_){}
   }
   function _startLogoSim(){
     clearInterval(_lsTimer); _lsGrid=null;
@@ -1970,35 +2001,27 @@
     const W=240,H=160;
     const text=($('mhLogoTextLogo')||{}).value||'H';
     const mask=_buildLetterMask(text,W,H);
-    _lsGrid=new LogoSimGrid(W,H,mask);
+    _lsGrid=new BilliardsLogoSim(W,H,mask);
     canvas.style.display='block';
-    const h2r=hex=>{const n=parseInt(hex.replace('#',''),16);return[(n>>16)&255,(n>>8)&255,n&255];};
+    const ctx=canvas.getContext('2d');
+    ctx.fillStyle='#030308'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='rgba(255,255,255,.05)';
+    for(let i=0;i<W*H;i++) if(mask[i]) ctx.fillRect(i%W,Math.floor(i/W),1,1);
     _lsTimer=setInterval(()=>{
       if(!_lsGrid) return;
       _lsGrid.step();
-      const p=getWheelPalette();
-      const ctx=canvas.getContext('2d');
-      const img=ctx.createImageData(W,H);
-      const A=h2r(p.aHex),B=h2r(p.bHex),C=h2r(p.cHex),D=[6,6,14];
-      for(let i=0;i<W*H;i++){
-        const vv=Math.min(1,_lsGrid.v[i]*3.0);
-        const ins=_lsGrid.mask[i];
-        let r,g,b;
-        if(ins){
-          // inside letter: C→B spectrum
-          r=Math.round(C[0]+(B[0]-C[0])*vv);
-          g=Math.round(C[1]+(B[1]-C[1])*vv);
-          b=Math.round(C[2]+(B[2]-C[2])*vv);
-        } else {
-          // outside: near-black → A (yellow/primary)
-          r=Math.round(D[0]+(A[0]-D[0])*vv);
-          g=Math.round(D[1]+(A[1]-D[1])*vv);
-          b=Math.round(D[2]+(A[2]-D[2])*vv);
-        }
-        img.data[i*4]=r; img.data[i*4+1]=g; img.data[i*4+2]=b; img.data[i*4+3]=255;
+      ctx.fillStyle='rgba(3,3,8,0.10)'; ctx.fillRect(0,0,W,H);
+      const tail=_lsGrid.trails.slice(-_lsGrid.balls.length*20);
+      for(const pt of tail){
+        ctx.beginPath(); ctx.arc(pt.x,pt.y,1.2,0,Math.PI*2);
+        ctx.fillStyle=`hsla(${pt.h},80%,60%,0.55)`; ctx.fill();
       }
-      ctx.putImageData(img,0,0);
-    },80);
+      for(const b of _lsGrid.balls){
+        ctx.beginPath(); ctx.arc(b.x,b.y,3,0,Math.PI*2);
+        ctx.fillStyle=`hsl(${b.hue},100%,82%)`; ctx.fill();
+      }
+      if(_lsGrid.tick%90===0) _logBilliards(_lsGrid);
+    },50);
   }
 
   function switchSuiteTab(tab){
@@ -2258,6 +2281,9 @@
     document.documentElement.style.setProperty('--ink-on-a', _luma(p.aHex) > 0.35 ? '#000' : '#fff');
     document.documentElement.style.setProperty('--ink-on-b', _luma(p.bHex) > 0.35 ? '#000' : '#fff');
     document.documentElement.style.setProperty('--ink-on-c', _luma(p.cHex) > 0.35 ? '#000' : '#fff');
+    const _tabPalette=[p.aHex,p.bHex,p.cHex,
+      _hslToHex((p.hue+30)%360,70,50),_hslToHex((p.hue+210)%360,70,50),_hslToHex((p.hue+150)%360,70,50)];
+    document.querySelectorAll('.mh-suite-tab').forEach((tab,i)=>{tab.style.setProperty('--pxc',_tabPalette[i%_tabPalette.length]);});
     document.querySelectorAll('.mh-dot').forEach((el, i) => { el.style.background = [p.aHex, p.cHex, p.bHex][i % 3]; });
     document.querySelectorAll('.mh-line').forEach((el, i) => {
       const color = [p.aHex, p.bHex, p.cHex][i % 3];
