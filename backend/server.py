@@ -575,7 +575,7 @@ def build_tonality_renderer_html() -> str:
     75%  { opacity:0.55; }
     100% { transform:perspective(700px) rotateX(52deg) scaleY(0.02); opacity:0; }
   }
-  .mh-builder-title { color:var(--mh-a,#ffff00); font:12px 'Space Mono', monospace; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+  .mh-builder-title { color:var(--mh-a,#ffff00); font:12px 'Space Mono', monospace; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; display:block; transform:skewY(14deg) scaleX(0.92); transform-origin:left top; }
   .mh-web-preview { position:relative; min-height:360px; margin-top:10px; border-radius:14px; overflow:hidden; background:#05050a; box-shadow:0 0 0 1px rgba(255,255,255,.04); }
   .mh-web-preview-inner { position:relative; z-index:1; min-height:360px; padding:18px; background:radial-gradient(circle at 22% 18%, var(--mh-a-soft, rgba(255,255,0,.22)), transparent 28%), radial-gradient(circle at 78% 44%, var(--mh-b-soft, rgba(0,0,255,.18)), transparent 26%), #06060c; color:var(--ink); }
   .mh-web-nav { display:flex; align-items:center; justify-content:space-between; gap:12px; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:10px 12px; background:rgba(0,0,0,.36); font:11px 'Space Mono', monospace; }
@@ -900,7 +900,7 @@ def build_tonality_renderer_html() -> str:
     width:100%; height:96px; border-radius:10px; overflow:hidden;
     position:relative; margin-bottom:11px; background:#08080f;
   }
-  .mh-sc-title { font:700 11px 'Space Mono',monospace; color:#fff; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; text-shadow:0 1px 4px rgba(0,0,0,.9); }
+  .mh-sc-title { font:700 11px 'Space Mono',monospace; color:#fff; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; text-shadow:0 1px 4px rgba(0,0,0,.9); display:block; transform:skewY(14deg) scaleX(0.92); transform-origin:left top; }
   .mh-sc-desc { font:10px/1.5 'Space Mono',monospace; color:rgba(175,175,210,.58); }
   /* Preview: colour wheel */
   .mh-spr-ring {
@@ -1096,6 +1096,62 @@ def build_tonality_renderer_html() -> str:
   body.mh-neon .mh-suite-tab.active { animation:mhPxPulse 0.8s ease-in-out infinite alternate !important; }
   /* ── Logo sim canvas ── */
   #mhLogoSimCanvas { display:none; border-radius:10px; width:100%; image-rendering:pixelated; margin:8px 0; }
+  /* ── Domino cascade: tiles squash top-to-bottom on tab switch ── */
+  @keyframes mhDomino {
+    0%   { transform:scaleY(1); opacity:1; }
+    35%  { transform:scaleY(0.04) translateY(48%); opacity:0.65; }
+    70%  { transform:scaleY(1); opacity:1; }
+    100% { transform:scaleY(1); opacity:1; }
+  }
+  #mhPageHexBg.mh-domino .mh-pxhex {
+    animation:mhDomino 0.5s calc(var(--row,0) * 38ms) ease-in-out both !important;
+    transform-origin:center bottom !important;
+  }
+  /* ── Retro 1995 Nike LED ad splash card ── */
+  .mh-card-retro {
+    border:3px solid var(--mh-a,#ff0) !important;
+    box-shadow:0 0 0 1px #000, 0 0 18px var(--mh-a,#ff0), 0 0 38px var(--mh-a,#ff0), inset 0 0 18px rgba(0,0,0,.85) !important;
+    background:#000 !important;
+  }
+  .mh-retro-screen {
+    position:relative; width:100%; height:96px; border-radius:10px; overflow:hidden;
+    background:#000;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% 45%, rgba(var(--mh-a-rgb,255,200,0),.06) 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent 0, transparent 3px, rgba(0,0,0,.45) 3px, rgba(0,0,0,.45) 4px);
+    margin-bottom:11px;
+  }
+  .mh-retro-scanlines {
+    position:absolute; inset:0; pointer-events:none; z-index:5;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.07) 0, rgba(0,0,0,.07) 1px, transparent 1px, transparent 4px);
+  }
+  .mh-retro-copy { position:absolute; inset:0; padding:7px 10px; display:flex; flex-direction:column; justify-content:center; }
+  .mh-retro-eyebrow {
+    font:600 5px 'Space Mono',monospace; letter-spacing:.22em; text-transform:uppercase;
+    color:rgba(var(--mh-a-rgb,255,200,0),.45); margin-bottom:3px;
+    animation:mhRetroTick 1.1s step-start infinite;
+  }
+  .mh-retro-line1,.mh-retro-line2,.mh-retro-line3 {
+    font:900 19px 'Space Mono',monospace; line-height:1.05;
+    letter-spacing:.14em; text-transform:uppercase;
+    color:var(--mh-a,#ff0);
+    -webkit-text-stroke:1px var(--mh-a,#ff0);
+    animation:mhRetroNeon 2.8s ease-in-out infinite alternate;
+  }
+  .mh-retro-line1{animation-delay:0s;} .mh-retro-line2{animation-delay:.35s;} .mh-retro-line3{animation-delay:.7s;}
+  .mh-retro-ticker {
+    position:absolute; bottom:3px; left:0; right:0; overflow:hidden;
+    font:400 5px 'Space Mono',monospace; letter-spacing:.1em; text-transform:uppercase;
+    color:rgba(var(--mh-a-rgb,255,200,0),.32); white-space:nowrap;
+    animation:mhRetroScroll 14s linear infinite;
+  }
+  @keyframes mhRetroNeon {
+    0%  { text-shadow:0 0 5px var(--mh-a,#ff0),0 0 12px var(--mh-a,#ff0),2px 2px 0 rgba(0,0,0,.95); }
+    60% { text-shadow:0 0 9px var(--mh-a,#ff0),0 0 24px var(--mh-a,#ff0),0 0 48px var(--mh-a,#ff0),2px 2px 0 rgba(0,0,0,.95); }
+    100%{ text-shadow:0 0 7px var(--mh-a,#ff0),0 0 16px var(--mh-a,#ff0),0 0 30px var(--mh-a,#ff0),2px 2px 0 rgba(0,0,0,.95); }
+  }
+  @keyframes mhRetroTick { 0%,100%{opacity:1} 50%{opacity:0} }
+  @keyframes mhRetroScroll { 0%{transform:translateX(100%)} 100%{transform:translateX(-900%)} }
 </style>
 <div id="mhPageFold"></div>
 <div id="mhSplash">
@@ -1170,6 +1226,21 @@ def build_tonality_renderer_html() -> str:
       </div>
       <div class="mh-sc-title">GIF Export</div>
       <div class="mh-sc-desc">Timeline presets · animated palette renders</div>
+      <div class="mh-splash-accent"></div>
+    </div>
+    <div class="mh-splash-card mh-card-retro" data-dest="logo">
+      <div class="mh-retro-screen">
+        <div class="mh-retro-scanlines"></div>
+        <div class="mh-retro-copy">
+          <div class="mh-retro-eyebrow">HEXFIELD · EST. MMXXVI</div>
+          <div class="mh-retro-line1">JUST</div>
+          <div class="mh-retro-line2">MAKE</div>
+          <div class="mh-retro-line3">ART.</div>
+        </div>
+        <div class="mh-retro-ticker">[ PALETTE ENGINE · NEON EDITION · V2 · MUNKER OPTICS · COLOUR THEORY · ] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [ JUST MAKE ART · HEXFIELD · ]</div>
+      </div>
+      <div class="mh-sc-title">Retro Ad</div>
+      <div class="mh-sc-desc">1995 LED screen · neon poster · ad generator</div>
       <div class="mh-splash-accent"></div>
     </div>
   </div>
@@ -1900,7 +1971,10 @@ def build_tonality_renderer_html() -> str:
     document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
     clearInterval(_lsTimer); _lsGrid = null; // stop logo sim on any tab switch
     const bg = document.getElementById('mhPageHexBg');
-    if (bg) { bg.classList.add('mh-bg-pulse'); setTimeout(() => bg.classList.remove('mh-bg-pulse'), 420); }
+    if (bg) {
+      bg.classList.add('mh-domino','mh-bg-pulse');
+      setTimeout(() => bg.classList.remove('mh-domino','mh-bg-pulse'), 1600);
+    }
     const paper = document.getElementById('mhFoldPaper');
     const DUR_COVER = 300, DUR_REVEAL = 360;
     function _activateTab() {
@@ -2115,6 +2189,8 @@ def build_tonality_renderer_html() -> str:
     const _dn = parseInt(_darkHex.replace('#',''), 16);
     document.documentElement.style.setProperty('--mh-dark', _darkHex);
     document.documentElement.style.setProperty('--mh-dark-rgb', `${(_dn>>16)&255},${(_dn>>8)&255},${_dn&255}`);
+    const _an=parseInt(p.aHex.replace('#',''),16);
+    document.documentElement.style.setProperty('--mh-a-rgb',`${(_an>>16)&255},${(_an>>8)&255},${_an&255}`);
     document.documentElement.style.setProperty('--ink-on-a', _luma(p.aHex) > 0.35 ? '#000' : '#fff');
     document.documentElement.style.setProperty('--ink-on-b', _luma(p.bHex) > 0.35 ? '#000' : '#fff');
     document.documentElement.style.setProperty('--ink-on-c', _luma(p.cHex) > 0.35 ? '#000' : '#fff');
@@ -2280,7 +2356,7 @@ def build_tonality_renderer_html() -> str:
       for (let c = 0; c < cols; c++) {
         const delay = Math.min(maxDelay, ((r + c) * 0.04)).toFixed(2);
         const cls = (r+c)%2===1 ? 'mh-pxhex mh-pxhex-b' : 'mh-pxhex';
-        h += `<div class="${cls}" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};animation-delay:-${delay}s"><div class="mh-pxf mh-pxf-t" style="background-image:${sT}"></div><div class="mh-pxf mh-pxf-r" style="background-image:${sR}"></div><div class="mh-pxf mh-pxf-l" style="background-image:${sL}"></div></div>`;
+        h += `<div class="${cls}" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};--row:${r};animation-delay:-${delay}s"><div class="mh-pxf mh-pxf-t" style="background-image:${sT}"></div><div class="mh-pxf mh-pxf-r" style="background-image:${sR}"></div><div class="mh-pxf mh-pxf-l" style="background-image:${sL}"></div></div>`;
       }
     }
     bg.innerHTML = h;
