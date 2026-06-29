@@ -496,7 +496,7 @@ def build_tonality_renderer_html() -> str:
     backdrop-filter: blur(28px) saturate(1.5);
     -webkit-backdrop-filter: blur(28px) saturate(1.5);
     padding: 14px;
-    box-shadow: 0 0 0 1px rgba(255,255,255,.05), 0 28px 90px rgba(0,0,0,.55);
+    box-shadow: 0 28px 90px rgba(0,0,0,.55);
   }
   .mh-render-adapter h2 { margin-top: 0; }
   .mh-render-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -505,7 +505,7 @@ def build_tonality_renderer_html() -> str:
     flex: 1;
     background: rgba(255,255,255,.04);
     color: var(--ink);
-    border: 1px solid rgba(255,255,255,.08);
+    border: none;
     border-radius: 8px;
     padding: 9px 10px;
     font: 12px 'Space Mono', monospace;
@@ -513,41 +513,39 @@ def build_tonality_renderer_html() -> str:
   .mh-render-toolbar button { min-height: 44px; }
   .mh-suite-tabs {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 6px;
-    margin: 10px 0;
+    grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+    gap: 8px;
+    margin: 10px 0 16px;
   }
   .mh-suite-tab {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    min-height: 52px;
+    position: relative;
+    display: block;
+    height: 76px;
     border: none;
-    border-radius: 9px;
-    background: rgba(255,255,255,.05);
-    color: var(--ink-dim);
-    font: 9px 'Space Mono', monospace;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    padding: 8px 4px 7px;
+    background: transparent;
+    padding: 0;
     cursor: pointer;
-    transition: background .15s, box-shadow .15s;
+    filter: drop-shadow(0 7px 14px rgba(0,0,0,.55));
+    transition: filter .14s, transform .14s cubic-bezier(.2,.8,.35,1.3);
   }
-  .mh-suite-tab:hover { background: rgba(255,255,255,.09); }
-  .mh-suite-tab:hover .mh-ctab-cube { transform: translateY(-3px) scale(1.08); }
-  .mh-suite-tab:active .mh-ctab-cube { transform: scale(0.82) translateY(3px); }
-  .mh-suite-tab.active { background: rgba(255,255,255,.07); color: var(--ink); box-shadow: 0 0 28px var(--mh-a,#ffff00); }
-  .mh-ctab-cube { position:relative; width:30px; height:35px; transition:transform .14s cubic-bezier(.2,.8,.35,1.3); }
-  .mh-ctab-f { position:absolute; inset:0; background:rgba(255,255,255,.14); }
-  .mh-ctab-t { clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%); filter:brightness(1.5); }
-  .mh-ctab-r { clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%); filter:brightness(0.9); }
-  .mh-ctab-l { clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%); filter:brightness(0.5); }
+  .mh-suite-tab:hover { transform: translateY(-5px); filter: drop-shadow(0 12px 22px rgba(0,0,0,.65)); }
+  .mh-suite-tab:active { transform: translateY(2px) scale(.95); filter: drop-shadow(0 3px 6px rgba(0,0,0,.5)); }
+  .mh-suite-tab.active { filter: drop-shadow(0 0 18px var(--mh-a,#ffff00)) drop-shadow(0 8px 18px rgba(0,0,0,.6)); }
+  .mh-ctab-cube { position:absolute; inset:0; }
+  .mh-ctab-f { position:absolute; inset:0; background:rgba(255,255,255,.10); }
+  .mh-ctab-t { clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%); filter:brightness(1.55); }
+  .mh-ctab-r { clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%); filter:brightness(0.88); }
+  .mh-ctab-l { clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%); filter:brightness(0.46); }
   .mh-suite-tab.active .mh-ctab-f { background:var(--mh-a,#ffff00); animation:mhPxPulse 3.5s ease-in-out infinite alternate; }
-  .mh-suite-tab.active .mh-ctab-t { filter:brightness(1.5); }
+  .mh-suite-tab.active .mh-ctab-t { filter:brightness(1.55); }
   .mh-suite-tab.active .mh-ctab-r { filter:brightness(0.88); }
   .mh-suite-tab.active .mh-ctab-l { filter:brightness(0.46); }
-  .mh-ctab-lbl { display:block; }
+  .mh-ctab-lbl {
+    position:absolute; top:18%; left:50%; transform:translateX(-50%);
+    color:var(--ink); font:bold 7px 'Space Mono',monospace;
+    letter-spacing:.06em; text-transform:uppercase;
+    text-shadow:0 1px 3px rgba(0,0,0,.9); white-space:nowrap; pointer-events:none;
+  }
   .mh-render-adapter h2,
   .mh-unified-munker-title,
   .mh-builder-title,
@@ -630,7 +628,6 @@ def build_tonality_renderer_html() -> str:
   .mh-web-footer{border-top:1px solid #ffffff18;padding:18px 32px;display:flex;justify-content:space-between;font:10px ui-monospace,monospace;color:#ffffff44}
   .mh-unified-munker {
     margin-top: 10px;
-    border: 1px solid rgba(255,255,255,.12);
     border-radius: 10px;
     background: rgba(0,0,0,.18);
     padding: 10px;
@@ -655,7 +652,6 @@ def build_tonality_renderer_html() -> str:
   .mh-hidden-original-munker { display: none !important; }
   .mh-painter-tip {
     margin-top: 9px;
-    border: 1px solid rgba(255,255,255,.12);
     border-left: 3px solid var(--mh-c, #00ffff);
     border-radius: 8px;
     background: rgba(0,0,0,.22);
@@ -665,7 +661,6 @@ def build_tonality_renderer_html() -> str:
   }
   .mh-export-panel {
     margin-top: 10px;
-    border: 1px solid rgba(255,255,255,.12);
     border-radius: 10px;
     background: rgba(0,0,0,.18);
     padding: 10px;
@@ -681,7 +676,7 @@ def build_tonality_renderer_html() -> str:
     width: 100%;
     min-height: 160px;
     margin-top: 8px;
-    border: 1px solid var(--line);
+    border: none;
     border-radius: 8px;
     background: #07070c;
     color: var(--ink);
@@ -691,7 +686,7 @@ def build_tonality_renderer_html() -> str:
     box-sizing: border-box;
   }
   .mh-export-status { margin-top: 7px; color: var(--ink-dim); font: 11px 'Space Mono', monospace; }
-  .mh-download-link { color: var(--mh-a, #ffff00); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 44px; display: inline-flex; align-items: center; }
+  .mh-download-link { color: var(--mh-a, #ffff00); text-decoration: none; border: none; border-radius: 8px; padding: 10px 12px; min-height: 44px; display: inline-flex; align-items: center; }
   .mh-wheel-readout {
     display: flex;
     gap: 6px;
@@ -700,7 +695,7 @@ def build_tonality_renderer_html() -> str:
     font: 11px 'Space Mono', monospace;
     color: var(--ink-dim);
   }
-  .mh-wheel-chip { border: 1px solid var(--line); border-radius: 999px; padding: 5px 8px; background: rgba(0,0,0,.22); }
+  .mh-wheel-chip { border: none; border-radius: 999px; padding: 5px 8px; background: rgba(0,0,0,.22); }
   .mh-target-stage {
     position: relative;
     margin-top: 10px;
@@ -712,7 +707,7 @@ def build_tonality_renderer_html() -> str:
       radial-gradient(circle at 72% 35%, var(--mh-b-soft, rgba(255,0,255,.18)), transparent 28%),
       radial-gradient(circle at 55% 82%, var(--mh-c-soft, rgba(0,255,255,.16)), transparent 26%),
       #07070c;
-    box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 16px 60px rgba(0,0,0,.6);
+    box-shadow: 0 16px 60px rgba(0,0,0,.6);
   }
   .mh-target-frame {
     position: absolute;
@@ -733,7 +728,6 @@ def build_tonality_renderer_html() -> str:
     gap: 14px;
   }
   .mh-urlbar, .mh-block, .mh-card {
-    border: 1px solid rgba(255,255,255,.24);
     background: rgba(10,10,16,.56);
     backdrop-filter: blur(2px);
   }
@@ -765,7 +759,6 @@ def build_tonality_renderer_html() -> str:
     position: absolute;
     inset: 0;
     pointer-events: none;
-    border: 1px solid rgba(255,255,255,.14);
     background-color: var(--tile-color, #888);
     background-image: var(--munker-pattern, none);
     background-size: var(--munker-tile, auto);
@@ -1842,7 +1835,8 @@ def build_tonality_renderer_html() -> str:
       munker.pattern = u.pattern;
       munker.speed   = speed;
     }
-    if (typeof renderHexView === 'function') renderHexView();
+    if (typeof applyMunker === 'function') applyMunker();
+    else if (typeof renderHexView === 'function') renderHexView();
     applyRenderPalette();
     buildArtifactField($('mhGame')?.value + ($('mhUrl')?.value || ''));
   }
@@ -2538,12 +2532,14 @@ window.MH_CONFIG = {{
 
     // Kit tab button
     var kitBtn=document.createElement('button');
-    kitBtn.className='mh-suite-tab'; kitBtn.dataset.suiteTab='kit'; kitBtn.textContent='Kit';
+    kitBtn.className='mh-suite-tab'; kitBtn.dataset.suiteTab='kit';
+    kitBtn.innerHTML='<div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Kit</span>';
     tabs.appendChild(kitBtn);
 
     // Fonts tab button
     var fontsBtn=document.createElement('button');
-    fontsBtn.className='mh-suite-tab'; fontsBtn.dataset.suiteTab='fonts'; fontsBtn.textContent='Fonts';
+    fontsBtn.className='mh-suite-tab'; fontsBtn.dataset.suiteTab='fonts';
+    fontsBtn.innerHTML='<div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Fonts</span>';
     tabs.appendChild(fontsBtn);
 
     // Kit panel
@@ -2583,7 +2579,8 @@ window.MH_CONFIG = {{
 
     // Type tab button
     var typeBtn=document.createElement('button');
-    typeBtn.className='mh-suite-tab'; typeBtn.dataset.suiteTab='type'; typeBtn.textContent='Type';
+    typeBtn.className='mh-suite-tab'; typeBtn.dataset.suiteTab='type';
+    typeBtn.innerHTML='<div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Type</span>';
     tabs.appendChild(typeBtn);
 
     // Type panel HTML
