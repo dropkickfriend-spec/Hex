@@ -490,20 +490,21 @@ def build_tonality_renderer_html() -> str:
 <style id="munkerhex-render-adapter">
   .mh-render-adapter {
     margin: 12px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: linear-gradient(180deg, rgba(28,28,40,.98), rgba(12,12,18,.98));
-    padding: 12px;
-    box-shadow: 0 18px 70px rgba(0,0,0,.35);
+    border-radius: 18px;
+    background: rgba(6,6,12,.72);
+    backdrop-filter: blur(28px) saturate(1.5);
+    -webkit-backdrop-filter: blur(28px) saturate(1.5);
+    padding: 14px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.05), 0 28px 90px rgba(0,0,0,.55);
   }
   .mh-render-adapter h2 { margin-top: 0; }
   .mh-render-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .mh-render-toolbar input, .mh-render-toolbar select {
     min-width: 180px;
     flex: 1;
-    background: #0b0b10;
+    background: rgba(255,255,255,.04);
     color: var(--ink);
-    border: 1px solid var(--line);
+    border: 1px solid rgba(255,255,255,.08);
     border-radius: 8px;
     padding: 9px 10px;
     font: 12px ui-monospace, monospace;
@@ -517,9 +518,9 @@ def build_tonality_renderer_html() -> str:
   }
   .mh-suite-tab {
     min-height: 44px;
-    border: 1px solid var(--line);
+    border: none;
     border-radius: 9px;
-    background: rgba(0,0,0,.22);
+    background: rgba(255,255,255,.05);
     color: var(--ink-dim);
     font: 10px ui-monospace, monospace;
     letter-spacing: .08em;
@@ -528,16 +529,17 @@ def build_tonality_renderer_html() -> str:
   .mh-suite-tab.active {
     color: #05050a;
     background: var(--mh-a, #ffff00);
-    border-color: var(--mh-a, #ffff00);
+    border: none;
+    box-shadow: 0 0 24px var(--mh-a, #ffff00);
   }
-  .mh-builder-panel { display:none; margin-top:10px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(0,0,0,.18); padding:10px; transform-origin:top center; }
+  .mh-builder-panel { display:none; margin-top:14px; border-radius:14px; background:rgba(255,255,255,.025); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); padding:14px; transform-origin:top center; }
   .mh-builder-panel.active { display:block; }
   .mh-builder-panel.mh-fold-out { display:block; animation:mhFoldOut 0.22s ease-in forwards; pointer-events:none; }
   .mh-builder-panel.mh-fold-in { animation:mhFoldIn 0.24s ease-out forwards; }
   @keyframes mhFoldOut { 0%{transform:perspective(900px) rotateX(0deg);opacity:1} 60%{opacity:.28} 100%{transform:perspective(900px) rotateX(-82deg);opacity:0} }
   @keyframes mhFoldIn  { 0%{transform:perspective(900px) rotateX(80deg);opacity:0} 45%{opacity:.4} 100%{transform:perspective(900px) rotateX(0deg);opacity:1} }
-  .mh-builder-title { color:var(--ink); font:12px ui-monospace, monospace; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
-  .mh-web-preview { position:relative; min-height:360px; margin-top:10px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#05050a; }
+  .mh-builder-title { color:var(--mh-a,#ffff00); font:12px ui-monospace, monospace; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+  .mh-web-preview { position:relative; min-height:360px; margin-top:10px; border-radius:14px; overflow:hidden; background:#05050a; box-shadow:0 0 0 1px rgba(255,255,255,.04); }
   .mh-web-preview-inner { position:relative; z-index:1; min-height:360px; padding:18px; background:radial-gradient(circle at 22% 18%, var(--mh-a-soft, rgba(255,255,0,.22)), transparent 28%), radial-gradient(circle at 78% 44%, var(--mh-b-soft, rgba(0,0,255,.18)), transparent 26%), #06060c; color:var(--ink); }
   .mh-web-nav { display:flex; align-items:center; justify-content:space-between; gap:12px; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:10px 12px; background:rgba(0,0,0,.36); font:11px ui-monospace, monospace; }
   .mh-web-logo { color:var(--mh-a, #ffff00); font-weight:700; letter-spacing:.14em; }
@@ -550,20 +552,22 @@ def build_tonality_renderer_html() -> str:
   .mh-web-btn { min-height:44px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--mh-a, #ffff00); border-radius:999px; padding:0 14px; color:#05050a; background:var(--mh-a, #ffff00); font:12px ui-monospace, monospace; text-decoration:none; }
   .mh-web-btn.secondary { color:var(--mh-b, #0000ff); background:rgba(0,0,0,.25); border-color:var(--mh-b, #0000ff); }
   .mh-web-card-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; margin-top:16px; }
-  .mh-web-card { min-height:98px; border:1px solid rgba(255,255,255,.16); border-radius:12px; background:rgba(255,255,255,.045); padding:12px; font:11px/1.45 ui-monospace, monospace; color:var(--ink-dim); }
+  .mh-web-card { min-height:98px; border-radius:12px; background:rgba(255,255,255,.055); padding:14px; font:11px/1.5 ui-monospace, monospace; color:var(--ink-dim); }
   .mh-web-card b { display:block; color:var(--mh-a, #ffff00); margin-bottom:6px; }
   .mh-extra-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin-top:10px; }
-  .mh-extra-card { border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px; min-height:82px; background:rgba(255,255,255,.035); color:var(--ink-dim); font:11px/1.45 ui-monospace, monospace; }
+  .mh-extra-card { border-radius:10px; padding:12px; min-height:82px; background:rgba(255,255,255,.045); color:var(--ink-dim); font:11px/1.45 ui-monospace, monospace; }
   .mh-extra-card b { color:var(--mh-a, #ffff00); display:block; margin-bottom:5px; }
   @media (max-width:760px){ .mh-suite-tabs { grid-template-columns:repeat(3, minmax(0,1fr)); } .mh-web-card-grid { grid-template-columns:1fr; } }
   /* Full-page hex background */
   #mhPageHexBg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
   .mh-pxhex{position:absolute;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);background:var(--pxc,#444);animation:mhPxPulse 4s ease-in-out infinite alternate}
-  @keyframes mhPxPulse{from{opacity:.03}to{opacity:.09}}
+  .mh-pxhex.mh-pxhex-b{animation:mhPxPulseB 6s ease-in-out infinite alternate}
+  @keyframes mhPxPulse{from{opacity:.07}to{opacity:.28}}
+  @keyframes mhPxPulseB{from{opacity:.04}to{opacity:.18}}
   /* Template card picker */
   .mh-tpl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
-  .mh-tpl-card{border:1px solid var(--line);border-radius:6px;padding:6px 4px;cursor:pointer;background:#0b0b10;text-align:center;font:9px ui-monospace,monospace;color:var(--ink-dim);transition:border-color .15s;user-select:none}
-  .mh-tpl-card:hover,.mh-tpl-card.active{border-color:var(--accent);color:var(--ink)}
+  .mh-tpl-card{border-radius:6px;padding:6px 4px;cursor:pointer;background:rgba(255,255,255,.04);box-shadow:0 0 0 1px rgba(255,255,255,.06);text-align:center;font:9px ui-monospace,monospace;color:var(--ink-dim);transition:box-shadow .15s,background .15s;user-select:none}
+  .mh-tpl-card:hover,.mh-tpl-card.active{box-shadow:0 0 0 1px var(--mh-a,#ffff00);color:var(--ink)}
   .mh-tpl-thumb{width:100%;aspect-ratio:3/2;border-radius:3px;margin-bottom:3px}
   /* Expanded web preview */
   .mh-web-preview{min-height:520px !important}
@@ -646,14 +650,14 @@ def build_tonality_renderer_html() -> str:
     position: relative;
     margin-top: 10px;
     min-height: 360px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
     background:
       radial-gradient(circle at 20% 30%, var(--mh-a-soft, rgba(255,255,0,.22)), transparent 24%),
       radial-gradient(circle at 72% 35%, var(--mh-b-soft, rgba(255,0,255,.18)), transparent 28%),
       radial-gradient(circle at 55% 82%, var(--mh-c-soft, rgba(0,255,255,.16)), transparent 26%),
       #07070c;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 16px 60px rgba(0,0,0,.6);
   }
   .mh-target-frame {
     position: absolute;
@@ -775,7 +779,7 @@ def build_tonality_renderer_html() -> str:
     background: var(--line-color, rgba(255,255,255,.92));
     box-shadow: 0 0 9px var(--line-color, rgba(255,255,255,.92));
   }
-  .mh-stage-label { position: absolute; left: 12px; bottom: 10px; z-index: 8; font: 11px ui-monospace, monospace; color: var(--ink); background: rgba(0,0,0,.62); border: 1px solid var(--line); border-radius: 999px; padding: 7px 10px; }
+  .mh-stage-label { position: absolute; left: 12px; bottom: 10px; z-index: 8; font: 11px ui-monospace, monospace; color: var(--ink); background: rgba(0,0,0,.52); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 999px; padding: 7px 12px; }
   .mh-munker-field, .mh-hex-field { position: absolute; inset: -60px; pointer-events: none; z-index: 4; }
   .mh-munker-field {
     opacity: var(--mh-opacity, 1);
@@ -1547,7 +1551,8 @@ def build_tonality_renderer_html() -> str:
       const off = r % 2 ? (colStep * 0.5).toFixed(0) : 0;
       for (let c = 0; c < cols; c++) {
         const delay = Math.min(maxDelay, ((r + c) * 0.04)).toFixed(2);
-        h += `<div class="mh-pxhex" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};animation-delay:-${delay}s"></div>`;
+        const cls = (r+c)%2===1 ? 'mh-pxhex mh-pxhex-b' : 'mh-pxhex';
+        h += `<div class="${cls}" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};animation-delay:-${delay}s"></div>`;
       }
     }
     bg.innerHTML = h;
@@ -1823,7 +1828,7 @@ window.MH_CONFIG = {{
     auth_and_features_patch = """
 <style id="mh-auth-features">
   /* HEXFIELD hero */
-  #mhHero{position:relative;padding:52px 24px 36px;text-align:center;overflow:hidden;border-bottom:1px solid var(--line);background:radial-gradient(ellipse at 50% 0%,rgba(255,255,0,.06) 0%,transparent 60%)}
+  #mhHero{position:relative;padding:52px 24px 48px;text-align:center;overflow:hidden;background:radial-gradient(ellipse at 50% 0%,rgba(255,255,0,.06) 0%,transparent 60%)}
   #mhHeroMark{display:flex;justify-content:center;margin-bottom:18px;gap:2px}
   #mhHeroWord{font:900 44px/1 ui-monospace,monospace;letter-spacing:.18em;color:var(--mh-a,#ffff00);text-shadow:0 0 48px var(--mh-a,#ffff00)55;text-transform:uppercase}
   #mhHeroTag{font:11px ui-monospace,monospace;letter-spacing:.28em;color:var(--ink-dim);margin-top:10px;text-transform:uppercase}
