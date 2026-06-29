@@ -1646,35 +1646,61 @@
     const content = webPresetContent(web.preset);
     const inner = $('mhWebPreviewInner');
     if (!inner) return;
+    // Derive layout from Munker spacing + thickness so sliders reshape the page
+    const u = currentUnifiedMunker();
+    const spacing = Math.max(2, u.spacing);
+    const thick   = Math.max(1, u.thick);
+    const lPad  = Math.max(14, Math.min(52, Math.round(spacing * 1.25)));   // outer padding
+    const lGap  = Math.max(8,  Math.min(40, Math.round(spacing * 0.9)));    // col & card gap
+    const hSize = Math.max(18, Math.min(52, Math.round(16 + thick * 0.7))); // headline px
+    // Right-column fraction grows with thickness — thicker artifact = more visual stage
+    const rFr   = Math.max(0.55, Math.min(1.6, thick * 0.028 + 0.6)).toFixed(2);
     const cardCount = web.density === 'clean' ? 3 : web.density === 'maximal' ? 6 : 4;
-    const cardDetails = ['Palette-calibrated typography','Munker-safe contrast ratios','Ruliad pattern surface','Export-ready CSS tokens','Animated line field','3-plane hex depth','Google Fonts pairing','Dark mode variables'];
+    const cardDetails = ['Palette-calibrated typography','Munker-safe contrast ratios','Ruliad pattern surface','Export-ready CSS tokens','Animated line field','3-plane hex depth'];
     const cards = Array.from({ length: cardCount }, (_, i) =>
       `<div class="mh-web-card" style="border-color:${renderPalette[i%renderPalette.length]}44"><b style="color:${renderPalette[i%renderPalette.length]}">${content.cards[i%content.cards.length]}</b>${cardDetails[i%cardDetails.length]}</div>`
     ).join('');
     const textCol = getBestTextColor ? getBestTextColor('#0b0b10') : '#e8e8f0';
-    inner.style.background = `radial-gradient(ellipse at 20% 15%,${p.aHex}18 0%,transparent 45%),radial-gradient(ellipse at 80% 60%,${p.bHex}14 0%,transparent 40%),#06060c`;
+    // Subtle right-column stat labels — ghost text that lets the artifact read through
+    const statLabels = [
+      { n: '042', label: 'palettes' },
+      { n: '∞',   label: 'depth' },
+      { n: `${Math.min(99,Math.round(thick*2))}%`, label: 'opacity' },
+    ];
+    const statsHtml = statLabels.map(s =>
+      `<div style="line-height:1.1;opacity:.22">` +
+        `<div style="font:700 ${Math.round(hSize*0.95)}px 'Space Mono',monospace;color:${p.aHex};letter-spacing:.04em">${s.n}</div>` +
+        `<div style="font:9px 'Space Mono',monospace;color:${textCol};letter-spacing:.18em;text-transform:uppercase;margin-top:2px">${s.label}</div>` +
+      `</div>`
+    ).join('');
+    inner.style.background = `radial-gradient(ellipse at 18% 20%,${p.aHex}1a 0%,transparent 44%),radial-gradient(ellipse at 78% 55%,${p.bHex}14 0%,transparent 40%),#06060c`;
     inner.innerHTML = `
-      <nav class="mh-web-nav" style="padding:14px 32px">
+      <nav class="mh-web-nav" style="padding:${Math.round(lPad*0.5)}px ${lPad}px">
         <span class="mh-web-logo" style="color:${p.aHex};letter-spacing:.18em">HEXFIELD</span>
-        <span class="mh-web-links" style="gap:20px"><span>Work</span><span>Studio</span><span>Exports</span></span>
-        <a class="mh-web-btn" style="padding:8px 18px;font-size:11px;min-height:0">Sign in</a>
+        <span class="mh-web-links" style="gap:${lGap}px"><span>Work</span><span>Studio</span><span>Exports</span></span>
+        <a class="mh-web-btn" style="padding:7px 14px;font-size:10px;min-height:0">Sign in</a>
       </nav>
-      <section style="padding:72px 32px 56px;max-width:680px;margin:0 auto;text-align:left">
-        <div class="mh-web-kicker" style="color:${p.bHex};margin-bottom:16px">${content.kicker}</div>
-        <h1 class="mh-web-headline" style="color:${p.aHex};margin-bottom:20px;font-size:clamp(22px,4vw,40px)">${content.headline}</h1>
-        <p class="mh-web-copy" style="color:${textCol}cc;max-width:520px;margin-bottom:32px">${content.copy}</p>
-        <div class="mh-web-cta-row" style="gap:12px">
-          <a class="mh-web-btn">Get started free</a>
-          <a class="mh-web-btn secondary">View demo →</a>
+      <section style="padding:${lPad}px;display:grid;grid-template-columns:1fr ${rFr}fr;gap:${lGap}px;align-items:center;min-height:220px">
+        <div style="display:flex;flex-direction:column;gap:${Math.round(lGap*0.55)}px">
+          <div class="mh-web-kicker" style="color:${p.bHex}">${content.kicker}</div>
+          <h1 class="mh-web-headline" style="color:${p.aHex};font-size:${hSize}px;margin:0;line-height:1.06">${content.headline}</h1>
+          <p class="mh-web-copy" style="color:${textCol}cc;margin:0">${content.copy}</p>
+          <div class="mh-web-cta-row" style="gap:10px;margin-top:${Math.round(lGap*0.3)}px">
+            <a class="mh-web-btn">Get started free</a>
+            <a class="mh-web-btn secondary">View demo →</a>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:${lGap}px;padding:${Math.round(lPad*0.4)}px 0 ${Math.round(lPad*0.4)}px ${Math.round(lGap*0.5)}px">
+          ${statsHtml}
         </div>
       </section>
-      <div style="height:1px;background:linear-gradient(90deg,transparent,${p.aHex}88,${p.bHex}88,transparent);margin:0 32px"></div>
-      <section style="padding:48px 32px 40px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;max-width:800px;margin:0 auto">
+      <div style="height:1px;background:linear-gradient(90deg,transparent,${p.aHex}77,${p.bHex}77,transparent);margin:0 ${lPad}px"></div>
+      <section style="padding:${Math.round(lPad*0.8)}px ${lPad}px;display:grid;grid-template-columns:repeat(auto-fill,minmax(${Math.max(88,80+lGap)}px,1fr));gap:${Math.round(lGap*0.75)}px">
         ${cards}
       </section>
       <footer class="mh-web-footer">
-        <span style="color:${p.aHex}aa">HEXFIELD · ${content.kicker}</span>
-        <span>Palette ${p.aHex} / ${p.bHex}</span>
+        <span style="color:${p.aHex}88">HEXFIELD · ${content.kicker}</span>
+        <span style="color:${textCol}44">spacing ${spacing}px · thick ${thick}px</span>
       </footer>`;
     const webR = $('mhWebRuliadField');
     if (webR) {
