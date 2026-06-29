@@ -850,9 +850,212 @@ def build_tonality_renderer_html() -> str:
     .mh-block { grid-template-columns: 1fr; }
     .mh-cards { grid-template-columns: repeat(2, 1fr); }
   }
+  /* ── Tab: clip to hex outline so corners don't show dark bg ── */
+  .mh-suite-tab { clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%); }
+  /* ── Strip remaining border rings ── */
+  .mh-web-preview { box-shadow: 0 20px 60px rgba(0,0,0,.5) !important; }
+  .mh-web-nav { border: none !important; }
+  .mh-tpl-card { box-shadow: none !important; }
+  /* ── Full-page fold overlay ── */
+  #mhPageFold {
+    position:fixed; inset:0; z-index:200; pointer-events:none; display:none;
+    background:rgba(6,6,12,.97);
+    background-image:linear-gradient(var(--mh-grid-line,rgba(128,128,128,.07)) 1px,transparent 1px),
+      linear-gradient(90deg,var(--mh-grid-line,rgba(128,128,128,.07)) 1px,transparent 1px);
+    background-size:24px 24px; transform-origin:top center;
+  }
+  #mhPageFold.mh-pf-cover { display:block; animation:mhPfCover 280ms cubic-bezier(.4,0,.2,1) forwards; }
+  #mhPageFold.mh-pf-reveal { display:block; animation:mhPfReveal 340ms cubic-bezier(.15,.7,.3,1.1) forwards; }
+  @keyframes mhPfCover {
+    0%{transform:scaleY(0.01);opacity:0}25%{opacity:1}100%{transform:scaleY(1);opacity:1}
+  }
+  @keyframes mhPfReveal {
+    0%{transform:scaleY(1);opacity:1}75%{opacity:.5}100%{transform:scaleY(0.01);opacity:0}
+  }
+  /* ── Splash page ── */
+  #mhSplash {
+    position:fixed; inset:0; z-index:40; overflow-y:auto; padding:28px 18px 60px;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  }
+  #mhSplash.mh-hidden { display:none; }
+  .mh-splash-eye {
+    font:11px 'Space Mono',monospace; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--mh-a,#ffff00); margin-bottom:6px; text-align:center;
+    text-shadow:0 0 16px var(--mh-a,#ffff00); margin-top:18px;
+  }
+  .mh-splash-h {
+    font:700 24px/1.05 'Space Mono',monospace; color:#fff; text-align:center;
+    margin-bottom:7px; text-shadow:0 2px 24px rgba(0,0,0,.9);
+  }
+  .mh-splash-sub {
+    font:11px/1.6 'Space Mono',monospace; color:rgba(200,200,220,.6); text-align:center;
+    margin-bottom:28px; max-width:420px;
+  }
+  .mh-splash-grid {
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px;
+    max-width:660px; width:100%;
+  }
+  .mh-splash-card {
+    background:rgba(6,6,14,.76); backdrop-filter:blur(28px) saturate(1.4);
+    -webkit-backdrop-filter:blur(28px) saturate(1.4);
+    border-radius:16px; padding:15px; cursor:pointer; position:relative; overflow:hidden;
+    transition:transform .15s cubic-bezier(.2,.8,.35,1.3);
+    filter:drop-shadow(0 7px 24px rgba(0,0,0,.6));
+  }
+  .mh-splash-card:hover { transform:translateY(-5px) scale(1.01); filter:drop-shadow(0 14px 38px rgba(0,0,0,.75)); }
+  .mh-splash-card:active { transform:scale(.97); }
+  .mh-splash-accent {
+    position:absolute; inset:0; border-radius:16px; pointer-events:none;
+    box-shadow:inset 0 0 0 1px var(--mh-a,#ffff00); opacity:0; transition:opacity .18s;
+  }
+  .mh-splash-card:hover .mh-splash-accent { opacity:.55; }
+  .mh-spr {
+    width:100%; height:96px; border-radius:10px; overflow:hidden;
+    position:relative; margin-bottom:11px; background:#08080f;
+  }
+  .mh-sc-title { font:700 11px 'Space Mono',monospace; color:#fff; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; text-shadow:0 1px 4px rgba(0,0,0,.9); }
+  .mh-sc-desc { font:10px/1.5 'Space Mono',monospace; color:rgba(175,175,210,.58); }
+  /* Preview: colour wheel */
+  .mh-spr-ring {
+    position:absolute; inset:14%; border-radius:50%;
+    background:conic-gradient(var(--mh-a,#ffff00),var(--mh-b,#0000ff),var(--mh-c,#00ffff),var(--mh-a,#ffff00));
+    animation:mhSprSpin 9s linear infinite;
+    -webkit-mask:radial-gradient(circle,transparent 34%,#000 35%);
+    mask:radial-gradient(circle,transparent 34%,#000 35%);
+  }
+  @keyframes mhSprSpin{to{transform:rotate(360deg)}}
+  /* Preview: website mockup */
+  .mh-spr-browser { padding:8px 10px; display:flex; flex-direction:column; gap:5px; justify-content:center; }
+  .mh-spr-topbar { height:6px; border-radius:3px; background:rgba(255,255,255,.07); display:flex; align-items:center; gap:3px; padding:0 5px; }
+  .mh-spr-dot { width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,.18); flex-shrink:0; }
+  .mh-spr-url { height:4px; flex:1; border-radius:2px; background:rgba(255,255,255,.06); }
+  .mh-spr-hero { height:26px; border-radius:4px; background:linear-gradient(110deg,var(--mh-a,#ffff00)22,transparent 40%,var(--mh-b,#0000ff)22 60%,transparent 70%); opacity:.3; }
+  .mh-spr-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
+  .mh-spr-card { height:16px; border-radius:3px; background:rgba(255,255,255,.05); }
+  .mh-spr-card:nth-child(1){box-shadow:inset 0 0 0 1px var(--mh-a,#ffff00)55}
+  .mh-spr-card:nth-child(2){box-shadow:inset 0 0 0 1px var(--mh-b,#0000ff)55}
+  .mh-spr-card:nth-child(3){box-shadow:inset 0 0 0 1px var(--mh-c,#00ffff)55}
+  /* Preview: logo mini hexes */
+  .mh-spr-logo { display:flex; align-items:center; justify-content:center; gap:1px; padding:6px; flex-wrap:wrap; max-width:160px; margin:0 auto; }
+  .mh-spr-logo-c { width:20px; height:23px; position:relative; display:inline-block; margin:0 1px; }
+  .mh-spr-lf { position:absolute; inset:0; }
+  .mh-spr-lf.t{clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%)}
+  .mh-spr-lf.r{clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%)}
+  .mh-spr-lf.l{clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%)}
+  /* Preview: QR grid */
+  .mh-spr-qr { display:flex; align-items:center; justify-content:center; }
+  .mh-spr-qr-g { display:grid; grid-template-columns:repeat(7,10px); grid-template-rows:repeat(7,10px); gap:2px; }
+  .mh-spr-qd { border-radius:2px; }
+  .mh-spr-qd.qa { background:var(--mh-a,#ffff00); }
+  .mh-spr-qd.qb { background:var(--mh-b,#0000ff); }
+  .mh-spr-qd.qx { background:rgba(255,255,255,.04); }
+  /* Preview: game hexes */
+  .mh-spr-game { display:flex; align-items:center; justify-content:center; gap:2px; padding:8px; }
+  .mh-spr-gc { width:26px; height:30px; position:relative; display:inline-block; }
+  .mh-spr-gf { position:absolute; inset:0; }
+  .mh-spr-gf.t{clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%)}
+  .mh-spr-gf.r{clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%)}
+  .mh-spr-gf.l{clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%)}
+  @keyframes mhSprHex{0%,100%{opacity:.4}50%{opacity:1}}
+  /* Preview: GIF bars */
+  .mh-spr-gif { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:5px; padding:10px 14px; }
+  .mh-spr-gbar { height:10px; border-radius:3px; animation:mhSprBarA 1.8s ease-in-out infinite alternate; }
+  @keyframes mhSprBarA{0%{transform:scaleX(.25);transform-origin:left;opacity:.4}100%{transform:scaleX(1);transform-origin:left;opacity:1}}
+  /* ── Back button in adapter ── */
+  .mh-back-btn {
+    display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,.06);
+    border:none; border-radius:8px; color:var(--ink-dim,#9090a8);
+    font:11px 'Space Mono',monospace; letter-spacing:.06em; padding:7px 12px;
+    cursor:pointer; margin-bottom:10px; transition:background .12s,color .12s;
+  }
+  .mh-back-btn:hover { background:rgba(255,255,255,.12); color:var(--ink,#dddde8); }
+  /* ── Adapter hidden by default (splash is primary UI) ── */
+  #mhRenderAdapter { display:none; }
+  @media(max-width:600px){
+    .mh-splash-grid{grid-template-columns:1fr}
+    .mh-splash-h{font-size:18px}
+    .mh-suite-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+  }
 </style>
+<div id="mhPageFold"></div>
+<div id="mhSplash">
+  <div class="mh-splash-eye">Hexfield · Palette Engine</div>
+  <h1 class="mh-splash-h">What are we building today?</h1>
+  <p class="mh-splash-sub">Palette-calibrated Munker optics for every medium. Pick a tool and the animated hex grid becomes your canvas.</p>
+  <div class="mh-splash-grid">
+    <div class="mh-splash-card" data-dest="colour">
+      <div class="mh-spr"><div class="mh-spr-ring"></div></div>
+      <div class="mh-sc-title">Colour Theory</div>
+      <div class="mh-sc-desc">CMY wheel · 3D hue cube · tonal analysis</div>
+      <div class="mh-splash-accent"></div>
+    </div>
+    <div class="mh-splash-card" data-dest="web">
+      <div class="mh-spr mh-spr-browser">
+        <div class="mh-spr-topbar"><span class="mh-spr-dot"></span><span class="mh-spr-dot"></span><span class="mh-spr-url"></span></div>
+        <div class="mh-spr-hero"></div>
+        <div class="mh-spr-cards"><div class="mh-spr-card"></div><div class="mh-spr-card"></div><div class="mh-spr-card"></div></div>
+      </div>
+      <div class="mh-sc-title">Website Design</div>
+      <div class="mh-sc-desc">Full-page templates · palette tokens · export</div>
+      <div class="mh-splash-accent"></div>
+    </div>
+    <div class="mh-splash-card" data-dest="logo">
+      <div class="mh-spr mh-spr-logo">
+        <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
+        <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
+        <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-c,#00ffff);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-c,#00ffff);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-c,#00ffff);filter:brightness(.45)"></div></div>
+        <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
+        <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
+      </div>
+      <div class="mh-sc-title">Logo Design</div>
+      <div class="mh-sc-desc">Animated hex mark · randomised seed · brand type</div>
+      <div class="mh-splash-accent"></div>
+    </div>
+    <div class="mh-splash-card" data-dest="qr">
+      <div class="mh-spr mh-spr-qr">
+        <div class="mh-spr-qr-g">
+          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div>
+          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
+          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
+          <div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div>
+          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
+          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
+          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div>
+        </div>
+      </div>
+      <div class="mh-sc-title">QR Code</div>
+      <div class="mh-sc-desc">Palette-calibrated QR · Munker overlay export</div>
+      <div class="mh-splash-accent"></div>
+    </div>
+    <div class="mh-splash-card" data-dest="game">
+      <div class="mh-spr mh-spr-game">
+        <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .0s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
+        <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .3s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
+        <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .6s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-c,#00ffff);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-c,#00ffff);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-c,#00ffff);filter:brightness(.45)"></div></div>
+        <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .9s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
+        <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .5s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
+      </div>
+      <div class="mh-sc-title">Game Scene</div>
+      <div class="mh-sc-desc">Hex platformer · Munker ground · level builder</div>
+      <div class="mh-splash-accent"></div>
+    </div>
+    <div class="mh-splash-card" data-dest="gif">
+      <div class="mh-spr mh-spr-gif">
+        <div style="width:90%;display:flex;flex-direction:column;gap:5px">
+          <div class="mh-spr-gbar" style="background:var(--mh-a,#ffff00);animation-delay:0s"></div>
+          <div class="mh-spr-gbar" style="background:var(--mh-b,#0000ff);animation-delay:.35s"></div>
+          <div class="mh-spr-gbar" style="background:var(--mh-c,#00ffff);animation-delay:.7s"></div>
+          <div class="mh-spr-gbar" style="background:rgba(255,255,255,.42);animation-delay:.18s"></div>
+        </div>
+      </div>
+      <div class="mh-sc-title">GIF Export</div>
+      <div class="mh-sc-desc">Timeline presets · animated palette renders</div>
+      <div class="mh-splash-accent"></div>
+    </div>
+  </div>
+</div>
 <section class="mh-render-adapter" id="mhRenderAdapter">
-  <h2>Render target · website/game through original Munker + hex grid</h2>
+  <button class="mh-back-btn" id="mhBackBtn">&#8592; Tools</button>
   <div class="mh-suite-tabs" id="mhSuiteTabs">
     <button class="mh-suite-tab active" data-suite-tab="web"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Web</span></button>
     <button class="mh-suite-tab" data-suite-tab="game"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Game</span></button>
@@ -1624,6 +1827,11 @@ def build_tonality_renderer_html() -> str:
     if (typeof buildTplGrid === 'function') buildTplGrid();
     const _logoPanel = document.getElementById('mhBuilderLogo');
     if (_logoPanel && _logoPanel.classList.contains('active')) renderLogoDesigner();
+    const _webPanel = document.getElementById('mhBuilderWeb');
+    if (_webPanel && _webPanel.classList.contains('active')) {
+      clearTimeout(applyRenderPalette._webT);
+      applyRenderPalette._webT = setTimeout(renderWebDesigner, 150);
+    }
     clearTimeout(applyRenderPalette._qrT);
     applyRenderPalette._qrT = setTimeout(function(){
       const qrPanel = document.getElementById('mhBuilderQr');
@@ -2005,6 +2213,46 @@ def build_tonality_renderer_html() -> str:
       $('mhQrStyle')?.addEventListener('change', generateQr);
       $('mhQrSize')?.addEventListener('change', generateQr);
     }
+    // ── Splash navigation ──
+    function goToTool(dest) {
+      const fold = document.getElementById('mhPageFold');
+      if (!fold) return;
+      fold.className = 'mh-pf-cover';
+      setTimeout(() => {
+        const splash = document.getElementById('mhSplash');
+        const adapter = document.getElementById('mhRenderAdapter');
+        if (splash) splash.classList.add('mh-hidden');
+        if (dest === 'colour') {
+          if (adapter) adapter.style.display = 'none';
+          // Show colour theory tool by scrolling below adapter
+          document.body.scrollTop = 0; document.documentElement.scrollTop = 0;
+        } else {
+          if (adapter) adapter.style.display = 'block';
+          if (typeof switchSuiteTab === 'function') switchSuiteTab(dest);
+        }
+        fold.className = 'mh-pf-reveal';
+        setTimeout(() => { fold.className = ''; }, 360);
+      }, 280);
+    }
+    function backToSplash() {
+      const fold = document.getElementById('mhPageFold');
+      if (!fold) return;
+      fold.className = 'mh-pf-cover';
+      setTimeout(() => {
+        const splash = document.getElementById('mhSplash');
+        const adapter = document.getElementById('mhRenderAdapter');
+        if (splash) splash.classList.remove('mh-hidden');
+        if (adapter) adapter.style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        fold.className = 'mh-pf-reveal';
+        setTimeout(() => { fold.className = ''; }, 360);
+      }, 280);
+    }
+    document.querySelectorAll('.mh-splash-card').forEach(card => {
+      card.addEventListener('click', () => { const d = card.dataset.dest; if (d) goToTool(d); });
+    });
+    const backBtn = $('mhBackBtn');
+    if (backBtn) backBtn.addEventListener('click', backToSplash);
   }, 400);
 })();
 (function(){
