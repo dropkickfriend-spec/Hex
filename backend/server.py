@@ -1095,9 +1095,9 @@ def build_tonality_renderer_html() -> str:
   body.mh-neon .mh-builder-title { animation:mhBuilderPulse 1.5s ease-in-out infinite,mhNeonFlicker 2.2s infinite !important; }
   body.mh-neon .mh-suite-tab.active { animation:mhPxPulse 0.8s ease-in-out infinite alternate !important; }
   /* ── Logo sim canvas grid ── */
-  #mhLogoSimGrid { display:none; grid-template-columns:1fr 1fr; gap:5px; margin:8px 0; }
-  #mhLogoSimGrid canvas { width:100%; border-radius:6px; cursor:pointer; image-rendering:pixelated; border:2px solid transparent; transition:border-color .12s,box-shadow .12s; }
-  #mhLogoSimGrid canvas.mh-sim-sel { border-color:var(--mh-a,#ff0); box-shadow:0 0 10px var(--mh-a,#ff0); }
+  #mhLogoSimGrid { display:none; grid-template-columns:repeat(4,1fr); gap:3px; margin:8px 0; }
+  #mhLogoSimGrid canvas { width:100%; aspect-ratio:3/2; border-radius:4px; cursor:pointer; image-rendering:pixelated; border:1px solid transparent; transition:border-color .12s,box-shadow .12s; }
+  #mhLogoSimGrid canvas.mh-sim-sel { border-color:var(--mh-a,#ff0); box-shadow:0 0 8px var(--mh-a,#ff0); }
   /* ── Wheel hide toggle ── */
   #mhWheelToggle { margin:0 8px 10px; padding:5px 12px; font:10px 'Space Mono',monospace; letter-spacing:.06em; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); border-radius:6px; cursor:pointer; color:var(--ink-dim); }
   /* ── Domino cascade: tiles squash top-to-bottom on tab switch ── */
@@ -1332,12 +1332,7 @@ def build_tonality_renderer_html() -> str:
       <button id="mhLogoSvgDlBtn">Download SVG</button>
     </div>
     <div id="mhLogoHexMark" style="display:flex;justify-content:center;align-items:center;padding:14px 0;min-height:100px"></div>
-    <div id="mhLogoSimGrid">
-      <canvas id="mhLSC0" width="120" height="80"></canvas>
-      <canvas id="mhLSC1" width="80"  height="80"></canvas>
-      <canvas id="mhLSC2" width="120" height="60"></canvas>
-      <canvas id="mhLSC3" width="100" height="80"></canvas>
-    </div>
+    <div id="mhLogoSimGrid"></div>
     <div class="mh-render-toolbar" style="margin-top:4px">
       <button id="mhLogoNftBtn">Export Unique Art (PNG)</button>
     </div>
@@ -1820,22 +1815,34 @@ def build_tonality_renderer_html() -> str:
   }
 
   // ── Logo sim: billiards in letter boundary ────────────────────────────────
-  let _lsGrids=[], _lsTimers=[], _lsRestartT=null;
-  const _lsVariants=[
-    {id:'mhLSC0',W:120,H:80,N:7,spd:[3,5]},
-    {id:'mhLSC1',W:80, H:80,N:5,spd:[5,7]},
-    {id:'mhLSC2',W:120,H:60,N:9,spd:[4,6]},
-    {id:'mhLSC3',W:100,H:80,N:6,spd:[3,4]},
+  let _lsGrids=[], _lsRafId=null, _lsRestartT=null;
+  const _lsRules=[
+    {rule:'pass',    N:4, spd:3.5, hOff:0},
+    {rule:'avoid',   N:5, spd:4,   hOff:30},
+    {rule:'seek',    N:4, spd:3,   hOff:60},
+    {rule:'like-att',N:6, spd:3,   hOff:90},
+    {rule:'like-rep',N:6, spd:4,   hOff:120},
+    {rule:'no-rep',  N:4, spd:3.5, hOff:150},
+    {rule:'excl',    N:5, spd:3.5, hOff:180},
+    {rule:'flock',   N:6, spd:4,   hOff:210},
+    {rule:'spiral',  N:4, spd:3,   hOff:240},
+    {rule:'chaos',   N:5, spd:4,   hOff:270},
+    {rule:'avoid',   N:7, spd:5,   hOff:300},
+    {rule:'seek',    N:3, spd:2.5, hOff:330},
+    {rule:'excl',    N:8, spd:3,   hOff:20},
+    {rule:'flock',   N:4, spd:5,   hOff:50},
+    {rule:'spiral',  N:6, spd:2.5, hOff:80},
+    {rule:'chaos',   N:3, spd:5,   hOff:110},
   ];
   function _drawLEDBall(ctx,bx,by,hue,inside,tick){
-    const S=5, cx=Math.round(bx), cy=Math.round(by);
+    const S=3, cx=Math.round(bx), cy=Math.round(by);
     for(let r=0;r<S;r++) for(let c=0;c<S;c++){
-      const d=Math.hypot(r-2,c-2);
-      if(d>2.5) continue;
-      if(d>1.4 && ((tick*7+r*11+c*5)%5<2)) continue;
-      const lum=d<1?98:d<2?80:58;
+      const d=Math.hypot(r-1,c-1);
+      if(d>1.5) continue;
+      if(d>0.6 && ((tick*7+r*11+c*5)%4<1)) continue;
+      const lum=d<0.6?98:d<1.1?80:58;
       ctx.fillStyle=`hsl(${hue},100%,${lum}%)`;
-      ctx.fillRect(cx-2+c, cy-2+r, 1, 1);
+      ctx.fillRect(cx-1+c, cy-1+r, 1, 1);
     }
   }
   function _buildLetterMask(text, W, H) {
@@ -1854,21 +1861,20 @@ def build_tonality_renderer_html() -> str:
     return mask;
   }
   class BilliardsLogoSim {
-    constructor(W,H,mask){
+    constructor(W,H,mask,N=4,spd=3.5,hueStart=0){
       this.W=W; this.H=H; this.mask=mask;
       this.tick=0; this.trails=[];
       this.outerVisited=new Set(); this.innerVisited=new Set();
       this.outsideTotal=0;
       for(let i=0;i<W*H;i++) if(!mask[i]) this.outsideTotal++;
       this.expanded=false;
-      const N=7;
       this.balls=Array.from({length:N},(_,i)=>{
         let x,y,att=0;
-        do{ x=8+Math.random()*(W-16); y=8+Math.random()*(H-16); att++; }
+        do{ x=3+Math.random()*(W-6); y=3+Math.random()*(H-6); att++; }
         while(mask[Math.round(y)*W+Math.round(x)] && att<200);
-        const ang=Math.random()*Math.PI*2, spd=3+Math.random()*2;
-        return {x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
-                sx:x,sy:y,life:0,hue:(i/N)*360,inside:false};
+        const ang=Math.random()*Math.PI*2, sp=spd*0.8+Math.random()*spd*0.4;
+        return {x,y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,
+                sx:x,sy:y,life:0,hue:(hueStart+i/N*180)%360,inside:false};
       });
     }
     _inLetter(x,y){
@@ -1876,7 +1882,68 @@ def build_tonality_renderer_html() -> str:
       if(xi<0||xi>=this.W||yi<0||yi>=this.H) return false;
       return this.mask[yi*this.W+xi]===1;
     }
-    _oob(x,y){ return x<6||x>=this.W-6||y<6||y>=this.H-6; }
+    _oob(x,y){ return x<3||x>=this.W-3||y<3||y>=this.H-3; }
+    _applyRule(rule){
+      const balls=this.balls;
+      if(rule==='avoid'||rule==='seek'){
+        const str=rule==='avoid'?-0.08:0.05;
+        for(let i=0;i<balls.length;i++) for(let j=i+1;j<balls.length;j++){
+          const dx=balls[j].x-balls[i].x, dy=balls[j].y-balls[i].y;
+          const dist=Math.hypot(dx,dy)||1;
+          if(dist<20){ const f=str/dist;
+            balls[i].vx+=dx*f; balls[i].vy+=dy*f;
+            balls[j].vx-=dx*f; balls[j].vy-=dy*f; }
+        }
+      }
+      if(rule==='like-att'||rule==='like-rep'){
+        const str=rule==='like-att'?0.06:-0.07;
+        for(let i=0;i<balls.length;i++) for(let j=i+1;j<balls.length;j++){
+          const hd=Math.abs(balls[i].hue-balls[j].hue)%360;
+          if(hd<60||hd>300){
+            const dx=balls[j].x-balls[i].x, dy=balls[j].y-balls[i].y;
+            const dist=Math.hypot(dx,dy)||1;
+            if(dist<18){ const f=str/dist;
+              balls[i].vx+=dx*f; balls[i].vy+=dy*f;
+              balls[j].vx-=dx*f; balls[j].vy-=dy*f; }
+          }
+        }
+      }
+      if(rule==='flock'){
+        let ax=0,ay=0;
+        for(const b of balls){ax+=b.vx;ay+=b.vy;}
+        ax/=balls.length; ay/=balls.length;
+        for(const b of balls){b.vx+=(ax-b.vx)*0.04;b.vy+=(ay-b.vy)*0.04;}
+      }
+      if(rule==='spiral'){
+        for(const b of balls){
+          const s=Math.hypot(b.vx,b.vy)||3;
+          b.vx+=(-b.vy/s)*0.12; b.vy+=(b.vx/s)*0.12;
+        }
+      }
+      if(rule==='chaos'){
+        for(const b of balls){b.vx+=(Math.random()-.5)*0.6;b.vy+=(Math.random()-.5)*0.6;}
+      }
+      if(rule==='excl'){
+        const occ=new Set();
+        for(const b of balls){
+          const k=`${b.x|0},${b.y|0}`;
+          if(occ.has(k)){b.vx+=(Math.random()-.5)*2;b.vy+=(Math.random()-.5)*2;}
+          else occ.add(k);
+        }
+      }
+      if(rule==='no-rep'){
+        for(const b of balls){
+          const pi=Math.round(b.y)*this.W+Math.round(b.x);
+          if(this.outerVisited.has(pi)||this.innerVisited.has(pi))
+            {b.vx+=(Math.random()-.5)*1.0;b.vy+=(Math.random()-.5)*1.0;}
+        }
+      }
+      for(const b of balls){
+        const s=Math.hypot(b.vx,b.vy)||1;
+        if(s>8){b.vx=b.vx/s*8;b.vy=b.vy/s*8;}
+        if(s<1.5){b.vx=b.vx/s*1.5;b.vy=b.vy/s*1.5;}
+      }
+    }
     step(){
       this.tick++;
       if(!this.expanded && this.outerVisited.size/Math.max(1,this.outsideTotal)>0.60)
@@ -1919,8 +1986,8 @@ def build_tonality_renderer_html() -> str:
             b.vx=Math.cos(ang)*spd; b.vy=Math.sin(ang)*spd; nx=b.x; ny=b.y;
           }
         }
-        b.x=Math.max(6,Math.min(this.W-7,nx));
-        b.y=Math.max(6,Math.min(this.H-7,ny));
+        b.x=Math.max(3,Math.min(this.W-4,nx));
+        b.y=Math.max(3,Math.min(this.H-4,ny));
         b.hue=(b.hue+(b.inside?1.4:0.7))%360;
         const pi=Math.round(b.y)*this.W+Math.round(b.x);
         if(b.inside) this.innerVisited.add(pi); else this.outerVisited.add(pi);
@@ -1936,57 +2003,56 @@ def build_tonality_renderer_html() -> str:
     try{ await sb.from('billiards_trails').insert({tick:sim.tick,points:pts,coverage:sim.outerVisited.size,expanded:sim.expanded,ts:new Date().toISOString()}); }catch(_){}
   }
   function _stopLogoSims(){
-    _lsTimers.forEach(t=>clearInterval(t)); _lsTimers=[]; _lsGrids=[];
+    if(_lsRafId){cancelAnimationFrame(_lsRafId);_lsRafId=null;}
+    _lsGrids=[];
   }
   function _startLogoSim(){
     _stopLogoSims();
     const grid=$('mhLogoSimGrid'); if(!grid) return;
-    grid.style.display='grid';
+    grid.style.display='grid'; grid.innerHTML='';
     const text=($('mhLogoTextLogo')||{}).value||'H';
+    const W=60,H=40;
     const darkHex=(getComputedStyle(document.documentElement).getPropertyValue('--mh-dark').trim()||'#0a0a14');
     const dn=parseInt(darkHex.replace('#',''),16);
     const [dr,dg,db]=[(dn>>16)&255,(dn>>8)&255,dn&255];
-    _lsVariants.forEach((v,vi)=>{
-      const canvas=$( v.id ); if(!canvas) return;
-      const {W,H,N,spd}=v;
+    const baseHue=(typeof getWheelPalette==='function'?getWheelPalette().hue:220);
+    const ctxs=[];
+    _lsRules.forEach((v,vi)=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=W; canvas.height=H;
+      grid.appendChild(canvas);
       const mask=_buildLetterMask(text,W,H);
-      // Customise ball count + speed for each variant
-      const sim=new BilliardsLogoSim(W,H,mask);
-      // Adjust balls to variant params
-      while(sim.balls.length < N){
-        const ang=Math.random()*Math.PI*2, sp=spd[0]+Math.random()*(spd[1]-spd[0]);
-        let x,y,att=0;
-        do{ x=8+Math.random()*(W-16); y=8+Math.random()*(H-16); att++; }
-        while(mask[Math.round(y)*W+Math.round(x)] && att<100);
-        sim.balls.push({x,y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,sx:x,sy:y,life:0,hue:Math.random()*360,inside:false});
-      }
+      const sim=new BilliardsLogoSim(W,H,mask,v.N,v.spd,(baseHue+v.hOff)%360);
+      sim._rule=v.rule;
       _lsGrids.push(sim);
       const ctx=canvas.getContext('2d');
       ctx.fillStyle=darkHex; ctx.fillRect(0,0,W,H);
-      ctx.fillStyle='rgba(255,255,255,.10)';
+      ctx.fillStyle='rgba(255,255,255,.12)';
       for(let i=0;i<W*H;i++) if(mask[i]) ctx.fillRect(i%W,Math.floor(i/W),1,1);
-      ctx.strokeStyle='rgba(255,255,255,.10)'; ctx.lineWidth=1; ctx.strokeRect(6,6,W-12,H-12);
-      // click to select this variant
+      ctxs.push({ctx,W,H,sim});
       canvas.onclick=()=>{
         document.querySelectorAll('#mhLogoSimGrid canvas').forEach(c=>c.classList.remove('mh-sim-sel'));
         canvas.classList.add('mh-sim-sel');
       };
-      if(vi===0) canvas.classList.add('mh-sim-sel'); // default first selected
-      const timer=setInterval(()=>{
-        if(!_lsGrids[vi]) return;
-        _lsGrids[vi].step();_lsGrids[vi].step();_lsGrids[vi].step();_lsGrids[vi].step();
-        ctx.fillStyle=`rgba(${dr},${dg},${db},0.07)`; ctx.fillRect(0,0,W,H);
-        const tail=sim.trails.slice(-sim.balls.length*40);
-        for(const pt of tail){
-          ctx.fillStyle=pt.ins?`hsla(${pt.h},90%,65%,0.7)`:`hsla(${pt.h},72%,50%,0.5)`;
-          ctx.fillRect(pt.x|0, pt.y|0, 2, 2); // pixel trail blocks
-        }
-        // LED pixel balls
-        for(const b of sim.balls) _drawLEDBall(ctx,b.x,b.y,b.hue,b.inside,sim.tick);
-        if(sim.tick%90===0) _logBilliards(sim);
-      },16);
-      _lsTimers.push(timer);
+      if(vi===0) canvas.classList.add('mh-sim-sel');
     });
+    function _rafLoop(){
+      _lsRafId=requestAnimationFrame(_rafLoop);
+      for(const {ctx,W,H,sim} of ctxs){
+        if(!sim) continue;
+        sim._applyRule(sim._rule);
+        sim.step(); sim.step(); sim.step();
+        ctx.fillStyle=`rgba(${dr},${dg},${db},0.09)`; ctx.fillRect(0,0,W,H);
+        const tail=sim.trails.slice(-sim.balls.length*30);
+        for(const pt of tail){
+          ctx.fillStyle=pt.ins?`hsla(${pt.h},90%,65%,0.8)`:`hsla(${pt.h},75%,52%,0.6)`;
+          ctx.fillRect(pt.x|0,pt.y|0,1,1);
+        }
+        for(const b of sim.balls) _drawLEDBall(ctx,b.x,b.y,b.hue,b.inside,sim.tick);
+      }
+      if(_lsGrids[0]&&_lsGrids[0].tick%120===0) _logBilliards(_lsGrids[0]);
+    }
+    _rafLoop();
   }
 
   function switchSuiteTab(tab){
