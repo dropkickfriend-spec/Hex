@@ -1094,8 +1094,12 @@ def build_tonality_renderer_html() -> str:
   body.mh-neon #mhPageHexBg { animation:mhNeonHue 10s linear infinite; }
   body.mh-neon .mh-builder-title { animation:mhBuilderPulse 1.5s ease-in-out infinite,mhNeonFlicker 2.2s infinite !important; }
   body.mh-neon .mh-suite-tab.active { animation:mhPxPulse 0.8s ease-in-out infinite alternate !important; }
-  /* ── Logo sim canvas ── */
-  #mhLogoSimCanvas { display:none; border-radius:10px; width:100%; image-rendering:pixelated; margin:8px 0; }
+  /* ── Logo sim canvas grid ── */
+  #mhLogoSimGrid { display:none; grid-template-columns:1fr 1fr; gap:5px; margin:8px 0; }
+  #mhLogoSimGrid canvas { width:100%; border-radius:6px; cursor:pointer; image-rendering:pixelated; border:2px solid transparent; transition:border-color .12s,box-shadow .12s; }
+  #mhLogoSimGrid canvas.mh-sim-sel { border-color:var(--mh-a,#ff0); box-shadow:0 0 10px var(--mh-a,#ff0); }
+  /* ── Wheel hide toggle ── */
+  #mhWheelToggle { margin:0 8px 10px; padding:5px 12px; font:10px 'Space Mono',monospace; letter-spacing:.06em; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); border-radius:6px; cursor:pointer; color:var(--ink-dim); }
   /* ── Domino cascade: tiles squash top-to-bottom on tab switch ── */
   @keyframes mhDomino {
     0%   { transform:scaleY(1); opacity:1; }
@@ -1327,8 +1331,13 @@ def build_tonality_renderer_html() -> str:
       <button id="mhLogoRegenBtn">Regenerate mark</button>
       <button id="mhLogoSvgDlBtn">Download SVG</button>
     </div>
-    <div id="mhLogoHexMark" style="display:flex;justify-content:center;align-items:center;padding:28px 0;min-height:160px"></div>
-    <canvas id="mhLogoSimCanvas" width="240" height="160"></canvas>
+    <div id="mhLogoHexMark" style="display:flex;justify-content:center;align-items:center;padding:14px 0;min-height:100px"></div>
+    <div id="mhLogoSimGrid">
+      <canvas id="mhLSC0" width="120" height="80"></canvas>
+      <canvas id="mhLSC1" width="80"  height="80"></canvas>
+      <canvas id="mhLSC2" width="120" height="60"></canvas>
+      <canvas id="mhLSC3" width="100" height="80"></canvas>
+    </div>
     <div class="mh-render-toolbar" style="margin-top:4px">
       <button id="mhLogoNftBtn">Export Unique Art (PNG)</button>
     </div>
@@ -1343,19 +1352,10 @@ def build_tonality_renderer_html() -> str:
     <div id="mhLogoPreviewLogo" style="margin-top:14px;text-align:center"></div>
   </div>
   </div>
-  <div class="mh-render-toolbar">
-    <input id="mhUrl" value="https://example.com" placeholder="https://your-site.com" />
-    <select id="mhGame">
-      <option value="website">Website URL render</option>
-      <option value="invaders">Game render · arcade invaders</option>
-      <option value="platformer">Game render · platformer</option>
-      <option value="maze">Game render · puzzle maze</option>
-    </select>
-    <select id="mhGameStyle">
-      <option value="hex3plane">Style · top-down 3-plane cube hex ground</option>
-    </select>
-    <button id="mhRenderBtn">Render with this style</button>
-  </div>
+  <input id="mhUrl" value="https://example.com" style="display:none">
+  <select id="mhGame" style="display:none"><option value="platformer" selected>platformer</option><option value="invaders">invaders</option><option value="maze">maze</option></select>
+  <select id="mhGameStyle" style="display:none"><option value="hex3plane">hex3plane</option></select>
+  <button id="mhRenderBtn" style="display:none"></button>
   <div class="mh-unified-munker" id="mhUnifiedMunker">
     <div class="mh-unified-munker-title">
       <span>Unified Munker generator</span>
@@ -1421,12 +1421,9 @@ def build_tonality_renderer_html() -> str:
   </div>
   <p class="hint" style="margin:8px 0 0">This keeps your original studio below. The target stage uses the same animated Munker controls and hex/cube colour system instead of replacing it.</p>
   <div class="mh-target-stage" id="mhTargetStage">
-    <iframe class="mh-target-frame" id="mhFrame" src="site-html?url=https%3A%2F%2Fexample.com" title="Website render target"></iframe>
-    <div class="mh-target-synthetic" id="mhSynthetic">
-      <div class="mh-urlbar"><span class="mh-dot"></span><span class="mh-dot"></span><span class="mh-dot"></span><span id="mhHostLabel">example.com</span></div>
-      <div class="mh-block"><div class="mh-orb"></div><div class="mh-lines"><div class="mh-line" style="width:86%"></div><div class="mh-line" style="width:62%"></div><div class="mh-line" style="width:74%"></div></div></div>
-      <div class="mh-cards"><div class="mh-card"></div><div class="mh-card"></div><div class="mh-card"></div><div class="mh-card"></div></div>
-    </div>
+    <div id="mhFrame" style="display:none"></div>
+    <div id="mhSynthetic" style="display:none"></div>
+    <span id="mhHostLabel" style="display:none"></span>
     <div class="mh-game-grid" id="mhGameGrid" style="display:none"></div>
     <div class="mh-token-layer" id="mhTokenLayer"></div>
     <div class="mh-hex-field"></div>
@@ -1822,8 +1819,25 @@ def build_tonality_renderer_html() -> str:
     }
   }
 
-  // ── Logo sim: letter acts as boundary for reaction-diffusion ─────────────
-  let _lsGrid=null, _lsTimer=null, _lsRestartT=null;
+  // ── Logo sim: billiards in letter boundary ────────────────────────────────
+  let _lsGrids=[], _lsTimers=[], _lsRestartT=null;
+  const _lsVariants=[
+    {id:'mhLSC0',W:120,H:80,N:7,spd:[3,5]},
+    {id:'mhLSC1',W:80, H:80,N:5,spd:[5,7]},
+    {id:'mhLSC2',W:120,H:60,N:9,spd:[4,6]},
+    {id:'mhLSC3',W:100,H:80,N:6,spd:[3,4]},
+  ];
+  function _drawLEDBall(ctx,bx,by,hue,inside,tick){
+    const S=5, cx=Math.round(bx), cy=Math.round(by);
+    for(let r=0;r<S;r++) for(let c=0;c<S;c++){
+      const d=Math.hypot(r-2,c-2);
+      if(d>2.5) continue;
+      if(d>1.4 && ((tick*7+r*11+c*5)%5<2)) continue;
+      const lum=d<1?98:d<2?80:58;
+      ctx.fillStyle=`hsl(${hue},100%,${lum}%)`;
+      ctx.fillRect(cx-2+c, cy-2+r, 1, 1);
+    }
+  }
   function _buildLetterMask(text, W, H) {
     const c=document.createElement('canvas'); c.width=W; c.height=H;
     const ctx=c.getContext('2d');
@@ -1919,49 +1933,60 @@ def build_tonality_renderer_html() -> str:
   async function _logBilliards(sim){
     const sb=sbClient(); if(!sb) return;
     const pts=sim.trails.slice(-sim.balls.length*20).map(p=>({x:Math.round(p.x),y:Math.round(p.y),h:Math.round(p.h)}));
-    try{ await sb.from('billiards_trails').insert({tick:sim.tick,points:pts,coverage:sim.visited.size,expanded:sim.expanded,ts:new Date().toISOString()}); }catch(_){}
+    try{ await sb.from('billiards_trails').insert({tick:sim.tick,points:pts,coverage:sim.outerVisited.size,expanded:sim.expanded,ts:new Date().toISOString()}); }catch(_){}
+  }
+  function _stopLogoSims(){
+    _lsTimers.forEach(t=>clearInterval(t)); _lsTimers=[]; _lsGrids=[];
   }
   function _startLogoSim(){
-    clearInterval(_lsTimer); _lsGrid=null;
-    const canvas=$('mhLogoSimCanvas'); if(!canvas) return;
-    const W=240,H=160;
+    _stopLogoSims();
+    const grid=$('mhLogoSimGrid'); if(!grid) return;
+    grid.style.display='grid';
     const text=($('mhLogoTextLogo')||{}).value||'H';
-    const mask=_buildLetterMask(text,W,H);
-    _lsGrid=new BilliardsLogoSim(W,H,mask);
-    canvas.style.display='block';
-    const ctx=canvas.getContext('2d');
-    // Use palette dark as canvas background
     const darkHex=(getComputedStyle(document.documentElement).getPropertyValue('--mh-dark').trim()||'#0a0a14');
     const dn=parseInt(darkHex.replace('#',''),16);
-    const dr=(dn>>16)&255, dg=(dn>>8)&255, db=dn&255;
-    ctx.fillStyle=darkHex; ctx.fillRect(0,0,W,H);
-    // Letter ghost (dim white fill so you can see the boundary)
-    ctx.fillStyle='rgba(255,255,255,.12)';
-    for(let i=0;i<W*H;i++) if(mask[i]) ctx.fillRect(i%W,Math.floor(i/W),1,1);
-    // Outer square guide
-    ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=1; ctx.strokeRect(6,6,W-12,H-12);
-    _lsTimer=setInterval(()=>{
-      if(!_lsGrid) return;
-      // 4 physics steps per 16ms frame ≈ 250 steps/s
-      _lsGrid.step();_lsGrid.step();_lsGrid.step();_lsGrid.step();
-      // Fade to palette bg (slow persistence-of-vision trail)
-      ctx.fillStyle=`rgba(${dr},${dg},${db},0.06)`; ctx.fillRect(0,0,W,H);
-      // Draw trail history
-      const tail=_lsGrid.trails.slice(-_lsGrid.balls.length*50);
-      for(const pt of tail){
-        ctx.beginPath(); ctx.arc(pt.x,pt.y,1.5,0,Math.PI*2);
-        ctx.fillStyle=pt.ins
-          ?`hsla(${pt.h},92%,68%,0.72)`   // inside letter: bright warm
-          :`hsla(${pt.h},72%,52%,0.55)`;  // outside: cooler mid tone
-        ctx.fill();
+    const [dr,dg,db]=[(dn>>16)&255,(dn>>8)&255,dn&255];
+    _lsVariants.forEach((v,vi)=>{
+      const canvas=$( v.id ); if(!canvas) return;
+      const {W,H,N,spd}=v;
+      const mask=_buildLetterMask(text,W,H);
+      // Customise ball count + speed for each variant
+      const sim=new BilliardsLogoSim(W,H,mask);
+      // Adjust balls to variant params
+      while(sim.balls.length < N){
+        const ang=Math.random()*Math.PI*2, sp=spd[0]+Math.random()*(spd[1]-spd[0]);
+        let x,y,att=0;
+        do{ x=8+Math.random()*(W-16); y=8+Math.random()*(H-16); att++; }
+        while(mask[Math.round(y)*W+Math.round(x)] && att<100);
+        sim.balls.push({x,y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,sx:x,sy:y,life:0,hue:Math.random()*360,inside:false});
       }
-      // Draw balls
-      for(const b of _lsGrid.balls){
-        ctx.beginPath(); ctx.arc(b.x,b.y,b.inside?4.5:3.5,0,Math.PI*2);
-        ctx.fillStyle=`hsl(${b.hue},100%,${b.inside?94:82}%)`; ctx.fill();
-      }
-      if(_lsGrid.tick%90===0) _logBilliards(_lsGrid);
-    },16);
+      _lsGrids.push(sim);
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle=darkHex; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='rgba(255,255,255,.10)';
+      for(let i=0;i<W*H;i++) if(mask[i]) ctx.fillRect(i%W,Math.floor(i/W),1,1);
+      ctx.strokeStyle='rgba(255,255,255,.10)'; ctx.lineWidth=1; ctx.strokeRect(6,6,W-12,H-12);
+      // click to select this variant
+      canvas.onclick=()=>{
+        document.querySelectorAll('#mhLogoSimGrid canvas').forEach(c=>c.classList.remove('mh-sim-sel'));
+        canvas.classList.add('mh-sim-sel');
+      };
+      if(vi===0) canvas.classList.add('mh-sim-sel'); // default first selected
+      const timer=setInterval(()=>{
+        if(!_lsGrids[vi]) return;
+        _lsGrids[vi].step();_lsGrids[vi].step();_lsGrids[vi].step();_lsGrids[vi].step();
+        ctx.fillStyle=`rgba(${dr},${dg},${db},0.07)`; ctx.fillRect(0,0,W,H);
+        const tail=sim.trails.slice(-sim.balls.length*40);
+        for(const pt of tail){
+          ctx.fillStyle=pt.ins?`hsla(${pt.h},90%,65%,0.7)`:`hsla(${pt.h},72%,50%,0.5)`;
+          ctx.fillRect(pt.x|0, pt.y|0, 2, 2); // pixel trail blocks
+        }
+        // LED pixel balls
+        for(const b of sim.balls) _drawLEDBall(ctx,b.x,b.y,b.hue,b.inside,sim.tick);
+        if(sim.tick%90===0) _logBilliards(sim);
+      },16);
+      _lsTimers.push(timer);
+    });
   }
 
   function switchSuiteTab(tab){
@@ -1969,7 +1994,7 @@ def build_tonality_renderer_html() -> str:
     const outPanel = document.querySelector('.mh-builder-panel.active');
     if (!inPanel || inPanel === outPanel) return;
     document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
-    clearInterval(_lsTimer); _lsGrid = null; // stop logo sim on any tab switch
+    _stopLogoSims(); // stop all logo sim instances on tab switch
     const bg = document.getElementById('mhPageHexBg');
     if (bg) {
       bg.classList.add('mh-domino','mh-bg-pulse');
@@ -2683,7 +2708,20 @@ def build_tonality_renderer_html() -> str:
   $('mhGameBuilderBtn').addEventListener('click', () => { switchSuiteTab('game'); setVal('mhGame','platformer'); render(); });
   $('mhGifDesignerBtn').addEventListener('click', () => { switchSuiteTab('gif'); exportGif(); });
   if ($('mhSyncBtn')) $('mhSyncBtn').addEventListener('click', syncMunker);
-  frame.addEventListener('load', () => setTimeout(styleWholeWebsiteFrame, 120));
+  if (frame && frame.tagName === 'IFRAME') frame.addEventListener('load', () => setTimeout(styleWholeWebsiteFrame, 120));
+  // Colour wheel hide toggle
+  (function(){
+    const ww = document.getElementById('wheelWrap');
+    if (!ww) return;
+    const btn = document.createElement('button');
+    btn.id = 'mhWheelToggle'; btn.textContent = 'Hide wheel';
+    btn.addEventListener('click', () => {
+      const hidden = ww.style.display === 'none';
+      ww.style.display = hidden ? '' : 'none';
+      btn.textContent = hidden ? 'Hide wheel' : 'Show wheel';
+    });
+    ww.parentNode.insertBefore(btn, ww);
+  })();
   function hideDuplicateMunkerControls(){
     document.querySelectorAll('details').forEach(details => {
       const summary = details.querySelector('summary');
