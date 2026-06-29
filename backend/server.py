@@ -548,7 +548,14 @@ def build_tonality_renderer_html() -> str:
   .mh-suite-tab.active .mh-ctab-r { filter:brightness(0.88); }
   .mh-suite-tab.active .mh-ctab-l { filter:brightness(0.46); }
   .mh-ctab-lbl { display:block; }
-  .mh-panels-wrap { position:relative; }
+  .mh-render-adapter h2,
+  .mh-unified-munker-title,
+  .mh-builder-title,
+  .mh-suite-tab .mh-ctab-lbl,
+  .mh-export-status {
+    text-shadow: 0 1px 4px rgba(0,0,0,.95), 0 0 10px rgba(0,0,0,.7);
+  }
+  .mh-panels-wrap { position:relative; overflow:hidden; border-radius:14px; }
   .mh-builder-panel {
     display:none; margin-top:14px; border-radius:14px;
     background:rgba(255,255,255,.025);
@@ -569,17 +576,17 @@ def build_tonality_renderer_html() -> str:
     background-size:24px 24px;
     transform-origin:top center; pointer-events:none;
   }
-  #mhFoldPaper.mh-paper-cover { display:block; animation:mhPaperCover 0.26s cubic-bezier(.4,0,.6,1) forwards; }
-  #mhFoldPaper.mh-paper-reveal { display:block; animation:mhPaperReveal 0.3s cubic-bezier(.15,.7,.3,1.1) forwards; }
+  #mhFoldPaper.mh-paper-cover { display:block; animation:mhPaperCover 0.3s cubic-bezier(.4,0,.2,1) forwards; }
+  #mhFoldPaper.mh-paper-reveal { display:block; animation:mhPaperReveal 0.36s cubic-bezier(.15,.7,.3,1.1) forwards; }
   @keyframes mhPaperCover {
-    0%  { transform:perspective(900px) rotateX(-90deg) scaleY(.55); opacity:0; }
-    38% { opacity:.75; }
-    100%{ transform:perspective(900px) rotateX(0deg) scaleY(1); opacity:1; }
+    0%   { transform:perspective(700px) rotateX(-52deg) scaleY(0.02); opacity:0; }
+    25%  { opacity:1; }
+    100% { transform:perspective(700px) rotateX(0deg) scaleY(1); opacity:1; }
   }
   @keyframes mhPaperReveal {
-    0%  { transform:perspective(900px) rotateX(0deg) scaleY(1); opacity:1; }
-    62% { opacity:.6; }
-    100%{ transform:perspective(900px) rotateX(90deg) scaleY(.55); opacity:0; }
+    0%   { transform:perspective(700px) rotateX(0deg) scaleY(1); opacity:1; }
+    75%  { opacity:0.55; }
+    100% { transform:perspective(700px) rotateX(52deg) scaleY(0.02); opacity:0; }
   }
   .mh-builder-title { color:var(--mh-a,#ffff00); font:12px 'Space Mono', monospace; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
   .mh-web-preview { position:relative; min-height:360px; margin-top:10px; border-radius:14px; overflow:hidden; background:#05050a; box-shadow:0 0 0 1px rgba(255,255,255,.04); }
@@ -859,6 +866,7 @@ def build_tonality_renderer_html() -> str:
     <button class="mh-suite-tab" data-suite-tab="character"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Character</span></button>
     <button class="mh-suite-tab" data-suite-tab="gif"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">GIF</span></button>
     <button class="mh-suite-tab" data-suite-tab="qr"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">QR</span></button>
+    <button class="mh-suite-tab" data-suite-tab="logo"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Logo</span></button>
   </div>
   <div class="mh-panels-wrap" id="mhPanelsWrap">
   <div id="mhFoldPaper"></div>
@@ -920,6 +928,21 @@ def build_tonality_renderer_html() -> str:
       <button id="mhQrSvgBtn" style="display:none">Download SVG</button>
       <span id="mhQrStatus" class="mh-export-status"></span>
     </div>
+  </div>
+  <div class="mh-builder-panel" id="mhBuilderLogo">
+    <div class="mh-builder-title">Logo designer · randomised hex mark + type</div>
+    <div class="mh-render-toolbar">
+      <button id="mhLogoRegenBtn">Regenerate mark</button>
+      <button id="mhLogoSvgDlBtn">Download SVG</button>
+    </div>
+    <div id="mhLogoHexMark" style="display:flex;justify-content:center;align-items:center;padding:28px 0;min-height:160px"></div>
+    <div class="mh-render-toolbar" style="margin-top:10px;flex-wrap:wrap">
+      <input id="mhLogoTextLogo" maxlength="24" value="HEXFIELD" placeholder="Brand name" style="flex:2" />
+      <select id="mhLogoMarkLogo"><option value="hex">Hex mark</option><option value="cube">Cube mark</option><option value="none">Text only</option></select>
+      <select id="mhLogoLayoutLogo"><option value="left">Mark left</option><option value="top">Mark top</option><option value="text">Text only</option></select>
+    </div>
+    <input class="mh-font-text-input" id="mhLogoTaglineLogo" value="Palette · Optics · Motion" placeholder="Tagline" style="margin-top:6px;width:100%;box-sizing:border-box" />
+    <div id="mhLogoPreviewLogo" style="margin-top:14px;text-align:center"></div>
   </div>
   </div>
   <div class="mh-render-toolbar">
@@ -1305,6 +1328,69 @@ def build_tonality_renderer_html() -> str:
     if (webA) { webA.innerHTML = artifactField.innerHTML; }
     updateBuilderCode();
   }
+  var _logoSeed = new Date().toDateString();
+  function renderLogoDesigner() {
+    var hexWrap = $('mhLogoHexMark');
+    if (hexWrap && typeof buildHexfieldMark === 'function') {
+      hexWrap.innerHTML = buildHexfieldMark(_logoSeed);
+    }
+    var preview = $('mhLogoPreviewLogo');
+    if (preview) {
+      var p = getWheelPalette();
+      var text = ($('mhLogoTextLogo') || {}).value || 'HEXFIELD';
+      var mark = ($('mhLogoMarkLogo') || {}).value || 'hex';
+      var layout = ($('mhLogoLayoutLogo') || {}).value || 'left';
+      var tagline = ($('mhLogoTaglineLogo') || {}).value || '';
+      var textCol = typeof getBestTextColor === 'function' ? getBestTextColor('#06060c') : p.aHex;
+      var stack = "'Space Mono', ui-monospace, monospace";
+      var W = 480, H = layout === 'top' ? 160 : 80;
+      function hexPts(cx, cy, R) {
+        var pts = [];
+        for (var i = 0; i < 6; i++) { var a = Math.PI/3*i - Math.PI/6; pts.push((cx+R*Math.cos(a)).toFixed(1)+','+(cy+R*Math.sin(a)).toFixed(1)); }
+        return pts.join(' ');
+      }
+      var markSvg = '', textX = 40, textY = H/2+12, tagY = H/2+30, anchor = 'start';
+      if (layout === 'left' && mark !== 'none') {
+        if (mark === 'hex') {
+          var mini = 16, gap = 3;
+          var offs = [[0,0],[0,-(mini*2+gap)],[mini*1.73+gap,-(mini+gap/2)],[mini*1.73+gap,mini+gap/2],[0,mini*2+gap],[-(mini*1.73+gap),mini+gap/2],[-(mini*1.73+gap),-(mini+gap/2)]];
+          offs.forEach(function(o,i){ var col = i===0?p.cHex:i%2===0?p.aHex:p.bHex; markSvg += '<polygon points="'+hexPts(44+o[0],H/2+o[1],mini)+'" fill="'+col+'" opacity="'+(i===0?'0.9':'0.75')+'"/>'; });
+        }
+        textX = 106;
+      } else if (layout === 'top') {
+        if (mark === 'hex') {
+          var mini = 14, gap = 3;
+          var offs = [[0,0],[0,-(mini*2+gap)],[mini*1.73+gap,-(mini+gap/2)],[mini*1.73+gap,mini+gap/2],[0,mini*2+gap],[-(mini*1.73+gap),mini+gap/2],[-(mini*1.73+gap),-(mini+gap/2)]];
+          offs.forEach(function(o,i){ var col = i===0?p.cHex:i%2===0?p.aHex:p.bHex; markSvg += '<polygon points="'+hexPts(W/2+o[0],44+o[1],mini)+'" fill="'+col+'" opacity="'+(i===0?'0.9':'0.75')+'"/>'; });
+        }
+        textX = W/2; textY = 108; tagY = 128; anchor = 'middle';
+      } else { textX = W/2; anchor = 'middle'; }
+      preview.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'">'
+        +markSvg
+        +'<text x="'+textX+'" y="'+textY+'" text-anchor="'+anchor+'" font-family="'+stack+'" font-size="32" font-weight="700" fill="'+textCol+'">'+text+'</text>'
+        +(tagline ? '<text x="'+textX+'" y="'+tagY+'" text-anchor="'+anchor+'" font-family="'+stack+'" font-size="11" fill="'+p.bHex+'" letter-spacing="0.14em">'+tagline+'</text>' : '')
+        +'</svg>';
+    }
+    var regen = $('mhLogoRegenBtn');
+    if (regen && !regen._mhWired) {
+      regen._mhWired = true;
+      regen.addEventListener('click', function() { _logoSeed = String(Date.now()); renderLogoDesigner(); });
+    }
+    var dlBtn = $('mhLogoSvgDlBtn');
+    if (dlBtn && !dlBtn._mhWired) {
+      dlBtn._mhWired = true;
+      dlBtn.addEventListener('click', function() {
+        var svgEl = $('mhLogoPreviewLogo')?.querySelector('svg');
+        if (!svgEl) return;
+        var blob = new Blob(['<?xml version="1.0"?>'+svgEl.outerHTML], {type:'image/svg+xml'});
+        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'logo-'+Date.now()+'.svg'; a.click();
+      });
+    }
+    ['mhLogoTextLogo','mhLogoMarkLogo','mhLogoLayoutLogo','mhLogoTaglineLogo'].forEach(function(id) {
+      var el = $(id);
+      if (el && !el._mhWired) { el._mhWired = true; el.addEventListener('input', renderLogoDesigner); }
+    });
+  }
   function switchSuiteTab(tab){
     const inPanel = $('mhBuilder' + tab.charAt(0).toUpperCase() + tab.slice(1));
     const outPanel = document.querySelector('.mh-builder-panel.active');
@@ -1313,7 +1399,7 @@ def build_tonality_renderer_html() -> str:
     const bg = document.getElementById('mhPageHexBg');
     if (bg) { bg.classList.add('mh-bg-pulse'); setTimeout(() => bg.classList.remove('mh-bg-pulse'), 420); }
     const paper = document.getElementById('mhFoldPaper');
-    const DUR_COVER = 260, DUR_REVEAL = 300;
+    const DUR_COVER = 300, DUR_REVEAL = 360;
     function _activateTab() {
       if (outPanel) outPanel.classList.remove('active');
       inPanel.classList.add('active');
@@ -1325,6 +1411,7 @@ def build_tonality_renderer_html() -> str:
       if (tab === 'kit' && typeof renderKitGrid === 'function') renderKitGrid();
       if (tab === 'fonts' && typeof loadFontEffects === 'function') loadFontEffects();
       if (tab === 'type' && typeof renderTypeScale === 'function') renderTypeScale();
+      if (tab === 'logo') renderLogoDesigner();
     }
     if (paper) {
       paper.classList.remove('mh-paper-cover','mh-paper-reveal');
@@ -1511,8 +1598,8 @@ def build_tonality_renderer_html() -> str:
     stage.style.setProperty('--mh-b', p.bHex);
     stage.style.setProperty('--mh-c', p.cHex);
     const _inkHue = (p.hue + 180) % 360;
-    const _inkHex = _hslToHex(_inkHue, 72, 88);
-    const _inkDimHex = _hslToHex(_inkHue, 36, 60);
+    const _inkHex = _hslToHex(_inkHue, 45, 88);
+    const _inkDimHex = _hslToHex(_inkHue, 22, 70);
     document.documentElement.style.setProperty('--ink', _inkHex);
     document.documentElement.style.setProperty('--ink-dim', _inkDimHex);
     stage.style.setProperty('--mh-a-soft', rgba(p.a, .25));
@@ -1542,6 +1629,8 @@ def build_tonality_renderer_html() -> str:
     updateBuilderCode();
     if (typeof buildPageHexBg === 'function') buildPageHexBg();
     if (typeof buildTplGrid === 'function') buildTplGrid();
+    const _logoPanel = document.getElementById('mhBuilderLogo');
+    if (_logoPanel && _logoPanel.classList.contains('active')) renderLogoDesigner();
     clearTimeout(applyRenderPalette._qrT);
     applyRenderPalette._qrT = setTimeout(function(){
       const qrPanel = document.getElementById('mhBuilderQr');
