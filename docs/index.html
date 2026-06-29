@@ -763,15 +763,18 @@
   @media (max-width:760px){ .mh-suite-tabs { grid-template-columns:repeat(3, minmax(0,1fr)); } .mh-web-card-grid { grid-template-columns:1fr; } }
   /* Full-page isometric 3D cube hex background */
   #mhPageHexBg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
-  #mhPageHexBg.mh-bg-pulse .mh-pxhex{animation-duration:.35s!important;opacity:.42!important}
+  #mhPageHexBg.mh-bg-pulse .mh-pxhex{animation-duration:.35s!important;opacity:1!important}
   .mh-pxhex{position:absolute;animation:mhPxPulse 4s ease-in-out infinite alternate}
   .mh-pxhex.mh-pxhex-b{animation:mhPxPulseB 6s ease-in-out infinite alternate}
-  @keyframes mhPxPulse{from{opacity:.07}to{opacity:.28}}
-  @keyframes mhPxPulseB{from{opacity:.04}to{opacity:.18}}
+  @keyframes mhPxPulse{from{opacity:.55}to{opacity:.88}}
+  @keyframes mhPxPulseB{from{opacity:.42}to{opacity:.72}}
   .mh-pxf{position:absolute;inset:0;background:var(--pxc,#444)}
-  .mh-pxf-t{clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%);filter:brightness(1.55)}
-  .mh-pxf-r{clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%);filter:brightness(0.88)}
-  .mh-pxf-l{clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%);filter:brightness(0.48)}
+  .mh-pxf-t{clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%);filter:brightness(1.55);animation:mhBgFaceTop var(--mh-face-speed,9s) linear infinite alternate}
+  .mh-pxf-r{clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%);filter:brightness(0.88);animation:mhBgFaceRight var(--mh-face-speed,9s) linear infinite alternate}
+  .mh-pxf-l{clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%);filter:brightness(0.48);animation:mhBgFaceLeft var(--mh-face-speed,9s) linear infinite alternate}
+  @keyframes mhBgFaceTop  {0%{background-position:0 0}100%{background-position:69px -40px}}
+  @keyframes mhBgFaceRight{0%{background-position:0 0}100%{background-position:69px  40px}}
+  @keyframes mhBgFaceLeft {0%{background-position:0 0}100%{background-position:80px   0px}}
   /* Template card picker */
   .mh-tpl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
   .mh-tpl-card{border-radius:6px;padding:6px 4px;cursor:pointer;background:rgba(255,255,255,.04);box-shadow:0 0 0 1px rgba(255,255,255,.06);text-align:center;font:9px ui-monospace,monospace;color:var(--ink-dim);transition:box-shadow .15s,background .15s;user-select:none}
@@ -1125,6 +1128,54 @@
     .mh-splash-grid{grid-template-columns:1fr}
     .mh-splash-h{font-size:18px}
     .mh-suite-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+  }
+  /* ── 3D block typography ── */
+  .mh-splash-h,
+  .mh-sc-title,
+  .mh-web-headline {
+    text-shadow:
+      1px 1px 0 var(--mh-b,#0000ff),
+      2px 2px 0 var(--mh-b,#0000ff),
+      3px 3px 0 var(--mh-c,#00ffff),
+      4px 4px 0 var(--mh-c,#00ffff),
+      5px 5px 0 rgba(0,0,0,.55),
+      6px 6px 14px rgba(0,0,0,.4);
+  }
+  /* ── Arcade animated titles ── */
+  @keyframes mhArcadeGlow {
+    0%,100% { text-shadow:1px 1px 0 var(--mh-b,#0000ff),2px 2px 0 var(--mh-b),3px 3px 0 var(--mh-c),4px 4px 0 var(--mh-c),0 0 18px var(--mh-a,#ffff00),0 0 42px var(--mh-a,#ffff00); }
+    33%      { text-shadow:1px 1px 0 var(--mh-c,#00ffff),2px 2px 0 var(--mh-c),3px 3px 0 var(--mh-a),4px 4px 0 var(--mh-a),0 0 18px var(--mh-b,#0000ff),0 0 42px var(--mh-b,#0000ff); }
+    66%      { text-shadow:1px 1px 0 var(--mh-a,#ffff00),2px 2px 0 var(--mh-a),3px 3px 0 var(--mh-b),4px 4px 0 var(--mh-b),0 0 18px var(--mh-c,#00ffff),0 0 42px var(--mh-c,#00ffff); }
+  }
+  @keyframes mhArcadeScan {
+    0%   { background-position:0 -100%; }
+    100% { background-position:0 200%;  }
+  }
+  @keyframes mhBuilderPulse {
+    0%,100% { color:var(--mh-a,#ffff00); letter-spacing:.08em; }
+    50%      { color:var(--mh-c,#00ffff); letter-spacing:.16em; }
+  }
+  .mh-splash-h {
+    animation: mhArcadeGlow 4s ease-in-out infinite;
+    position: relative;
+  }
+  .mh-splash-h::after {
+    content:''; position:absolute; inset:-4px; pointer-events:none;
+    background:linear-gradient(to bottom,transparent 40%,rgba(255,255,255,.16) 50%,transparent 60%);
+    animation:mhArcadeScan 2.8s linear infinite;
+  }
+  .mh-splash-eye { animation:mhArcadeGlow 4s ease-in-out infinite reverse; }
+  .mh-builder-title { animation:mhBuilderPulse 3s ease-in-out infinite; }
+  /* ── Cube-face diagonal layout for splash cards ── */
+  .mh-splash-card:nth-child(odd)  { transform:perspective(900px) rotateY(10deg) skewY(2deg); }
+  .mh-splash-card:nth-child(even) { transform:perspective(900px) rotateY(-10deg) skewY(-2deg); }
+  .mh-splash-card:hover { transform:perspective(900px) rotateY(0deg) skewY(0deg) translateY(-5px) scale(1.02) !important; filter:drop-shadow(0 14px 38px rgba(0,0,0,.75)); }
+  .mh-splash-card:active { transform:scale(.97) !important; }
+  /* ── Builder panel rise animation on tab switch ── */
+  .mh-builder-panel.active { animation:mhPanelRise .38s cubic-bezier(.2,.8,.35,1.3) forwards; }
+  @keyframes mhPanelRise {
+    from { transform:perspective(600px) rotateX(-6deg) translateY(10px); opacity:0; }
+    to   { transform:perspective(600px) rotateX(0deg)  translateY(0);    opacity:1; }
   }
   /* ── View mode toggles ── */
   body.mh-grid-over #mhPageHexBg { z-index:30; mix-blend-mode:screen; opacity:0.18; pointer-events:none; }
@@ -2149,18 +2200,28 @@
     document.documentElement.style.setProperty('--mh-c', p.cHex);
     document.documentElement.style.setProperty('--mh-grid-line',
       `rgba(${p.centre[0]},${p.centre[1]},${p.centre[2]},.09)`);
-    const sz = 46, hexH = sz / 0.866, rowStep = hexH * 0.75 + 2, colStep = sz + 2;
+    const sz = 80, hexH = sz / 0.866, rowStep = hexH * 0.75 + 2, colStep = sz + 2;
     const cols = Math.ceil(window.innerWidth / colStep) + 2;
     const rows = Math.ceil((window.innerHeight + 200) / rowStep) + 2;
     const pal = [p.aHex, p.bHex, p.cHex, ...p.colors];
     const maxDelay = 2.4;
-    function _bgStripe(angle, fallback) {
-      if (typeof buildMunkerPattern === 'function') return buildMunkerPattern(angle) || `repeating-linear-gradient(${angle}deg,rgba(255,255,255,${fallback}) 0 2px,transparent 2px 8px)`;
-      return `repeating-linear-gradient(${angle}deg,rgba(255,255,255,${fallback}) 0 2px,transparent 2px 8px)`;
+    function _faceStripe(angleDeg, hex1, hex2) {
+      const u = typeof currentUnifiedMunker === 'function' ? currentUnifiedMunker() : {};
+      const t = Math.max(2, u.thick || 4);
+      const sp = Math.max(t + 2, (u.spacing || 10) + t);
+      const op = Math.min(1, (u.opacity || 80) / 100);
+      const toRgba = (hex, a) => {
+        const n = parseInt(hex.replace('#',''), 16);
+        return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+      };
+      const c1 = toRgba(hex1, op), c2 = toRgba(hex2, op);
+      if (hex1 === hex2) return `repeating-linear-gradient(${angleDeg}deg,${c1} 0 ${t}px,transparent ${t}px ${sp}px)`;
+      const period = sp * 2;
+      return `repeating-linear-gradient(${angleDeg}deg,${c1} 0 ${t}px,transparent ${t}px ${sp}px,${c2} ${sp}px ${sp+t}px,transparent ${sp+t}px ${period}px)`;
     }
-    const sT = _bgStripe(60,  .18);
-    const sR = _bgStripe(120, .13);
-    const sL = _bgStripe(90,  .09);
+    const sT = _faceStripe(60,  p.aHex, p.bHex);
+    const sR = _faceStripe(120, p.bHex, p.cHex);
+    const sL = _faceStripe(90,  p.cHex, p.aHex);
     const existing = bg.children;
     if (existing.length === cols * rows) {
       let i = 0;
