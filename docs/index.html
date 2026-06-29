@@ -1212,6 +1212,50 @@
   select, textarea, .mh-web-preview *, .mh-spr * {
     -webkit-text-stroke:0 !important; paint-order:normal !important;
   }
+  /* ── Pill tabs: bg cubes carry the hex aesthetic, tabs are lightweight neon labels ── */
+  .mh-ctab-cube { display:none !important; }
+  .mh-suite-tabs { gap:5px !important; }
+  .mh-suite-tab {
+    height:auto !important; padding:7px 15px !important;
+    background:rgba(var(--mh-dark-rgb,3,3,8),.88) !important;
+    border:1px solid rgba(255,255,255,.14) !important;
+    border-radius:999px !important; clip-path:none !important;
+    filter:none !important; transform:none !important;
+    transition:border-color .14s,box-shadow .14s,background .14s !important;
+  }
+  .mh-suite-tab:hover {
+    background:rgba(var(--mh-dark-rgb,3,3,8),.96) !important;
+    border-color:rgba(255,255,255,.3) !important;
+    filter:none !important; transform:translateY(-2px) !important;
+  }
+  .mh-suite-tab.active {
+    background:var(--mh-a,#ffff00) !important; border-color:var(--mh-a,#ffff00) !important;
+    box-shadow:0 0 14px var(--mh-a,#ffff00),0 0 28px var(--mh-a,#ffff00) !important;
+    filter:none !important; transform:none !important; animation:none !important;
+  }
+  .mh-suite-tab .mh-ctab-lbl {
+    position:static !important; transform:none !important; left:auto !important; top:auto !important;
+    color:var(--ink,#f0f0f8) !important; font:bold 10px 'Space Mono',monospace !important;
+    text-shadow:none !important; letter-spacing:.1em !important;
+  }
+  .mh-suite-tab.active .mh-ctab-lbl { color:var(--ink-on-a,#000) !important; }
+  /* ── Neon mode ── */
+  @keyframes mhNeonFlicker {
+    0%,18%,22%,25%,53%,57%,100%{
+      text-shadow:0 0 7px #fff,0 0 10px #fff,0 0 21px #fff,
+                  0 0 42px var(--mh-a,#ffff00),0 0 82px var(--mh-a),0 0 92px var(--mh-a);
+      opacity:1;
+    }
+    20%,24%,55%{ text-shadow:none; opacity:0.28; }
+  }
+  @keyframes mhNeonHue { from{filter:hue-rotate(0deg) saturate(1.6)} to{filter:hue-rotate(360deg) saturate(1.6)} }
+  body.mh-neon .mh-splash-h { animation:mhNeonFlicker 3s infinite,mhArcadeGlow 4s ease-in-out infinite !important; }
+  body.mh-neon .mh-splash-eye { animation:mhNeonFlicker 2.7s infinite reverse,mhArcadeGlow 4s ease-in-out infinite reverse !important; }
+  body.mh-neon #mhPageHexBg { animation:mhNeonHue 10s linear infinite; }
+  body.mh-neon .mh-builder-title { animation:mhBuilderPulse 1.5s ease-in-out infinite,mhNeonFlicker 2.2s infinite !important; }
+  body.mh-neon .mh-suite-tab.active { animation:mhPxPulse 0.8s ease-in-out infinite alternate !important; }
+  /* ── Logo sim canvas ── */
+  #mhLogoSimCanvas { display:none; border-radius:10px; width:100%; image-rendering:pixelated; margin:8px 0; }
 </style>
 <div id="mhPageFold"></div>
 <div id="mhSplash">
@@ -1295,6 +1339,7 @@
   <span class="mh-mode-btns">
     <button class="mh-mode-btn" id="mhGridBtn" title="Hex grid overlay">Grid+</button>
     <button class="mh-mode-btn" id="mhShadowBtn" title="Drop shadows">Shadow</button>
+    <button class="mh-mode-btn" id="mhNeonBtn" title="Neon mode">Neon</button>
   </span>
   <div class="mh-suite-tabs" id="mhSuiteTabs">
     <button class="mh-suite-tab active" data-suite-tab="web"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Web</span></button>
@@ -1372,6 +1417,10 @@
       <button id="mhLogoSvgDlBtn">Download SVG</button>
     </div>
     <div id="mhLogoHexMark" style="display:flex;justify-content:center;align-items:center;padding:28px 0;min-height:160px"></div>
+    <canvas id="mhLogoSimCanvas" width="240" height="160"></canvas>
+    <div class="mh-render-toolbar" style="margin-top:4px">
+      <button id="mhLogoNftBtn">Export Unique Art (PNG)</button>
+    </div>
     <div class="mh-render-toolbar" style="margin-top:10px;flex-wrap:wrap">
       <input id="mhLogoTextLogo" maxlength="24" value="HEXFIELD" placeholder="Brand name" style="flex:2" />
       <select id="mhLogoMarkLogo"><option value="hex">Hex mark</option><option value="cube">Cube mark</option><option value="none">Text only</option></select>
@@ -1852,12 +1901,112 @@
       var el = $(id);
       if (el && !el._mhWired) { el._mhWired = true; el.addEventListener('input', renderLogoDesigner); }
     });
+    // restart sim on text change
+    var _txtEl = $('mhLogoTextLogo');
+    if (_txtEl && !_txtEl._lsWired) {
+      _txtEl._lsWired = true;
+      _txtEl.addEventListener('input', () => { clearTimeout(_lsRestartT); _lsRestartT = setTimeout(_startLogoSim, 350); });
+    }
   }
+
+  // ── Logo sim: letter acts as boundary for reaction-diffusion ─────────────
+  let _lsGrid=null, _lsTimer=null, _lsRestartT=null;
+  function _buildLetterMask(text, W, H) {
+    const c=document.createElement('canvas'); c.width=W; c.height=H;
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#000';
+    const ch=(text||'H').charAt(0);
+    const fs=Math.round(H*0.72);
+    ctx.font=`700 ${fs}px 'Space Mono',monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(ch, W/2, H/2);
+    const d=ctx.getImageData(0,0,W,H).data;
+    const mask=new Uint8Array(W*H);
+    for(let i=0;i<W*H;i++) mask[i]=d[i*4]<128?1:0;
+    return mask;
+  }
+  class LogoSimGrid {
+    constructor(W,H,mask){
+      this.W=W; this.H=H; this.N=W*H; this.mask=mask;
+      this.u=new Float32Array(this.N).fill(1);
+      this.v=new Float32Array(this.N).fill(0);
+      this.f=0.037; this.k=0.060;
+      // seed random spots OUTSIDE the letter
+      for(let i=0;i<14;i++){
+        const px=2+Math.floor(Math.random()*(W-4));
+        const py=2+Math.floor(Math.random()*(H-4));
+        for(let dy=-3;dy<=3;dy++) for(let dx=-3;dx<=3;dx++){
+          const idx=((py+dy+H)%H)*W+((px+dx+W)%W);
+          if(!mask[idx]){this.u[idx]=0.25; this.v[idx]=0.5;}
+        }
+      }
+    }
+    step(){
+      const W=this.W,H=this.H,u=this.u,v=this.v,m=this.mask;
+      const nu=new Float32Array(this.N),nv=new Float32Array(this.N);
+      const f=this.f,k=this.k;
+      for(let r=0;r<H;r++){
+        for(let c=0;c<W;c++){
+          const i=r*W+c;
+          const ui=u[i],vi=v[i];
+          const Lu=u[r*W+((c-1+W)%W)]+u[r*W+((c+1)%W)]+u[((r-1+H)%H)*W+c]+u[((r+1)%H)*W+c]-4*ui;
+          const Lv=v[r*W+((c-1+W)%W)]+v[r*W+((c+1)%W)]+v[((r-1+H)%H)*W+c]+v[((r+1)%H)*W+c]-4*vi;
+          const uvv=ui*vi*vi;
+          const inside=m[i];
+          // inside letter: slower diffusion + different f/k → labyrinthine pattern
+          const du=inside?0.12:0.20, dv=inside?0.06:0.10;
+          const ff=inside?0.040:f, fk=inside?0.058:k;
+          nu[i]=Math.max(0,Math.min(1,ui+du*Lu-uvv+ff*(1-ui)));
+          nv[i]=Math.max(0,Math.min(1,vi+dv*Lv+uvv-(ff+fk)*vi));
+        }
+      }
+      this.u=nu; this.v=nv;
+    }
+  }
+  function _startLogoSim(){
+    clearInterval(_lsTimer); _lsGrid=null;
+    const canvas=$('mhLogoSimCanvas'); if(!canvas) return;
+    const W=240,H=160;
+    const text=($('mhLogoTextLogo')||{}).value||'H';
+    const mask=_buildLetterMask(text,W,H);
+    _lsGrid=new LogoSimGrid(W,H,mask);
+    canvas.style.display='block';
+    const h2r=hex=>{const n=parseInt(hex.replace('#',''),16);return[(n>>16)&255,(n>>8)&255,n&255];};
+    _lsTimer=setInterval(()=>{
+      if(!_lsGrid) return;
+      _lsGrid.step();
+      const p=getWheelPalette();
+      const ctx=canvas.getContext('2d');
+      const img=ctx.createImageData(W,H);
+      const A=h2r(p.aHex),B=h2r(p.bHex),C=h2r(p.cHex),D=[6,6,14];
+      for(let i=0;i<W*H;i++){
+        const vv=Math.min(1,_lsGrid.v[i]*3.0);
+        const ins=_lsGrid.mask[i];
+        let r,g,b;
+        if(ins){
+          // inside letter: C→B spectrum
+          r=Math.round(C[0]+(B[0]-C[0])*vv);
+          g=Math.round(C[1]+(B[1]-C[1])*vv);
+          b=Math.round(C[2]+(B[2]-C[2])*vv);
+        } else {
+          // outside: near-black → A (yellow/primary)
+          r=Math.round(D[0]+(A[0]-D[0])*vv);
+          g=Math.round(D[1]+(A[1]-D[1])*vv);
+          b=Math.round(D[2]+(A[2]-D[2])*vv);
+        }
+        img.data[i*4]=r; img.data[i*4+1]=g; img.data[i*4+2]=b; img.data[i*4+3]=255;
+      }
+      ctx.putImageData(img,0,0);
+    },80);
+  }
+
   function switchSuiteTab(tab){
     const inPanel = $('mhBuilder' + tab.charAt(0).toUpperCase() + tab.slice(1));
     const outPanel = document.querySelector('.mh-builder-panel.active');
     if (!inPanel || inPanel === outPanel) return;
     document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
+    clearInterval(_lsTimer); _lsGrid = null; // stop logo sim on any tab switch
     const bg = document.getElementById('mhPageHexBg');
     if (bg) { bg.classList.add('mh-bg-pulse'); setTimeout(() => bg.classList.remove('mh-bg-pulse'), 420); }
     const paper = document.getElementById('mhFoldPaper');
@@ -1873,7 +2022,7 @@
       if (tab === 'kit' && typeof renderKitGrid === 'function') renderKitGrid();
       if (tab === 'fonts' && typeof loadFontEffects === 'function') loadFontEffects();
       if (tab === 'type' && typeof renderTypeScale === 'function') renderTypeScale();
-      if (tab === 'logo') renderLogoDesigner();
+      if (tab === 'logo') { renderLogoDesigner(); setTimeout(_startLogoSim, 250); }
     }
     if (paper) {
       paper.classList.remove('mh-paper-cover','mh-paper-reveal');
@@ -2106,6 +2255,9 @@
     const _dn = parseInt(_darkHex.replace('#',''), 16);
     document.documentElement.style.setProperty('--mh-dark', _darkHex);
     document.documentElement.style.setProperty('--mh-dark-rgb', `${(_dn>>16)&255},${(_dn>>8)&255},${_dn&255}`);
+    document.documentElement.style.setProperty('--ink-on-a', _luma(p.aHex) > 0.35 ? '#000' : '#fff');
+    document.documentElement.style.setProperty('--ink-on-b', _luma(p.bHex) > 0.35 ? '#000' : '#fff');
+    document.documentElement.style.setProperty('--ink-on-c', _luma(p.cHex) > 0.35 ? '#000' : '#fff');
     document.querySelectorAll('.mh-dot').forEach((el, i) => { el.style.background = [p.aHex, p.cHex, p.bHex][i % 3]; });
     document.querySelectorAll('.mh-line').forEach((el, i) => {
       const color = [p.aHex, p.bHex, p.cHex][i % 3];
@@ -2686,13 +2838,39 @@
     if (backBtn) backBtn.addEventListener('click', backToSplash);
 
     // ── Mode toggle buttons ────────────────────────────────────────────────
-    [['mhGridBtn','mh-grid-over'],['mhShadowBtn','mh-shadows']].forEach(([id, cls]) => {
+    [['mhGridBtn','mh-grid-over'],['mhShadowBtn','mh-shadows'],['mhNeonBtn','mh-neon']].forEach(([id, cls]) => {
       const btn = document.getElementById(id);
       if (!btn) return;
       btn.addEventListener('click', () => {
         document.body.classList.toggle(cls);
         btn.classList.toggle('active', document.body.classList.contains(cls));
       });
+    });
+    // ── NFT / unique art export from logo sim ────────────────────────────────
+    document.addEventListener('click', function(e) {
+      if (e.target.id !== 'mhLogoNftBtn') return;
+      const simC = $('mhLogoSimCanvas');
+      const svgEl = $('mhLogoPreviewLogo')?.querySelector('svg');
+      if (!simC || simC.style.display === 'none') { alert('Open the Logo tab first — the sim needs to run.'); return; }
+      const out = document.createElement('canvas');
+      out.width = 480; out.height = 320;
+      const ctx = out.getContext('2d');
+      ctx.drawImage(simC, 0, 0, 480, 320);
+      if (svgEl) {
+        const blob = new Blob([svgEl.outerHTML], {type:'image/svg+xml'});
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          ctx.globalAlpha = 0.88; ctx.globalCompositeOperation = 'screen';
+          ctx.drawImage(img, 0, 80, 480, 160);
+          ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+          URL.revokeObjectURL(url);
+          out.toBlob(b => { const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`hex-art-${Date.now()}.png`; a.click(); }, 'image/png');
+        };
+        img.src = url;
+      } else {
+        out.toBlob(b => { const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`hex-art-${Date.now()}.png`; a.click(); }, 'image/png');
+      }
     });
 
     // ── Start Gray-Scott simulation ────────────────────────────────────────
