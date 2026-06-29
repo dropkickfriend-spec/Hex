@@ -548,23 +548,38 @@ def build_tonality_renderer_html() -> str:
   .mh-suite-tab.active .mh-ctab-r { filter:brightness(0.88); }
   .mh-suite-tab.active .mh-ctab-l { filter:brightness(0.46); }
   .mh-ctab-lbl { display:block; }
-  .mh-builder-panel { display:none; margin-top:14px; border-radius:14px; background:rgba(255,255,255,.025); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); padding:14px; transform-origin:top center; }
-  .mh-builder-panel.active { display:block; }
-  .mh-builder-panel.mh-fold-out { display:block; animation:mhFoldOut 0.26s cubic-bezier(.4,0,.8,.6) forwards; pointer-events:none; }
-  .mh-builder-panel.mh-fold-in { animation:mhFoldIn 0.28s cubic-bezier(.15,.7,.35,1.1) forwards; }
-  @keyframes mhFoldOut {
-    0%  { transform:perspective(900px) rotateX(0deg) scaleY(1) skewX(0deg); opacity:1; }
-    14% { transform:perspective(900px) rotateX(-7deg) scaleY(.98) skewX(calc(var(--mh-skew,0deg)*.3)); opacity:.92; }
-    44% { transform:perspective(900px) rotateX(-35deg) scaleY(.88) skewX(var(--mh-skew,0deg)); opacity:.52; }
-    74% { transform:perspective(900px) rotateX(-72deg) scaleY(.72) skewX(calc(var(--mh-skew,0deg)*.35)); opacity:.14; }
-    100%{ transform:perspective(900px) rotateX(-90deg) scaleY(.58) skewX(0deg); opacity:0; }
+  .mh-panels-wrap { position:relative; }
+  .mh-builder-panel {
+    display:none; margin-top:14px; border-radius:14px;
+    background:rgba(255,255,255,.025);
+    background-image:
+      linear-gradient(var(--mh-grid-line,rgba(128,128,128,.07)) 1px, transparent 1px),
+      linear-gradient(90deg, var(--mh-grid-line,rgba(128,128,128,.07)) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: -1px -1px;
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); padding:14px;
   }
-  @keyframes mhFoldIn {
-    0%  { transform:perspective(900px) rotateX(90deg) scaleY(.58) skewX(0deg); opacity:0; }
-    24% { transform:perspective(900px) rotateX(44deg) scaleY(.8) skewX(calc(var(--mh-skew,0deg)*-.5)); opacity:.3; }
-    56% { transform:perspective(900px) rotateX(13deg) scaleY(.97) skewX(calc(var(--mh-skew,0deg)*-.8)); opacity:.74; }
-    80% { transform:perspective(900px) rotateX(-3.5deg) scaleY(1.03) skewX(calc(var(--mh-skew,0deg)*-.2)); opacity:.96; }
-    100%{ transform:perspective(900px) rotateX(0deg) scaleY(1) skewX(0deg); opacity:1; }
+  .mh-builder-panel.active { display:block; }
+  #mhFoldPaper {
+    display:none; position:absolute; inset:0; z-index:20; border-radius:14px;
+    background-color:rgba(7,7,12,.94);
+    background-image:
+      linear-gradient(var(--mh-grid-line,rgba(128,128,128,.09)) 1px, transparent 1px),
+      linear-gradient(90deg, var(--mh-grid-line,rgba(128,128,128,.09)) 1px, transparent 1px);
+    background-size:24px 24px;
+    transform-origin:top center; pointer-events:none;
+  }
+  #mhFoldPaper.mh-paper-cover { display:block; animation:mhPaperCover 0.26s cubic-bezier(.4,0,.6,1) forwards; }
+  #mhFoldPaper.mh-paper-reveal { display:block; animation:mhPaperReveal 0.3s cubic-bezier(.15,.7,.3,1.1) forwards; }
+  @keyframes mhPaperCover {
+    0%  { transform:perspective(900px) rotateX(-90deg) scaleY(.55); opacity:0; }
+    38% { opacity:.75; }
+    100%{ transform:perspective(900px) rotateX(0deg) scaleY(1); opacity:1; }
+  }
+  @keyframes mhPaperReveal {
+    0%  { transform:perspective(900px) rotateX(0deg) scaleY(1); opacity:1; }
+    62% { opacity:.6; }
+    100%{ transform:perspective(900px) rotateX(90deg) scaleY(.55); opacity:0; }
   }
   .mh-builder-title { color:var(--mh-a,#ffff00); font:12px 'Space Mono', monospace; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
   .mh-web-preview { position:relative; min-height:360px; margin-top:10px; border-radius:14px; overflow:hidden; background:#05050a; box-shadow:0 0 0 1px rgba(255,255,255,.04); }
@@ -845,6 +860,8 @@ def build_tonality_renderer_html() -> str:
     <button class="mh-suite-tab" data-suite-tab="gif"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">GIF</span></button>
     <button class="mh-suite-tab" data-suite-tab="qr"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">QR</span></button>
   </div>
+  <div class="mh-panels-wrap" id="mhPanelsWrap">
+  <div id="mhFoldPaper"></div>
   <div class="mh-builder-panel active" id="mhBuilderWeb">
     <div class="mh-builder-title">HEXFIELD website designer · full-page templates + export</div>
     <div class="mh-tpl-grid" id="mhTplGrid"></div>
@@ -903,6 +920,7 @@ def build_tonality_renderer_html() -> str:
       <button id="mhQrSvgBtn" style="display:none">Download SVG</button>
       <span id="mhQrStatus" class="mh-export-status"></span>
     </div>
+  </div>
   </div>
   <div class="mh-render-toolbar">
     <input id="mhUrl" value="https://example.com" placeholder="https://your-site.com" />
@@ -1277,23 +1295,17 @@ def build_tonality_renderer_html() -> str:
     updateBuilderCode();
   }
   function switchSuiteTab(tab){
-    document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
-    const outPanel = document.querySelector('.mh-builder-panel.active');
     const inPanel = $('mhBuilder' + tab.charAt(0).toUpperCase() + tab.slice(1));
+    const outPanel = document.querySelector('.mh-builder-panel.active');
     if (!inPanel || inPanel === outPanel) return;
+    document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
     const bg = document.getElementById('mhPageHexBg');
     if (bg) { bg.classList.add('mh-bg-pulse'); setTimeout(() => bg.classList.remove('mh-bg-pulse'), 420); }
-    const skew = ((Math.random() * 3) - 1.5).toFixed(2) + 'deg';
-    const DUR = 260;
-    if (outPanel) {
-      outPanel.style.setProperty('--mh-skew', skew);
-      outPanel.classList.add('mh-fold-out');
-      setTimeout(() => outPanel.classList.remove('active','mh-fold-out'), DUR);
-    }
-    setTimeout(() => {
-      inPanel.style.setProperty('--mh-skew', skew);
-      inPanel.classList.add('active','mh-fold-in');
-      setTimeout(() => inPanel.classList.remove('mh-fold-in'), DUR + 50);
+    const paper = document.getElementById('mhFoldPaper');
+    const DUR_COVER = 260, DUR_REVEAL = 300;
+    function _activateTab() {
+      if (outPanel) outPanel.classList.remove('active');
+      inPanel.classList.add('active');
       if (tab === 'web') renderWebDesigner();
       if (tab === 'game') { setVal('mhGame','platformer'); render(); }
       if (tab === 'character') renderCharacterDesigner();
@@ -1302,7 +1314,21 @@ def build_tonality_renderer_html() -> str:
       if (tab === 'kit' && typeof renderKitGrid === 'function') renderKitGrid();
       if (tab === 'fonts' && typeof loadFontEffects === 'function') loadFontEffects();
       if (tab === 'type' && typeof renderTypeScale === 'function') renderTypeScale();
-    }, outPanel ? DUR - 35 : 0);
+    }
+    if (paper) {
+      paper.classList.remove('mh-paper-cover','mh-paper-reveal');
+      void paper.offsetWidth;
+      paper.classList.add('mh-paper-cover');
+      setTimeout(() => {
+        _activateTab();
+        paper.classList.remove('mh-paper-cover');
+        void paper.offsetWidth;
+        paper.classList.add('mh-paper-reveal');
+        setTimeout(() => paper.classList.remove('mh-paper-reveal'), DUR_REVEAL);
+      }, DUR_COVER);
+    } else {
+      _activateTab();
+    }
   }
   function renderCharacterDesigner(){
     const target = $('mhCharacterPreview'); if (!target) return;
@@ -1587,18 +1613,34 @@ def build_tonality_renderer_html() -> str:
     document.documentElement.style.setProperty('--mh-a', p.aHex);
     document.documentElement.style.setProperty('--mh-b', p.bHex);
     document.documentElement.style.setProperty('--mh-c', p.cHex);
+    document.documentElement.style.setProperty('--mh-grid-line',
+      `rgba(${p.centre[0]},${p.centre[1]},${p.centre[2]},.09)`);
     const sz = 46, hexH = sz / 0.866, rowStep = hexH * 0.75 + 2, colStep = sz + 2;
     const cols = Math.ceil(window.innerWidth / colStep) + 2;
     const rows = Math.ceil((window.innerHeight + 200) / rowStep) + 2;
     const pal = [p.aHex, p.bHex, p.cHex, ...p.colors];
     const maxDelay = 2.4;
     function _bgStripe(angle, fallback) {
-      if (typeof buildMunkerPattern === 'function') return buildMunkerPattern(angle);
+      if (typeof buildMunkerPattern === 'function') return buildMunkerPattern(angle) || `repeating-linear-gradient(${angle}deg,rgba(255,255,255,${fallback}) 0 2px,transparent 2px 8px)`;
       return `repeating-linear-gradient(${angle}deg,rgba(255,255,255,${fallback}) 0 2px,transparent 2px 8px)`;
     }
     const sT = _bgStripe(60,  .18);
     const sR = _bgStripe(120, .13);
     const sL = _bgStripe(90,  .09);
+    const existing = bg.children;
+    if (existing.length === cols * rows) {
+      let i = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const t = existing[i++];
+          t.style.setProperty('--pxc', pal[(r*cols+c) % pal.length]);
+          if (t.children[0]) t.children[0].style.backgroundImage = sT;
+          if (t.children[1]) t.children[1].style.backgroundImage = sR;
+          if (t.children[2]) t.children[2].style.backgroundImage = sL;
+        }
+      }
+      return;
+    }
     let h = '';
     for (let r = 0; r < rows; r++) {
       const off = r % 2 ? (colStep * 0.5).toFixed(0) : 0;
@@ -1687,6 +1729,15 @@ def build_tonality_renderer_html() -> str:
     syncLineThickness(thick, false);
     stage.style.setProperty('--mh-opacity', mode === 'off' ? '.0' : String(opacity/100));
     stage.style.setProperty('--mh-speed', speed + 's');
+    if (typeof munker !== 'undefined') {
+      munker.mode    = mode;
+      munker.thick   = thick;
+      munker.spacing = spacing;
+      munker.opacity = opacity;
+      munker.pattern = u.pattern;
+      munker.speed   = speed;
+    }
+    if (typeof renderHexView === 'function') renderHexView();
     applyRenderPalette();
     buildArtifactField($('mhGame')?.value + ($('mhUrl')?.value || ''));
   }
