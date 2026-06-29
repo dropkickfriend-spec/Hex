@@ -1198,15 +1198,26 @@
   .mh-render-adapter, .mh-builder-panel, .mh-unified-munker,
   .mh-export-panel, .mh-painter-tip { background: none !important; }
   .mh-splash-card { background: rgba(var(--mh-dark-rgb, 3,3,8), .82); }
-  /* ── Broad text contrast: thick subtitle outline on all floating UI text ── */
+  /* ── Text contrast: single deep shadow, no white backfill ── */
   .mh-render-adapter *, .mh-builder-panel *, .mh-unified-munker *,
   .mh-export-panel *, .mh-painter-tip *, .mh-splash-card * {
-    text-shadow:
-      -2px -2px 0 var(--mh-dark,#0a0a1a), 0 -2px 0 var(--mh-dark,#0a0a1a), 2px -2px 0 var(--mh-dark,#0a0a1a),
-      -2px  0   0 var(--mh-dark,#0a0a1a), 2px  0   0 var(--mh-dark,#0a0a1a),
-      -2px  2px 0 var(--mh-dark,#0a0a1a), 0    2px 0 var(--mh-dark,#0a0a1a), 2px  2px 0 var(--mh-dark,#0a0a1a),
-      0 0 14px rgba(0,0,0,.95) !important;
+    text-shadow: 0 1px 10px rgba(0,0,0,.98), 0 2px 4px rgba(0,0,0,.8) !important;
   }
+  /* ── Dark theme inputs / selects ── */
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+  select, textarea {
+    background: rgba(0,0,0,.55) !important;
+    color: var(--ink,#e8e8f4) !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    border-radius: 6px !important;
+    padding: 5px 8px !important;
+    outline: none !important;
+  }
+  input:not([type="range"]):focus, select:focus, textarea:focus {
+    border-color: rgba(var(--mh-a-rgb,255,220,0),.5) !important;
+    box-shadow: 0 0 0 2px rgba(var(--mh-a-rgb,255,220,0),.15) !important;
+  }
+  select option { background:#0e0e1e; color:#e8e8f4; }
   /* ── Range sliders: palette-A thumb with glow ── */
   input[type="range"] { -webkit-appearance:none; appearance:none; height:5px; border-radius:99px; background:rgba(255,255,255,.16); outline:none; cursor:pointer; }
   input[type="range"]::-webkit-slider-runnable-track { height:5px; border-radius:99px; background:rgba(255,255,255,.16); }
@@ -1260,10 +1271,28 @@
   body.mh-neon #mhPageHexBg { animation:mhNeonHue 10s linear infinite; }
   body.mh-neon .mh-builder-title { animation:mhBuilderPulse 1.5s ease-in-out infinite,mhNeonFlicker 2.2s infinite !important; }
   body.mh-neon .mh-suite-tab.active { animation:mhPxPulse 0.8s ease-in-out infinite alternate !important; }
-  /* ── Logo sim canvas grid ── */
-  #mhLogoSimGrid { display:none; grid-template-columns:repeat(4,1fr); gap:3px; margin:8px 0; }
-  #mhLogoSimGrid canvas { width:100%; aspect-ratio:3/2; border-radius:4px; cursor:pointer; image-rendering:pixelated; border:1px solid transparent; transition:border-color .12s,box-shadow .12s; }
-  #mhLogoSimGrid canvas.mh-sim-sel { border-color:var(--mh-a,#ff0); box-shadow:0 0 8px var(--mh-a,#ff0); }
+  /* ── Logo sim canvas grid: iso-face diamonds ── */
+  #mhLogoSimGrid { display:none; grid-template-columns:repeat(4,1fr); gap:2px; margin:6px 0; }
+  #mhLogoSimGrid canvas {
+    width:100%; aspect-ratio:2/1;
+    cursor:pointer; image-rendering:pixelated;
+    clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);
+    border-radius:0; border:none;
+    transition:filter .12s;
+    filter:brightness(0.85);
+  }
+  #mhLogoSimGrid canvas.mh-sim-sel {
+    filter:brightness(1.35) drop-shadow(0 0 6px var(--mh-a,#ff0));
+  }
+  /* ── Logo library: saved picks ── */
+  #mhLogoLibrary { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px; min-height:0; }
+  .mh-lib-chip {
+    display:flex; flex-direction:column; align-items:center;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10);
+    border-radius:6px; padding:4px 8px; cursor:pointer; font:9px 'Space Mono',monospace;
+    color:var(--ink-dim,#9090a8); transition:border-color .1s,background .1s;
+  }
+  .mh-lib-chip:hover { border-color:var(--mh-a,#ff0); background:rgba(255,255,255,.12); color:var(--ink,#e8e8f4); }
   /* ── Wheel hide toggle ── */
   #mhWheelToggle { margin:0 8px 10px; padding:5px 12px; font:10px 'Space Mono',monospace; letter-spacing:.06em; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); border-radius:6px; cursor:pointer; color:var(--ink-dim); }
   /* ── Domino cascade: tiles squash top-to-bottom on tab switch ── */
@@ -1499,6 +1528,7 @@
     </div>
     <div id="mhLogoHexMark" style="display:flex;justify-content:center;align-items:center;padding:14px 0;min-height:100px"></div>
     <div id="mhLogoSimGrid"></div>
+    <div id="mhLogoLibrary"></div>
     <div class="mh-render-toolbar" style="margin-top:4px">
       <button id="mhLogoNftBtn">Export Unique Art (PNG)</button>
     </div>
@@ -1507,8 +1537,15 @@
       <select id="mhLogoMarkLogo"><option value="hex">Hex mark</option><option value="cube">Cube mark</option><option value="none">Text only</option></select>
       <select id="mhLogoLayoutLogo"><option value="left">Mark left</option><option value="top">Mark top</option><option value="text">Text only</option></select>
     </div>
-    <input id="mhLogoCategoryLogo" maxlength="40" value="" placeholder="Category  ·  e.g.  Tech · Design · Sport"
-      style="margin-top:4px;width:100%;box-sizing:border-box" />
+    <div class="mh-render-toolbar" style="margin-top:4px;flex-wrap:wrap">
+      <input id="mhLogoCategoryLogo" maxlength="40" value="" placeholder="Category  ·  e.g.  Tech · Design · Sport" style="flex:2" />
+      <select id="mhLogoSimFont">
+        <option value="'Space Mono',monospace">Space Mono</option>
+        <option value="serif">Serif</option>
+        <option value="sans-serif">Sans</option>
+        <option value="Impact,display">Impact</option>
+      </select>
+    </div>
     <input class="mh-font-text-input" id="mhLogoTaglineLogo" value="Palette · Optics · Motion" placeholder="Tagline" style="margin-top:6px;width:100%;box-sizing:border-box" />
     <div id="mhLogoPreviewLogo" style="margin-top:14px;text-align:center"></div>
   </div>
@@ -1972,33 +2009,40 @@
       var el = $(id);
       if (el && !el._mhWired) { el._mhWired = true; el.addEventListener('input', renderLogoDesigner); }
     });
-    // restart sim on text change
+    // restart sim on text or font change
     var _txtEl = $('mhLogoTextLogo');
     if (_txtEl && !_txtEl._lsWired) {
       _txtEl._lsWired = true;
       _txtEl.addEventListener('input', () => { clearTimeout(_lsRestartT); _lsRestartT = setTimeout(_startLogoSim, 350); });
     }
+    var _fontEl = $('mhLogoSimFont');
+    if (_fontEl && !_fontEl._lsWired) {
+      _fontEl._lsWired = true;
+      _fontEl.addEventListener('change', () => { clearTimeout(_lsRestartT); _lsRestartT = setTimeout(_startLogoSim, 100); });
+    }
   }
 
   // ── Logo sim: billiards in letter boundary ────────────────────────────────
   let _lsGrids=[], _lsRafId=null, _lsRestartT=null;
+  // 4 fonts × 4 rules = 16 combos
+  const _lsFonts=["'Space Mono',monospace","serif","sans-serif","Impact,display"];
   const _lsRules=[
-    {rule:'pass',    N:4, spd:3.5, hOff:0},
-    {rule:'avoid',   N:5, spd:4,   hOff:30},
-    {rule:'seek',    N:4, spd:3,   hOff:60},
-    {rule:'like-att',N:6, spd:3,   hOff:90},
-    {rule:'like-rep',N:6, spd:4,   hOff:120},
-    {rule:'no-rep',  N:4, spd:3.5, hOff:150},
-    {rule:'excl',    N:5, spd:3.5, hOff:180},
-    {rule:'flock',   N:6, spd:4,   hOff:210},
-    {rule:'spiral',  N:4, spd:3,   hOff:240},
-    {rule:'chaos',   N:5, spd:4,   hOff:270},
-    {rule:'avoid',   N:7, spd:5,   hOff:300},
-    {rule:'seek',    N:3, spd:2.5, hOff:330},
-    {rule:'excl',    N:8, spd:3,   hOff:20},
-    {rule:'flock',   N:4, spd:5,   hOff:50},
-    {rule:'spiral',  N:6, spd:2.5, hOff:80},
-    {rule:'chaos',   N:3, spd:5,   hOff:110},
+    {rule:'avoid',   N:4, spd:3.5, hOff:0,   font:0},
+    {rule:'flock',   N:5, spd:4,   hOff:30,  font:0},
+    {rule:'spiral',  N:4, spd:3,   hOff:60,  font:0},
+    {rule:'chaos',   N:5, spd:4,   hOff:90,  font:0},
+    {rule:'seek',    N:4, spd:3.5, hOff:120, font:1},
+    {rule:'avoid',   N:6, spd:4,   hOff:150, font:1},
+    {rule:'no-rep',  N:4, spd:3,   hOff:180, font:1},
+    {rule:'excl',    N:5, spd:4,   hOff:210, font:1},
+    {rule:'like-att',N:5, spd:3.5, hOff:240, font:2},
+    {rule:'flock',   N:4, spd:5,   hOff:270, font:2},
+    {rule:'chaos',   N:6, spd:3.5, hOff:300, font:2},
+    {rule:'spiral',  N:3, spd:2.5, hOff:330, font:2},
+    {rule:'like-rep',N:5, spd:4,   hOff:20,  font:3},
+    {rule:'excl',    N:7, spd:3,   hOff:50,  font:3},
+    {rule:'seek',    N:4, spd:5,   hOff:80,  font:3},
+    {rule:'no-rep',  N:6, spd:2.5, hOff:110, font:3},
   ];
   function _drawLEDBall(ctx,bx,by,hue,inside,tick){
     const S=3, cx=Math.round(bx), cy=Math.round(by);
@@ -2011,14 +2055,14 @@
       ctx.fillRect(cx-1+c, cy-1+r, 1, 1);
     }
   }
-  function _buildLetterMask(text, W, H) {
+  function _buildLetterMask(text, W, H, font) {
     const c=document.createElement('canvas'); c.width=W; c.height=H;
     const ctx=c.getContext('2d');
     ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
     ctx.fillStyle='#000';
     const ch=(text||'H').charAt(0);
     const fs=Math.round(H*0.72);
-    ctx.font=`700 ${fs}px 'Space Mono',monospace`;
+    ctx.font=`700 ${fs}px ${font||"'Space Mono',monospace"}`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(ch, W/2, H/2);
     const d=ctx.getImageData(0,0,W,H).data;
@@ -2172,12 +2216,36 @@
     if(_lsRafId){cancelAnimationFrame(_lsRafId);_lsRafId=null;}
     _lsGrids=[];
   }
+  async function _saveLogoLibEntry(v,sim){
+    const sb=sbClient(); if(!sb) return;
+    const brand=($('mhLogoTextLogo')||{}).value||'';
+    const cat=($('mhLogoCategoryLogo')||{}).value||'';
+    try{ await sb.from('logo_library').insert({
+      font:_lsFonts[v.font||0],rule:v.rule,hue_off:v.hOff,
+      brand_name:brand,category:cat,
+      coverage:sim.outerVisited.size,expanded:sim.expanded
+    }); _loadLogoLibrary(); }catch(_){}
+  }
+  async function _loadLogoLibrary(){
+    const lib=$('mhLogoLibrary'); if(!lib) return;
+    const sb=sbClient(); if(!sb){lib.innerHTML='';return;}
+    try{
+      const {data}=await sb.from('logo_library').select('*').order('ts',{ascending:false}).limit(12);
+      if(!data||!data.length){lib.innerHTML='';return;}
+      lib.innerHTML=data.map(r=>`<div class="mh-lib-chip" title="${r.font} · ${r.rule}">
+        <span style="font-size:11px;color:var(--ink,#e8e8f4)">${r.brand_name||'?'}</span>
+        <span>${(r.font||'').replace(/,.*/,'').replace(/'/g,'').slice(0,9)}</span>
+        <span style="opacity:.6">${r.rule}</span>
+      </div>`).join('');
+    }catch(_){lib.innerHTML='';}
+  }
   function _startLogoSim(){
     _stopLogoSims();
     const grid=$('mhLogoSimGrid'); if(!grid) return;
     grid.style.display='grid'; grid.innerHTML='';
     const text=($('mhLogoTextLogo')||{}).value||'H';
-    const W=60,H=40;
+    const fontOverride=($('mhLogoSimFont')||{}).value||null;
+    const W=60,H=30; // 2:1 ratio matches iso face diamond
     const darkHex=(getComputedStyle(document.documentElement).getPropertyValue('--mh-dark').trim()||'#0a0a14');
     const dn=parseInt(darkHex.replace('#',''),16);
     const [dr,dg,db]=[(dn>>16)&255,(dn>>8)&255,dn&255];
@@ -2187,18 +2255,20 @@
       const canvas=document.createElement('canvas');
       canvas.width=W; canvas.height=H;
       grid.appendChild(canvas);
-      const mask=_buildLetterMask(text,W,H);
+      const font=fontOverride||_lsFonts[v.font||0];
+      const mask=_buildLetterMask(text,W,H,font);
       const sim=new BilliardsLogoSim(W,H,mask,v.N,v.spd,(baseHue+v.hOff)%360);
-      sim._rule=v.rule;
+      sim._rule=v.rule; sim._v=v;
       _lsGrids.push(sim);
       const ctx=canvas.getContext('2d');
       ctx.fillStyle=darkHex; ctx.fillRect(0,0,W,H);
-      ctx.fillStyle='rgba(255,255,255,.12)';
+      ctx.fillStyle='rgba(255,255,255,.14)';
       for(let i=0;i<W*H;i++) if(mask[i]) ctx.fillRect(i%W,Math.floor(i/W),1,1);
       ctxs.push({ctx,W,H,sim});
       canvas.onclick=()=>{
         document.querySelectorAll('#mhLogoSimGrid canvas').forEach(c=>c.classList.remove('mh-sim-sel'));
         canvas.classList.add('mh-sim-sel');
+        _saveLogoLibEntry(v,sim);
       };
       if(vi===0) canvas.classList.add('mh-sim-sel');
     });
@@ -2219,6 +2289,7 @@
       if(_lsGrids[0]&&_lsGrids[0].tick%120===0) _logBilliards(_lsGrids[0]);
     }
     _rafLoop();
+    _loadLogoLibrary();
   }
 
   function switchSuiteTab(tab){
