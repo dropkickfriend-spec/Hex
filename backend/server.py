@@ -492,11 +492,7 @@ def build_tonality_renderer_html() -> str:
   .mh-render-adapter {
     margin: 12px;
     border-radius: 18px;
-    background: rgba(6,6,12,.72);
-    backdrop-filter: blur(28px) saturate(1.5);
-    -webkit-backdrop-filter: blur(28px) saturate(1.5);
     padding: 14px;
-    box-shadow: 0 28px 90px rgba(0,0,0,.55);
   }
   .mh-render-adapter h2 { margin-top: 0; }
   .mh-render-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -555,14 +551,7 @@ def build_tonality_renderer_html() -> str:
   }
   .mh-panels-wrap { position:relative; overflow:hidden; border-radius:14px; }
   .mh-builder-panel {
-    display:none; margin-top:14px; border-radius:14px;
-    background:rgba(255,255,255,.025);
-    background-image:
-      linear-gradient(var(--mh-grid-line,rgba(128,128,128,.07)) 1px, transparent 1px),
-      linear-gradient(90deg, var(--mh-grid-line,rgba(128,128,128,.07)) 1px, transparent 1px);
-    background-size: 24px 24px;
-    background-position: -1px -1px;
-    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); padding:14px;
+    display:none; margin-top:14px; border-radius:14px; padding:14px;
   }
   .mh-builder-panel.active { display:block; }
   #mhFoldPaper {
@@ -629,7 +618,6 @@ def build_tonality_renderer_html() -> str:
   .mh-unified-munker {
     margin-top: 10px;
     border-radius: 10px;
-    background: rgba(0,0,0,.18);
     padding: 10px;
   }
   .mh-unified-munker-title {
@@ -654,7 +642,6 @@ def build_tonality_renderer_html() -> str:
     margin-top: 9px;
     border-left: 3px solid var(--mh-c, #00ffff);
     border-radius: 8px;
-    background: rgba(0,0,0,.22);
     padding: 9px 10px;
     color: var(--ink-dim);
     font: 11px/1.45 'Space Mono', monospace;
@@ -662,7 +649,6 @@ def build_tonality_renderer_html() -> str:
   .mh-export-panel {
     margin-top: 10px;
     border-radius: 10px;
-    background: rgba(0,0,0,.18);
     padding: 10px;
   }
   .mh-export-title {
@@ -896,8 +882,6 @@ def build_tonality_renderer_html() -> str:
     max-width:660px; width:100%;
   }
   .mh-splash-card {
-    background:rgba(6,6,14,.76); backdrop-filter:blur(28px) saturate(1.4);
-    -webkit-backdrop-filter:blur(28px) saturate(1.4);
     border-radius:16px; padding:15px; cursor:pointer; position:relative; overflow:hidden;
     transition:transform .15s cubic-bezier(.2,.8,.35,1.3);
     filter:drop-shadow(0 7px 24px rgba(0,0,0,.6));
@@ -976,6 +960,22 @@ def build_tonality_renderer_html() -> str:
     .mh-splash-h{font-size:18px}
     .mh-suite-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
   }
+  /* ── View mode toggles ── */
+  body.mh-grid-over #mhPageHexBg { z-index:30; mix-blend-mode:screen; opacity:0.18; pointer-events:none; }
+  body.mh-shadows .mh-render-adapter h2,
+  body.mh-shadows .mh-unified-munker-title,
+  body.mh-shadows .mh-builder-title,
+  body.mh-shadows .mh-suite-tab .mh-ctab-lbl,
+  body.mh-shadows .mh-render-toolbar label,
+  body.mh-shadows .mh-export-status,
+  body.mh-shadows .mh-splash-eye,
+  body.mh-shadows .mh-splash-h,
+  body.mh-shadows .mh-splash-sub,
+  body.mh-shadows .mh-splash-card { text-shadow:0 1px 6px rgba(0,0,0,.98),0 0 18px rgba(0,0,0,.8); }
+  .mh-mode-btns { display:inline-flex; gap:5px; margin-left:8px; vertical-align:middle; }
+  .mh-mode-btn { background:rgba(255,255,255,.06); border:none; border-radius:8px; color:var(--ink-dim,#9090a8); font:10px 'Space Mono',monospace; letter-spacing:.06em; padding:6px 10px; min-height:0; cursor:pointer; transition:background .12s,color .12s; }
+  .mh-mode-btn:hover { background:rgba(255,255,255,.12); color:var(--ink,#dddde8); }
+  .mh-mode-btn.active { background:rgba(255,255,255,.14); color:var(--mh-a,#ffff00); box-shadow:0 0 8px var(--mh-a,#ffff00); }
 </style>
 <div id="mhPageFold"></div>
 <div id="mhSplash">
@@ -1056,6 +1056,10 @@ def build_tonality_renderer_html() -> str:
 </div>
 <section class="mh-render-adapter" id="mhRenderAdapter">
   <button class="mh-back-btn" id="mhBackBtn">&#8592; Tools</button>
+  <span class="mh-mode-btns">
+    <button class="mh-mode-btn" id="mhGridBtn" title="Hex grid overlay">Grid+</button>
+    <button class="mh-mode-btn" id="mhShadowBtn" title="Drop shadows">Shadow</button>
+  </span>
   <div class="mh-suite-tabs" id="mhSuiteTabs">
     <button class="mh-suite-tab active" data-suite-tab="web"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Web</span></button>
     <button class="mh-suite-tab" data-suite-tab="game"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Game</span></button>
@@ -1984,6 +1988,125 @@ def build_tonality_renderer_html() -> str:
     }
     bg.innerHTML = h;
   }
+
+  // ── Gray-Scott reaction-diffusion driving the hex background ──────────────
+  class SimGrid {
+    constructor(W, H) {
+      this.W = W; this.H = H; this.N = W * H;
+      this.u = new Float32Array(this.N).fill(1);
+      this.v = new Float32Array(this.N).fill(0);
+      this.f = 0.055; this.k = 0.062;
+      this._seed();
+    }
+    _seed() {
+      for (let i = 0; i < 12; i++) {
+        const cx = (Math.random() * this.W) | 0;
+        const cy = (Math.random() * this.H) | 0;
+        for (let dy = -2; dy <= 2; dy++)
+          for (let dx = -2; dx <= 2; dx++) {
+            const idx = ((cy+dy+this.H)%this.H)*this.W + ((cx+dx+this.W)%this.W);
+            this.v[idx] = 0.5 + Math.random()*0.1;
+            this.u[idx] = 0.25;
+          }
+      }
+    }
+    step() {
+      const {W,H,N,f,k} = this; const u = this.u, v = this.v;
+      const nu = new Float32Array(N); const nv = new Float32Array(N);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const i = y*W+x;
+        const L = y*W+(x-1+W)%W, R = y*W+(x+1)%W;
+        const U = ((y-1+H)%H)*W+x, D = ((y+1)%H)*W+x;
+        const lu = u[L]+u[R]+u[U]+u[D] - 4*u[i];
+        const lv = v[L]+v[R]+v[U]+v[D] - 4*v[i];
+        const uvv = u[i]*v[i]*v[i];
+        nu[i] = Math.min(1, Math.max(0, u[i] + 0.2*lu - uvv + f*(1-u[i])));
+        nv[i] = Math.min(1, Math.max(0, v[i] + 0.1*lv + uvv - (f+k)*v[i]));
+      }
+      this.u.set(nu); this.v.set(nv);
+    }
+    hash() {
+      const v = this.v, N = this.N; let s = '';
+      for (let i = 0; i < 64; i++) {
+        const idx = Math.round(i * (N-1) / 63);
+        s += Math.min(7, (v[idx] * 8) | 0).toString(8);
+      }
+      return s;
+    }
+    nudge() {
+      this.f = 0.03 + Math.random()*0.04;
+      this.k = 0.055 + Math.random()*0.015;
+      this._seed();
+    }
+  }
+
+  let _sim = null, _simTiles = null, _simTimer = null;
+
+  function startSim() {
+    const bg = document.getElementById('mhPageHexBg');
+    if (!bg) return;
+    _simTiles = Array.from(bg.querySelectorAll('.mh-pxhex'));
+    if (!_simTiles.length) return;
+    const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+    const cols = Math.ceil(Math.sqrt(_simTiles.length * aspect));
+    const rows = Math.ceil(_simTiles.length / Math.max(1, cols));
+    _sim = new SimGrid(cols, rows);
+    clearInterval(_simTimer);
+    _simTimer = setInterval(tickSim, 120);
+  }
+
+  function tickSim() {
+    if (!_sim || !_simTiles) return;
+    _sim.step();
+    const pal = getWheelPalette();
+    const aH = pal.hue, bH = (aH+120)%360, cH = (aH+240)%360;
+    _simTiles.forEach((el, i) => {
+      const vv = _sim.v[i % _sim.N];
+      const hue = vv < 0.33 ? aH : vv < 0.66 ? bH : cH;
+      const sat = 55 + vv * 40;
+      const lit = 28 + vv * 38;
+      el.style.setProperty('--pxc', `hsl(${hue},${sat}%,${lit}%)`);
+    });
+  }
+
+  async function syncSimState() {
+    if (!_sim) return;
+    const h = _sim.hash();
+    const sb = sbClient(); if (!sb) return;
+    try {
+      const { data } = await sb.from('hex_sim_states').select('id').eq('hash', h).maybeSingle();
+      if (data) {
+        _sim.nudge();
+      } else {
+        await sb.from('hex_sim_states').insert({
+          hash: h, f_param: _sim.f, k_param: _sim.k,
+          palette_hue: getWheelPalette().hue
+        });
+      }
+    } catch(e) {}
+  }
+
+  function subscribeSimRealtime() {
+    const sb = sbClient(); if (!sb) return;
+    try {
+      sb.channel('hex-sim')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'hex_sim_states' },
+          payload => {
+            if (!_sim) return;
+            const {f_param, k_param} = payload.new;
+            if (f_param) _sim.f = f_param;
+            if (k_param) _sim.k = k_param;
+            const bg = document.getElementById('mhPageHexBg');
+            if (bg) {
+              bg.style.transition = 'opacity .4s';
+              bg.style.opacity = '0.6';
+              setTimeout(() => { bg.style.opacity = ''; bg.style.transition = ''; }, 420);
+            }
+          })
+        .subscribe();
+    } catch(e) {}
+  }
+
   function groundMetrics(){
     let size = 34, gap = 3, N = 7;
     try {
@@ -2279,6 +2402,21 @@ def build_tonality_renderer_html() -> str:
     });
     const backBtn = $('mhBackBtn');
     if (backBtn) backBtn.addEventListener('click', backToSplash);
+
+    // ── Mode toggle buttons ────────────────────────────────────────────────
+    [['mhGridBtn','mh-grid-over'],['mhShadowBtn','mh-shadows']].forEach(([id, cls]) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        document.body.classList.toggle(cls);
+        btn.classList.toggle('active', document.body.classList.contains(cls));
+      });
+    });
+
+    // ── Start Gray-Scott simulation ────────────────────────────────────────
+    startSim();
+    setInterval(syncSimState, 5000);
+    subscribeSimRealtime();
   }, 400);
 })();
 (function(){
