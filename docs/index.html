@@ -683,27 +683,54 @@
     margin: 10px 0;
   }
   .mh-suite-tab {
-    min-height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-height: 52px;
     border: none;
     border-radius: 9px;
     background: rgba(255,255,255,.05);
     color: var(--ink-dim);
-    font: 10px ui-monospace, monospace;
+    font: 9px ui-monospace, monospace;
     letter-spacing: .08em;
     text-transform: uppercase;
+    padding: 8px 4px 7px;
+    cursor: pointer;
+    transition: background .15s, box-shadow .15s;
   }
-  .mh-suite-tab.active {
-    color: #05050a;
-    background: var(--mh-a, #ffff00);
-    border: none;
-    box-shadow: 0 0 24px var(--mh-a, #ffff00);
-  }
+  .mh-suite-tab:hover { background: rgba(255,255,255,.09); }
+  .mh-suite-tab:hover .mh-ctab-cube { transform: translateY(-3px) scale(1.08); }
+  .mh-suite-tab:active .mh-ctab-cube { transform: scale(0.82) translateY(3px); }
+  .mh-suite-tab.active { background: rgba(255,255,255,.07); color: var(--ink); box-shadow: 0 0 28px var(--mh-a,#ffff00); }
+  .mh-ctab-cube { position:relative; width:30px; height:35px; transition:transform .14s cubic-bezier(.2,.8,.35,1.3); }
+  .mh-ctab-f { position:absolute; inset:0; background:rgba(255,255,255,.14); }
+  .mh-ctab-t { clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%); filter:brightness(1.5); }
+  .mh-ctab-r { clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%); filter:brightness(0.9); }
+  .mh-ctab-l { clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%); filter:brightness(0.5); }
+  .mh-suite-tab.active .mh-ctab-f { background:var(--mh-a,#ffff00); animation:mhPxPulse 3.5s ease-in-out infinite alternate; }
+  .mh-suite-tab.active .mh-ctab-t { filter:brightness(1.5); }
+  .mh-suite-tab.active .mh-ctab-r { filter:brightness(0.88); }
+  .mh-suite-tab.active .mh-ctab-l { filter:brightness(0.46); }
+  .mh-ctab-lbl { display:block; }
   .mh-builder-panel { display:none; margin-top:14px; border-radius:14px; background:rgba(255,255,255,.025); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); padding:14px; transform-origin:top center; }
   .mh-builder-panel.active { display:block; }
-  .mh-builder-panel.mh-fold-out { display:block; animation:mhFoldOut 0.22s ease-in forwards; pointer-events:none; }
-  .mh-builder-panel.mh-fold-in { animation:mhFoldIn 0.24s ease-out forwards; }
-  @keyframes mhFoldOut { 0%{transform:perspective(900px) rotateX(0deg);opacity:1} 60%{opacity:.28} 100%{transform:perspective(900px) rotateX(-82deg);opacity:0} }
-  @keyframes mhFoldIn  { 0%{transform:perspective(900px) rotateX(80deg);opacity:0} 45%{opacity:.4} 100%{transform:perspective(900px) rotateX(0deg);opacity:1} }
+  .mh-builder-panel.mh-fold-out { display:block; animation:mhFoldOut 0.26s cubic-bezier(.4,0,.8,.6) forwards; pointer-events:none; }
+  .mh-builder-panel.mh-fold-in { animation:mhFoldIn 0.28s cubic-bezier(.15,.7,.35,1.1) forwards; }
+  @keyframes mhFoldOut {
+    0%  { transform:perspective(900px) rotateX(0deg) scaleY(1) skewX(0deg); opacity:1; }
+    14% { transform:perspective(900px) rotateX(-7deg) scaleY(.98) skewX(calc(var(--mh-skew,0deg)*.3)); opacity:.92; }
+    44% { transform:perspective(900px) rotateX(-35deg) scaleY(.88) skewX(var(--mh-skew,0deg)); opacity:.52; }
+    74% { transform:perspective(900px) rotateX(-72deg) scaleY(.72) skewX(calc(var(--mh-skew,0deg)*.35)); opacity:.14; }
+    100%{ transform:perspective(900px) rotateX(-90deg) scaleY(.58) skewX(0deg); opacity:0; }
+  }
+  @keyframes mhFoldIn {
+    0%  { transform:perspective(900px) rotateX(90deg) scaleY(.58) skewX(0deg); opacity:0; }
+    24% { transform:perspective(900px) rotateX(44deg) scaleY(.8) skewX(calc(var(--mh-skew,0deg)*-.5)); opacity:.3; }
+    56% { transform:perspective(900px) rotateX(13deg) scaleY(.97) skewX(calc(var(--mh-skew,0deg)*-.8)); opacity:.74; }
+    80% { transform:perspective(900px) rotateX(-3.5deg) scaleY(1.03) skewX(calc(var(--mh-skew,0deg)*-.2)); opacity:.96; }
+    100%{ transform:perspective(900px) rotateX(0deg) scaleY(1) skewX(0deg); opacity:1; }
+  }
   .mh-builder-title { color:var(--mh-a,#ffff00); font:12px ui-monospace, monospace; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
   .mh-web-preview { position:relative; min-height:360px; margin-top:10px; border-radius:14px; overflow:hidden; background:#05050a; box-shadow:0 0 0 1px rgba(255,255,255,.04); }
   .mh-web-preview-inner { position:relative; z-index:1; min-height:360px; padding:18px; background:radial-gradient(circle at 22% 18%, var(--mh-a-soft, rgba(255,255,0,.22)), transparent 28%), radial-gradient(circle at 78% 44%, var(--mh-b-soft, rgba(0,0,255,.18)), transparent 26%), #06060c; color:var(--ink); }
@@ -724,12 +751,17 @@
   .mh-extra-card { border-radius:10px; padding:12px; min-height:82px; background:rgba(255,255,255,.045); color:var(--ink-dim); font:11px/1.45 ui-monospace, monospace; }
   .mh-extra-card b { color:var(--mh-a, #ffff00); display:block; margin-bottom:5px; }
   @media (max-width:760px){ .mh-suite-tabs { grid-template-columns:repeat(3, minmax(0,1fr)); } .mh-web-card-grid { grid-template-columns:1fr; } }
-  /* Full-page hex background */
+  /* Full-page isometric 3D cube hex background */
   #mhPageHexBg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
-  .mh-pxhex{position:absolute;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);background:var(--pxc,#444);animation:mhPxPulse 4s ease-in-out infinite alternate}
+  #mhPageHexBg.mh-bg-pulse .mh-pxhex{animation-duration:.35s!important;opacity:.42!important}
+  .mh-pxhex{position:absolute;animation:mhPxPulse 4s ease-in-out infinite alternate}
   .mh-pxhex.mh-pxhex-b{animation:mhPxPulseB 6s ease-in-out infinite alternate}
   @keyframes mhPxPulse{from{opacity:.07}to{opacity:.28}}
   @keyframes mhPxPulseB{from{opacity:.04}to{opacity:.18}}
+  .mh-pxf{position:absolute;inset:0;background:var(--pxc,#444)}
+  .mh-pxf-t{clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%);filter:brightness(1.55)}
+  .mh-pxf-r{clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%);filter:brightness(0.88)}
+  .mh-pxf-l{clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%);filter:brightness(0.48)}
   /* Template card picker */
   .mh-tpl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
   .mh-tpl-card{border-radius:6px;padding:6px 4px;cursor:pointer;background:rgba(255,255,255,.04);box-shadow:0 0 0 1px rgba(255,255,255,.06);text-align:center;font:9px ui-monospace,monospace;color:var(--ink-dim);transition:box-shadow .15s,background .15s;user-select:none}
@@ -972,11 +1004,11 @@
 <section class="mh-render-adapter" id="mhRenderAdapter">
   <h2>Render target · website/game through original Munker + hex grid</h2>
   <div class="mh-suite-tabs" id="mhSuiteTabs">
-    <button class="mh-suite-tab active" data-suite-tab="web">Web</button>
-    <button class="mh-suite-tab" data-suite-tab="game">Game</button>
-    <button class="mh-suite-tab" data-suite-tab="character">Character</button>
-    <button class="mh-suite-tab" data-suite-tab="gif">GIF</button>
-    <button class="mh-suite-tab" data-suite-tab="qr">QR</button>
+    <button class="mh-suite-tab active" data-suite-tab="web"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Web</span></button>
+    <button class="mh-suite-tab" data-suite-tab="game"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Game</span></button>
+    <button class="mh-suite-tab" data-suite-tab="character"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Character</span></button>
+    <button class="mh-suite-tab" data-suite-tab="gif"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">GIF</span></button>
+    <button class="mh-suite-tab" data-suite-tab="qr"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">QR</span></button>
   </div>
   <div class="mh-builder-panel active" id="mhBuilderWeb">
     <div class="mh-builder-title">HEXFIELD website designer · full-page templates + export</div>
@@ -1414,14 +1446,19 @@
     const outPanel = document.querySelector('.mh-builder-panel.active');
     const inPanel = $('mhBuilder' + tab.charAt(0).toUpperCase() + tab.slice(1));
     if (!inPanel || inPanel === outPanel) return;
-    const DUR = 220;
+    const bg = document.getElementById('mhPageHexBg');
+    if (bg) { bg.classList.add('mh-bg-pulse'); setTimeout(() => bg.classList.remove('mh-bg-pulse'), 420); }
+    const skew = ((Math.random() * 3) - 1.5).toFixed(2) + 'deg';
+    const DUR = 260;
     if (outPanel) {
+      outPanel.style.setProperty('--mh-skew', skew);
       outPanel.classList.add('mh-fold-out');
       setTimeout(() => outPanel.classList.remove('active','mh-fold-out'), DUR);
     }
     setTimeout(() => {
+      inPanel.style.setProperty('--mh-skew', skew);
       inPanel.classList.add('active','mh-fold-in');
-      setTimeout(() => inPanel.classList.remove('mh-fold-in'), DUR + 40);
+      setTimeout(() => inPanel.classList.remove('mh-fold-in'), DUR + 50);
       if (tab === 'web') renderWebDesigner();
       if (tab === 'game') { setVal('mhGame','platformer'); render(); }
       if (tab === 'character') renderCharacterDesigner();
@@ -1430,7 +1467,7 @@
       if (tab === 'kit' && typeof renderKitGrid === 'function') renderKitGrid();
       if (tab === 'fonts' && typeof loadFontEffects === 'function') loadFontEffects();
       if (tab === 'type' && typeof renderTypeScale === 'function') renderTypeScale();
-    }, outPanel ? DUR - 30 : 0);
+    }, outPanel ? DUR - 35 : 0);
   }
   function renderCharacterDesigner(){
     const target = $('mhCharacterPreview'); if (!target) return;
@@ -1750,7 +1787,7 @@
       for (let c = 0; c < cols; c++) {
         const delay = Math.min(maxDelay, ((r + c) * 0.04)).toFixed(2);
         const cls = (r+c)%2===1 ? 'mh-pxhex mh-pxhex-b' : 'mh-pxhex';
-        h += `<div class="${cls}" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};animation-delay:-${delay}s"></div>`;
+        h += `<div class="${cls}" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};animation-delay:-${delay}s"><div class="mh-pxf mh-pxf-t"></div><div class="mh-pxf mh-pxf-r"></div><div class="mh-pxf mh-pxf-l"></div></div>`;
       }
     }
     bg.innerHTML = h;
