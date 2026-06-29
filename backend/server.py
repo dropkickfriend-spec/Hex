@@ -1040,9 +1040,12 @@ def build_tonality_renderer_html() -> str:
   input[type="range"]::-webkit-slider-runnable-track { height:5px; border-radius:99px; background:rgba(255,255,255,.16); }
   input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--mh-a,#ffff00); box-shadow:0 0 10px var(--mh-a,#ffff00),0 0 22px var(--mh-a,#ffff00); margin-top:-6px; cursor:pointer; border:2px solid rgba(0,0,0,.5); }
   input[type="range"]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; border:2px solid rgba(0,0,0,.5); background:var(--mh-a,#ffff00); box-shadow:0 0 10px var(--mh-a,#ffff00); }
-  /* ── Max-contrast floating text ── */
-  label, .field { text-shadow:0 1px 5px rgba(0,0,0,.98),0 0 10px rgba(0,0,0,.85) !important; }
-  .val, .mh-sc-desc, .mh-splash-sub { text-shadow:0 1px 5px rgba(0,0,0,.98),0 0 10px rgba(0,0,0,.85) !important; }
+  /* ── TV-subtitle tonal outline: dark hue-tinted stroke on all text ── */
+  body { -webkit-text-stroke:1px var(--mh-dark,#030308); paint-order:stroke fill; }
+  button, input[type="text"], input[type="number"], input[type="color"],
+  select, textarea, .mh-web-preview *, .mh-spr * {
+    -webkit-text-stroke:0 !important; paint-order:normal !important;
+  }
 </style>
 <div id="mhPageFold"></div>
 <div id="mhSplash">
