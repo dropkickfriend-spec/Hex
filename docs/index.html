@@ -1309,11 +1309,18 @@
     position:absolute; inset:0; pointer-events:none; z-index:4;
     mix-blend-mode:screen; border-radius:4px;
   }
-  /* Munker illusion stripe overlay — pointer-events:none so cubes stay interactive */
-  .mh-ls-munker {
-    position:absolute; inset:0; pointer-events:none; z-index:4;
-    mix-blend-mode:screen; border-radius:4px;
-  }
+  /* ── Logo panel: transparent so cube bg bleeds through ── */
+  #mhBuilderLogo { background:transparent !important; }
+  /* ── Logo mark DOM cube grid ── */
+  #mhLogoHexMark { position:relative; display:flex; justify-content:center; padding:10px 0 6px; }
+  .mh-logo-cube-grid { position:relative; }
+  /* ── Logo preview: 3D iso + 2D flat side by side ── */
+  #mhLogoPreviewLogo { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
+  .mh-logo-variant { flex:1; min-width:180px; border-radius:10px; overflow:hidden;
+    background:rgba(0,0,0,0.38); backdrop-filter:blur(3px);
+    display:flex; flex-direction:column; align-items:center; padding:10px 8px 8px; gap:4px; }
+  .mh-logo-variant-label { font:10px 'Space Mono',monospace; color:rgba(255,255,255,.45);
+    letter-spacing:.12em; text-transform:uppercase; }
   /* ── Logo library: saved picks ── */
   #mhLogoLibrary { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px; min-height:0; }
   .mh-lib-chip {
@@ -1983,47 +1990,113 @@
     updateBuilderCode();
   }
   var _logoSeed = new Date().toDateString();
-  function renderLogoDesigner() {
-    var hexWrap = $('mhLogoHexMark');
-    if (hexWrap && typeof buildHexfieldMark === 'function') {
-      hexWrap.innerHTML = buildHexfieldMark(_logoSeed);
+  // ── Helpers for isometric cube SVG faces ────────────────────────────────────
+  function _adjRgb(hex, f) {
+    var r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    return 'rgb('+Math.min(255,r*f|0)+','+Math.min(255,g*f|0)+','+Math.min(255,b*f|0)+')';
+  }
+  function _svgIsoCube(ox, oy, W, col) {
+    var H=W/0.866, H4=H/4, H2=H/2, H34=H*3/4, W2=W/2;
+    var t=_adjRgb(col,1.55), ri=_adjRgb(col,0.88), l=_adjRgb(col,0.48);
+    return '<polygon points="'+(ox+W2|0)+','+(oy|0)+' '+(ox+W|0)+','+(oy+H4|0)+' '+(ox+W2|0)+','+(oy+H2|0)+' '+(ox|0)+','+(oy+H4|0)+'" fill="'+t+'"/>'
+          +'<polygon points="'+(ox+W|0)+','+(oy+H4|0)+' '+(ox+W|0)+','+(oy+H34|0)+' '+(ox+W2|0)+','+(oy+H|0)+' '+(ox+W2|0)+','+(oy+H2|0)+'" fill="'+ri+'"/>'
+          +'<polygon points="'+(ox|0)+','+(oy+H4|0)+' '+(ox+W2|0)+','+(oy+H2|0)+' '+(ox+W2|0)+','+(oy+H|0)+' '+(ox|0)+','+(oy+H34|0)+'" fill="'+l+'"/>';
+  }
+  function _svgFlatDiamond(ox, oy, W, col) {
+    var H=W/0.866, H4=H/4, H2=H/2, W2=W/2;
+    return '<polygon points="'+(ox+W2|0)+','+(oy|0)+' '+(ox+W|0)+','+(oy+H4|0)+' '+(ox+W2|0)+','+(oy+H2|0)+' '+(ox|0)+','+(oy+H4|0)+'" fill="'+col+'"/>';
+  }
+  // Build a small isometric cube grid DOM element for the mark (animatable)
+  function _buildIsoCubeMark(seed, p, container) {
+    var COLS=10, ROWS=5, SZ=12;
+    var CH=SZ/0.866, RS=CH*0.75, CS=SZ;
+    var totalW=Math.ceil(CS*COLS+CS*0.5), totalH=Math.ceil(RS*(ROWS-1)+CH);
+    container.innerHTML='';
+    var grid=document.createElement('div');
+    grid.className='mh-logo-cube-grid mh-ls-grid';
+    grid.style.cssText='width:'+totalW+'px;height:'+totalH+'px;--mh-ls-sz:'+SZ+'px';
+    container.appendChild(grid);
+    // Seeded PRNG for reproducible mark per seed
+    var sn=seed.split('').reduce(function(a,c){return (a^c.charCodeAt(0)*397)&0xffffffff;},7);
+    function prng(){sn=(sn*1664525+1013904223)&0xffffffff;return (sn>>>0)/0x100000000;}
+    var palette=[p.aHex,p.bHex,p.cHex];
+    for(var row=0;row<ROWS;row++){
+      var ox=(row%2===1)?CS*0.5:0;
+      var yPx=row*RS;
+      for(var col=0;col<COLS;col++){
+        var cell=document.createElement('div');
+        cell.className='mh-ls-cube';
+        cell.style.left=(col*CS+ox).toFixed(1)+'px';
+        cell.style.top=yPx.toFixed(1)+'px';
+        // Weight toward palette A for letter region (center columns)
+        var cx=col/COLS, cy=row/ROWS;
+        var inCentre=(cx>0.2&&cx<0.8&&cy>0.15&&cy<0.85);
+        var r=prng();
+        var baseCol=inCentre?(r<0.55?p.aHex:r<0.82?p.bHex:p.cHex):(r<0.4?p.bHex:r<0.75?p.cHex:p.aHex);
+        cell.style.setProperty('--pxc',baseCol);
+        var fT=document.createElement('div'); fT.className='mh-ls-f mh-ls-t';
+        var fR=document.createElement('div'); fR.className='mh-ls-f mh-ls-r';
+        var fL=document.createElement('div'); fL.className='mh-ls-f mh-ls-l';
+        cell.appendChild(fT); cell.appendChild(fR); cell.appendChild(fL);
+        // Same hover pulse as hue-cube and logo sim cells
+        cell.addEventListener('mouseenter',(function(c){return function(){
+          c.classList.remove('pulsing'); void c.offsetWidth;
+          c.classList.add('pulsing');
+          setTimeout(function(){c.classList.remove('pulsing');},720);
+        };})(cell));
+        grid.appendChild(cell);
+      }
     }
+  }
+
+  function renderLogoDesigner() {
+    var p = typeof getWheelPalette === 'function' ? getWheelPalette() : {aHex:'#ffff00',bHex:'#ff00ff',cHex:'#00ffff',hue:60};
+    // ── 3D isometric cube mark (DOM, animatable) ──
+    var hexWrap = $('mhLogoHexMark');
+    if (hexWrap) _buildIsoCubeMark(_logoSeed, p, hexWrap);
+
     var preview = $('mhLogoPreviewLogo');
     if (preview) {
-      var p = getWheelPalette();
       var text = ($('mhLogoTextLogo') || {}).value || 'HEXFIELD';
-      var mark = ($('mhLogoMarkLogo') || {}).value || 'hex';
       var layout = ($('mhLogoLayoutLogo') || {}).value || 'left';
       var tagline = ($('mhLogoTaglineLogo') || {}).value || '';
-      var textCol = typeof getBestTextColor === 'function' ? getBestTextColor('#06060c') : p.aHex;
       var stack = "'Space Mono', ui-monospace, monospace";
-      var W = 480, H = layout === 'top' ? 160 : 80;
-      function hexPts(cx, cy, R) {
-        var pts = [];
-        for (var i = 0; i < 6; i++) { var a = Math.PI/3*i - Math.PI/6; pts.push((cx+R*Math.cos(a)).toFixed(1)+','+(cy+R*Math.sin(a)).toFixed(1)); }
-        return pts.join(' ');
+      var textCol = typeof getBestTextColor === 'function' ? getBestTextColor('#06060c') : p.aHex;
+      // ── SVG cube mark geometry: 3×2 iso cubes ──
+      var CW=22, CH=CW/0.866, RS=CH*0.75;
+      var cols3d=[p.aHex,p.bHex,p.cHex,p.bHex,p.aHex,p.cHex];
+      var markSvg3d='', markSvg2d='';
+      var mIdx=0;
+      for(var mr=0;mr<2;mr++){
+        var ox3=(mr%2===1)?CW*0.5:0;
+        for(var mc=0;mc<3;mc++){
+          var mx=mc*CW+ox3, my=mr*RS;
+          markSvg3d+=_svgIsoCube(mx,my,CW,cols3d[mIdx]);
+          markSvg2d+=_svgFlatDiamond(mx,my,CW,cols3d[mIdx]);
+          mIdx++;
+        }
       }
-      var markSvg = '', textX = 40, textY = H/2+12, tagY = H/2+30, anchor = 'start';
-      if (layout === 'left' && mark !== 'none') {
-        if (mark === 'hex') {
-          var mini = 16, gap = 3;
-          var offs = [[0,0],[0,-(mini*2+gap)],[mini*1.73+gap,-(mini+gap/2)],[mini*1.73+gap,mini+gap/2],[0,mini*2+gap],[-(mini*1.73+gap),mini+gap/2],[-(mini*1.73+gap),-(mini+gap/2)]];
-          offs.forEach(function(o,i){ var col = i===0?p.cHex:i%2===0?p.aHex:p.bHex; markSvg += '<polygon points="'+hexPts(44+o[0],H/2+o[1],mini)+'" fill="'+col+'" opacity="'+(i===0?'0.9':'0.75')+'"/>'; });
-        }
-        textX = 106;
-      } else if (layout === 'top') {
-        if (mark === 'hex') {
-          var mini = 14, gap = 3;
-          var offs = [[0,0],[0,-(mini*2+gap)],[mini*1.73+gap,-(mini+gap/2)],[mini*1.73+gap,mini+gap/2],[0,mini*2+gap],[-(mini*1.73+gap),mini+gap/2],[-(mini*1.73+gap),-(mini+gap/2)]];
-          offs.forEach(function(o,i){ var col = i===0?p.cHex:i%2===0?p.aHex:p.bHex; markSvg += '<polygon points="'+hexPts(W/2+o[0],44+o[1],mini)+'" fill="'+col+'" opacity="'+(i===0?'0.9':'0.75')+'"/>'; });
-        }
-        textX = W/2; textY = 108; tagY = 128; anchor = 'middle';
-      } else { textX = W/2; anchor = 'middle'; }
-      preview.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'">'
-        +markSvg
-        +'<text x="'+textX+'" y="'+textY+'" text-anchor="'+anchor+'" font-family="'+stack+'" font-size="32" font-weight="700" fill="'+textCol+'">'+text+'</text>'
-        +(tagline ? '<text x="'+textX+'" y="'+tagY+'" text-anchor="'+anchor+'" font-family="'+stack+'" font-size="11" fill="'+p.bHex+'" letter-spacing="0.14em">'+tagline+'</text>' : '')
-        +'</svg>';
+      var markW=Math.ceil(CW*3+CW*0.5), markH=Math.ceil(CH+RS);
+
+      // ── Build two variant SVGs ──
+      function _logoSvg(markPaths, label, W, H, textX, textY, tagY, anchor) {
+        return '<div class="mh-logo-variant">'
+          +'<div class="mh-logo-variant-label">'+label+'</div>'
+          +'<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'">'
+          +markPaths
+          +'<text x="'+textX+'" y="'+textY+'" text-anchor="'+anchor+'" font-family="'+stack+'" font-size="26" font-weight="700" fill="'+textCol+'" paint-order="stroke fill" stroke="#000" stroke-width="3" stroke-linejoin="round">'+text.replace(/</g,'&lt;')+'</text>'
+          +(tagline?'<text x="'+textX+'" y="'+tagY+'" text-anchor="'+anchor+'" font-family="'+stack+'" font-size="10" fill="'+p.bHex+'" letter-spacing="0.12em">'+tagline.replace(/</g,'&lt;')+'</text>':'')
+          +'</svg></div>';
+      }
+
+      var W=240, H=72;
+      var markOffX=6, markOffY=(H-markH)/2|0;
+      var marks3d='<g transform="translate('+markOffX+','+markOffY+')">'+markSvg3d+'</g>';
+      var marks2d='<g transform="translate('+markOffX+','+markOffY+')">'+markSvg2d+'</g>';
+      var tX=markW+markOffX+10, tY=H/2+10|0, tagYv=H/2+24|0;
+
+      preview.innerHTML = _logoSvg(marks3d,'3D ISO',W,H,tX,tY,tagYv,'start')
+                        + _logoSvg(marks2d,'2D FLAT',W,H,tX,tY,tagYv,'start');
     }
     var regen = $('mhLogoRegenBtn');
     if (regen && !regen._mhWired) {
