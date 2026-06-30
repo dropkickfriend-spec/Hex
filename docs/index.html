@@ -719,7 +719,7 @@
   .mh-export-status {
     text-shadow: 0 1px 4px rgba(0,0,0,.95), 0 0 10px rgba(0,0,0,.7);
   }
-  .mh-panels-wrap { position:relative; overflow:hidden; border-radius:14px; }
+  .mh-panels-wrap { position:relative; overflow:hidden; border-radius:14px; z-index:1; }
   .mh-builder-panel {
     display:none; margin-top:14px; border-radius:14px; padding:14px;
   }
@@ -1240,7 +1240,7 @@
   }
   /* ── Hex-face cube tabs: cube blocks with label printed on left isometric face ── */
   .mh-ctab-cube { display:block !important; }
-  .mh-suite-tabs { gap:8px !important; align-items:flex-end !important; }
+  .mh-suite-tabs { gap:8px !important; align-items:flex-end !important; position:relative; z-index:2; }
   .mh-suite-tab {
     position:relative; display:block;
     width:76px; height:76px !important; padding:0 !important;
@@ -1309,8 +1309,29 @@
     position:absolute; inset:0; pointer-events:none; z-index:4;
     mix-blend-mode:screen; border-radius:4px;
   }
-  /* ── Logo panel: transparent so cube bg bleeds through ── */
-  #mhBuilderLogo { background:transparent !important; }
+  /* ── Logo + Type panels: transparent so cube bg bleeds through ── */
+  #mhBuilderLogo, #mhBuilderType { background:transparent !important; }
+  /* ── Live type alphabet grid ── */
+  #mhTypeAlphaGrid { display:flex; flex-wrap:wrap; gap:3px; }
+  .mh-type-letter-wrap {
+    position:relative; border-radius:5px; overflow:hidden; cursor:pointer;
+    transition:box-shadow .12s, transform .12s;
+    background:rgba(0,0,0,.45);
+  }
+  .mh-type-letter-wrap:hover { transform:translateY(-3px); }
+  .mh-type-letter-wrap.mh-tl-sel { box-shadow:0 0 0 2px var(--mh-a,#ffff00); transform:translateY(-3px); }
+  .mh-type-letter-grid { position:relative; overflow:hidden; }
+  .mh-type-style-btn {
+    min-height:28px; padding:0 10px; font-size:11px;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14);
+    border-radius:5px; color:var(--ink); cursor:pointer; letter-spacing:.05em;
+  }
+  .mh-type-style-btn.active {
+    background:var(--mh-a,#ffff00); color:#000; border-color:transparent;
+  }
+  /* Selected preview row */
+  #mhTypeSelectedRow .mh-type-letter-wrap { cursor:default; }
+  #mhTypeSelectedRow .mh-type-letter-wrap:hover { transform:none; }
   /* ── Logo mark DOM cube grid ── */
   #mhLogoHexMark { position:relative; display:flex; justify-content:center; padding:10px 0 6px; }
   .mh-logo-cube-grid { position:relative; }
@@ -1495,6 +1516,7 @@
     <button class="mh-suite-tab" data-suite-tab="gif"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">GIF</span></button>
     <button class="mh-suite-tab" data-suite-tab="qr"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">QR</span></button>
     <button class="mh-suite-tab" data-suite-tab="logo"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Logo</span></button>
+    <button class="mh-suite-tab" data-suite-tab="type"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Type</span></button>
   </div>
   <div class="mh-panels-wrap" id="mhPanelsWrap">
   <div id="mhFoldPaper"></div>
@@ -1590,6 +1612,30 @@
     </div>
     <input class="mh-font-text-input" id="mhLogoTaglineLogo" value="Palette · Optics · Motion" placeholder="Tagline" style="margin-top:6px;width:100%;box-sizing:border-box" />
     <div id="mhLogoPreviewLogo" style="margin-top:14px;text-align:center"></div>
+  </div>
+
+  <!-- ── Live Type panel ── -->
+  <div class="mh-builder-panel" id="mhBuilderType">
+    <div class="mh-builder-title">Live type · cube billiard alphabet</div>
+    <div class="mh-render-toolbar" style="margin-bottom:8px;gap:6px;flex-wrap:wrap">
+      <span style="font:10px 'Space Mono',monospace;color:var(--ink-dim);letter-spacing:.1em">STYLE</span>
+      <button class="mh-type-style-btn active" data-ts="0">Neon</button>
+      <button class="mh-type-style-btn" data-ts="1">Chrome</button>
+      <button class="mh-type-style-btn" data-ts="2">Acid</button>
+      <button class="mh-type-style-btn" data-ts="3">Phantom</button>
+      <span style="flex:1"></span>
+      <button id="mhTypeUseBtn" style="min-width:auto">&#10003; Use selected</button>
+      <button id="mhTypeGifBtn" style="min-width:auto">&#9679; Record</button>
+      <span id="mhTypeRecStatus" class="mh-export-status"></span>
+    </div>
+    <div class="mh-render-toolbar" style="margin-bottom:10px;gap:6px">
+      <input id="mhTypeCustomText" maxlength="60" value="" placeholder="Custom word · leave blank for full alphabet" style="flex:1" />
+    </div>
+    <div id="mhTypeAlphaGrid"></div>
+    <div id="mhTypeSelectedPreview" style="margin-top:12px;display:none">
+      <div class="mh-builder-title" style="margin-bottom:6px">Selected style preview</div>
+      <div id="mhTypeSelectedRow" style="display:flex;flex-wrap:wrap;gap:2px;align-items:flex-end"></div>
+    </div>
   </div>
   </div>
   <input id="mhUrl" value="https://example.com" style="display:none">
@@ -2594,12 +2640,178 @@
     requestAnimationFrame(drawFrame);
   }
 
+  // ── Live Type alphabet sim ────────────────────────────────────────────────
+  let _typeRafId=null, _typeGrids=[], _typeStyleIdx=0, _typeSelectedLetter=null;
+  const _typeStyles=[
+    {name:'Neon',    bgSat:55, bgL:7,  rule:'flock',  N:4, spd:4,   munkerAng:0,   ballL:88},
+    {name:'Chrome',  bgSat:15, bgL:10, rule:'avoid',  N:3, spd:3,   munkerAng:90,  ballL:80},
+    {name:'Acid',    bgSat:70, bgL:8,  rule:'chaos',  N:5, spd:4.5, munkerAng:45,  ballL:92},
+    {name:'Phantom', bgSat:40, bgL:5,  rule:'spiral', N:3, spd:2,   munkerAng:135, ballL:70},
+  ];
+  const _TA_COLS=12, _TA_ROWS=6, _TA_SZ=7, _TA_W=36, _TA_H=18;
+
+  function _stopTypeAlpha(){
+    if(_typeRafId){cancelAnimationFrame(_typeRafId);_typeRafId=null;}
+    _typeGrids=[];
+  }
+
+  function _startTypeAlpha(){
+    _stopTypeAlpha();
+    const container=$('mhTypeAlphaGrid'); if(!container) return;
+    container.innerHTML='';
+    const p=typeof getWheelPalette==='function'?getWheelPalette():{hue:220};
+    const style=_typeStyles[_typeStyleIdx];
+    const customEl=$('mhTypeCustomText');
+    const customText=(customEl&&customEl.value.trim().toUpperCase())||'';
+    const letters=customText
+      ?[...new Set(customText.split('').filter(c=>/[A-Z0-9]/.test(c)))]
+      :'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const SZ=_TA_SZ, COLS=_TA_COLS, ROWS=_TA_ROWS, W=_TA_W, H=_TA_H;
+    const CH=SZ/0.866, RS=CH*0.75, CS=SZ;
+    const totalW=Math.ceil(CS*COLS+CS*0.5), totalH=Math.ceil(RS*(ROWS-1)+CH);
+    const font="'Space Mono',monospace";
+    const period=Math.round(totalH/3), sw=2, gap=period-sw*2;
+    let _lastTick=0;
+
+    letters.forEach((ch,li)=>{
+      const lh=(p.hue+li*14)%360, ch2=(lh+174)%360;
+      const bgDark=`hsl(${lh},${style.bgSat}%,${style.bgL}%)`;
+      const bgGray=`hsl(${lh},${style.bgSat*0.6|0}%,${style.bgL+5}%)`;
+      const letterGray='hsl(0,0%,30%)';
+      const wrap=document.createElement('div');
+      wrap.className='mh-type-letter-wrap'; wrap.dataset.letter=ch;
+      wrap.style.background=bgDark;
+      wrap.style.setProperty('--mh-a',`hsl(${lh},100%,62%)`);
+      const grid=document.createElement('div');
+      grid.className='mh-type-letter-grid mh-ls-grid';
+      grid.style.cssText=`width:${totalW}px;height:${totalH}px;--mh-ls-sz:${SZ}px`;
+      wrap.appendChild(grid); container.appendChild(wrap);
+      const mask=_buildLetterMask(ch,W,H,font);
+      const sim=new BilliardsLogoSim(W,H,mask,style.N,style.spd,(lh+li*8)%360);
+      sim._rule=style.rule;
+      const cells=[], state=new Float32Array(COLS*ROWS*3);
+      for(let row=0;row<ROWS;row++){
+        const ox=(row%2===1)?CS*0.5:0, yPx=row*RS;
+        for(let col=0;col<COLS;col++){
+          const cell=document.createElement('div'); cell.className='mh-ls-cube';
+          cell.style.left=(col*CS+ox).toFixed(1)+'px'; cell.style.top=yPx.toFixed(1)+'px';
+          const mx=Math.floor(col/COLS*W), my=Math.floor(row/ROWS*H);
+          cell.style.setProperty('--pxc', mask[my*W+mx]===1?letterGray:bgGray);
+          const fT=document.createElement('div'); fT.className='mh-ls-f mh-ls-t';
+          const fR=document.createElement('div'); fR.className='mh-ls-f mh-ls-r';
+          const fL=document.createElement('div'); fL.className='mh-ls-f mh-ls-l';
+          cell.appendChild(fT); cell.appendChild(fR); cell.appendChild(fL);
+          cell.addEventListener('mouseenter',()=>{
+            cell.classList.remove('pulsing'); void cell.offsetWidth;
+            cell.classList.add('pulsing'); setTimeout(()=>cell.classList.remove('pulsing'),720);
+          });
+          grid.appendChild(cell); cells.push(cell);
+        }
+      }
+      sim._cells=cells; sim._state=state;
+      sim._COLS=COLS; sim._ROWS=ROWS; sim._W=W; sim._H=H;
+      // Munker overlay — hue rotates per letter for visual variety
+      const munker=document.createElement('div'); munker.className='mh-ls-munker';
+      munker.style.background=`repeating-linear-gradient(${style.munkerAng}deg,
+        hsla(${lh},95%,60%,0.40) 0px, hsla(${lh},95%,60%,0.40) ${sw}px,
+        transparent ${sw}px, transparent ${sw+gap}px,
+        hsla(${ch2},95%,58%,0.36) ${sw+gap}px, hsla(${ch2},95%,58%,0.36) ${sw+gap+sw}px,
+        transparent ${sw+gap+sw}px, transparent ${period}px)`;
+      grid.appendChild(munker);
+      wrap.addEventListener('click',()=>{
+        document.querySelectorAll('.mh-type-letter-wrap').forEach(w=>w.classList.remove('mh-tl-sel'));
+        wrap.classList.add('mh-tl-sel');
+        _typeSelectedLetter={ch,li,styleIdx:_typeStyleIdx};
+      });
+      _typeGrids.push({sim,cells,state,COLS,ROWS,W,H,bgGray,letterGray,mask});
+    });
+
+    function _typeRafLoop(){
+      _typeRafId=requestAnimationFrame(_typeRafLoop);
+      const now=performance.now();
+      if(now-_lastTick<33) return; _lastTick=now;
+      for(const g of _typeGrids){
+        const {sim,cells,state:st,COLS:C,ROWS:R,W:SW,H:SH,bgGray,letterGray,mask:sm}=g;
+        sim._applyRule(sim._rule); sim.step(); sim.step();
+        for(let i=0;i<st.length;i+=3) st[i+2]*=0.88;
+        const tail=sim.trails.slice(-sim.balls.length*15);
+        for(const pt of tail){
+          const cx=Math.min(C-1,Math.max(0,pt.x/SW*C|0));
+          const cy=Math.min(R-1,Math.max(0,pt.y/SH*R|0));
+          const si=(cy*C+cx)*3;
+          st[si]=pt.h; st[si+1]=pt.ins?85:70; st[si+2]=Math.max(st[si+2],pt.ins?58:40);
+        }
+        for(const b of sim.balls){
+          const cx=Math.min(C-1,Math.max(0,b.x/SW*C|0));
+          const cy=Math.min(R-1,Math.max(0,b.y/SH*R|0));
+          const idx=cy*C+cx, si=idx*3;
+          st[si]=b.hue; st[si+1]=100; st[si+2]=style.ballL;
+          if(b._ci!==idx){
+            const cell=cells[idx];
+            if(cell){cell.classList.remove('pulsing');void cell.offsetWidth;cell.classList.add('pulsing');setTimeout(()=>cell.classList.remove('pulsing'),720);}
+            b._ci=idx;
+          }
+        }
+        for(let i=0;i<cells.length;i++){
+          const si=i*3, l=st[si+2];
+          if(l<3){
+            const mx=Math.floor((i%C)/C*SW), my=Math.floor((i/C|0)/R*SH);
+            cells[i].style.setProperty('--pxc', sm[my*SW+mx]===1?letterGray:bgGray);
+          } else {
+            cells[i].style.setProperty('--pxc',`hsl(${st[si]|0},${st[si+1]|0}%,${l|0}%)`);
+          }
+        }
+      }
+    }
+    _typeRafLoop();
+    _wireTypeControls();
+  }
+
+  function _wireTypeControls(){
+    document.querySelectorAll('.mh-type-style-btn').forEach(btn=>{
+      if(btn._twired) return; btn._twired=true;
+      btn.addEventListener('click',()=>{
+        _typeStyleIdx=parseInt(btn.dataset.ts);
+        document.querySelectorAll('.mh-type-style-btn').forEach(b=>b.classList.toggle('active',b===btn));
+        _startTypeAlpha();
+      });
+    });
+    const inp=$('mhTypeCustomText');
+    if(inp&&!inp._twired){inp._twired=true; inp.addEventListener('input',()=>{clearTimeout(inp._tt);inp._tt=setTimeout(_startTypeAlpha,400);});}
+    const useBtn=$('mhTypeUseBtn');
+    if(useBtn&&!useBtn._twired){useBtn._twired=true; useBtn.addEventListener('click',()=>{
+      const preview=$('mhTypeSelectedPreview'), row=$('mhTypeSelectedRow'); if(!preview||!row) return;
+      const text=($('mhTypeCustomText')||{}).value.trim().toUpperCase()||'HEXFIELD';
+      row.innerHTML=''; preview.style.display='block';
+      [...text].forEach(c=>{
+        if(c===' '){const s=document.createElement('div');s.style.cssText='width:14px;display:inline-block';row.appendChild(s);return;}
+        if(!/[A-Z0-9]/.test(c)) return;
+        const src=document.querySelector(`.mh-type-letter-wrap[data-letter="${c}"]`);
+        if(src) row.appendChild(src.cloneNode(true));
+      });
+    });}
+    const recBtn=$('mhTypeGifBtn');
+    if(recBtn&&!recBtn._twired){recBtn._twired=true; recBtn.addEventListener('click',()=>{
+      const status=$('mhTypeRecStatus'), btn=$('mhTypeGifBtn');
+      if(!_typeGrids.length||!window.MediaRecorder) return;
+      const g=_typeGrids[0], C=g.COLS, R=g.ROWS, SCALE=8;
+      const oc=document.createElement('canvas'); oc.width=C*SCALE; oc.height=R*SCALE;
+      const octx=oc.getContext('2d');
+      const mr=new MediaRecorder(oc.captureStream(30),{mimeType:'video/webm;codecs=vp8',videoBitsPerSecond:600000});
+      const chunks=[]; mr.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+      mr.onstop=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(chunks,{type:'video/webm'}));a.download='type-sim.webm';a.click();btn.textContent='⏺ Record';if(status)status.textContent='Done ✓';setTimeout(()=>{if(status)status.textContent='';},3000);};
+      mr.start(); btn.textContent='⏹ …';
+      let drawn=0, last=0;
+      (function df(ts){if(ts-last>=33){last=ts;const st=g.state;octx.clearRect(0,0,C*SCALE,R*SCALE);for(let i=0;i<C*R;i++){const si=i*3,l=st[si+2];octx.fillStyle=l<3?g.bgGray:`hsl(${st[si]|0},${st[si+1]|0}%,${l|0}%)`;octx.fillRect((i%C)*SCALE,(i/C|0)*SCALE,SCALE,SCALE);}if(++drawn>=90){mr.stop();return;}}requestAnimationFrame(df);})(0);
+    });}
+  }
+
   function switchSuiteTab(tab){
     const inPanel = $('mhBuilder' + tab.charAt(0).toUpperCase() + tab.slice(1));
     const outPanel = document.querySelector('.mh-builder-panel.active');
     if (!inPanel || inPanel === outPanel) return;
     document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
-    _stopLogoSims(); // stop all logo sim instances on tab switch
+    _stopLogoSims(); _stopTypeAlpha(); // stop sims on tab switch
     const bg = document.getElementById('mhPageHexBg');
     if (bg) {
       bg.classList.add('mh-domino','mh-bg-pulse');
@@ -2617,7 +2829,7 @@
       if (tab === 'qr') setTimeout(() => { if (typeof generateQr === 'function') generateQr(); }, 60);
       if (tab === 'kit' && typeof renderKitGrid === 'function') renderKitGrid();
       if (tab === 'fonts' && typeof loadFontEffects === 'function') loadFontEffects();
-      if (tab === 'type' && typeof renderTypeScale === 'function') renderTypeScale();
+      if (tab === 'type') { if(typeof renderTypeScale==='function') renderTypeScale(); setTimeout(_startTypeAlpha, 200); }
       if (tab === 'logo') { renderLogoDesigner(); setTimeout(_startLogoSim, 250); }
     }
     if (paper) {
