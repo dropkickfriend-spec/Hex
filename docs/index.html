@@ -1497,6 +1497,19 @@
   }
   @keyframes mhRetroTick { 0%,100%{opacity:1} 50%{opacity:0} }
   @keyframes mhRetroScroll { 0%{transform:translateX(100%)} 100%{transform:translateX(-900%)} }
+  /* ── Chess board ── */
+  .mh-chess-2d-wrap { position:relative; overflow:auto; }
+  .mh-chess-2d { display:grid; grid-template-columns:repeat(8,1fr); border:2px solid rgba(255,255,255,.12); border-radius:8px; overflow:hidden; aspect-ratio:1; max-width:420px; margin:0 auto; }
+  .mh-chess-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:clamp(14px,3.5vw,28px); }
+  .mh-chess-cell.light { background:rgba(255,255,255,.10); }
+  .mh-chess-cell.dark { background:rgba(0,0,0,.25); }
+  .mh-chess-piece { text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 10px var(--mh-a,#ffff00); line-height:1; pointer-events:none; color:#f0f0f0; }
+  .mh-chess-piece.bp { color:var(--mh-b,#0000ff); text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 10px var(--mh-b,#0000ff); }
+  .mh-chess-canvas { border:1px solid rgba(255,255,255,.1); border-radius:10px; }
+  .mh-chess-mode-btn { min-width:auto; padding:6px 12px; font:10px 'Space Mono',monospace; letter-spacing:.1em; }
+  .mh-chess-mode-btn.active { background:rgba(255,255,255,.14); color:var(--mh-a,#ffff00); box-shadow:0 0 8px var(--mh-a,#ffff00); }
+  .mh-chess-coords { display:flex; justify-content:center; gap:0; max-width:420px; margin:0 auto; }
+  .mh-chess-coord { flex:1; text-align:center; font:9px 'Space Mono',monospace; color:rgba(255,255,255,.3); }
 </style>
 <div id="mhPageFold"></div>
 <div id="mhSplash">
@@ -1619,6 +1632,7 @@
     <button class="mh-suite-tab" data-suite-tab="qr"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">QR</span></button>
     <button class="mh-suite-tab" data-suite-tab="logo"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Logo</span></button>
     <button class="mh-suite-tab" data-suite-tab="type"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Type</span></button>
+    <button class="mh-suite-tab" data-suite-tab="chess"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Chess</span></button>
   </div>
   <div class="mh-panels-wrap" id="mhPanelsWrap">
   <div id="mhFoldPaper"></div>
@@ -1757,6 +1771,22 @@
     <div id="mhTypeSelectedPreview" style="margin-top:12px;display:none">
       <div class="mh-builder-title" style="margin-bottom:6px">Selected style preview</div>
       <div id="mhTypeSelectedRow" style="display:flex;flex-wrap:wrap;gap:2px;align-items:flex-end"></div>
+    </div>
+  </div>
+  <div class="mh-builder-panel" id="mhBuilderChess">
+    <div class="mh-builder-title">Chess · 2D + 3D isometric board renders</div>
+    <div class="mh-render-toolbar" style="margin-bottom:8px;gap:6px;flex-wrap:wrap">
+      <button class="mh-chess-mode-btn active" data-mode="2d">2D Flat</button>
+      <button class="mh-chess-mode-btn" data-mode="3d">3D Iso</button>
+      <input id="mhChessFen" placeholder="Paste FEN position…" style="flex:1;font:10px 'Space Mono',monospace;min-width:160px" value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"/>
+      <button id="mhChessRender">Render</button>
+      <button id="mhChessExport">Export PNG</button>
+    </div>
+    <div id="mhChessView2d" class="mh-chess-2d-wrap"></div>
+    <canvas id="mhChessCanvas3d" class="mh-chess-canvas" style="display:none;width:100%;max-height:480px;"></canvas>
+    <div class="mh-export-status" id="mhChessStatus" style="margin-top:6px"></div>
+    <div class="mh-painter-tip" style="margin-top:10px">
+      Chrome extension: <a href="../extension/README.md" style="color:var(--mh-a,#ffff00);text-decoration:none">install /extension</a> to inject HexField renders on chess.com + lichess.org
     </div>
   </div>
   </div>
@@ -2762,6 +2792,182 @@
       }).catch(() => { if (status) status.textContent = 'Backend unreachable.'; });
     });
   }
+
+  // ── Chess Board Renderer ──────────────────────────────────────────────────
+  const CHESS_GLYPHS = {
+    K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙',
+    k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'
+  };
+  function _parseFen(fen) {
+    const board = [];
+    const rows = (fen || '').trim().split(' ')[0].split('/');
+    for (const row of rows) {
+      const cells = [];
+      for (const ch of row) {
+        const n = parseInt(ch);
+        if (!isNaN(n)) for (let i = 0; i < n; i++) cells.push(null);
+        else cells.push(ch);
+      }
+      board.push(cells);
+    }
+    return board;
+  }
+  function renderChessBoard() {
+    const fenEl = $('mhChessFen');
+    const fen = fenEl ? fenEl.value : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
+    const board = _parseFen(fen);
+    const mode = (document.querySelector('.mh-chess-mode-btn.active') || {dataset:{mode:'2d'}}).dataset.mode;
+    if (mode === '3d') _renderChess3d(board);
+    else _renderChess2d(board);
+  }
+  function _renderChess2d(board) {
+    const wrap = $('mhChessView2d'), canvas = $('mhChessCanvas3d');
+    if (!wrap) return;
+    if (canvas) canvas.style.display = 'none';
+    wrap.style.display = '';
+    const p = getWheelPalette();
+    const lightColor = p.aHex + '28';
+    const darkColor  = p.bHex + '38';
+    let html = `<div class="mh-chess-2d" style="--cl:${lightColor};--cd:${darkColor}">`;
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const sq = (r + c) % 2 === 0 ? 'light' : 'dark';
+        const piece = board[r] && board[r][c];
+        const glyph = piece ? (CHESS_GLYPHS[piece] || '') : '';
+        const isBlack = piece && piece === piece.toLowerCase();
+        html += `<div class="mh-chess-cell ${sq}" style="background:var(--${sq==='light'?'cl':'cd'})"><span class="mh-chess-piece${isBlack?' bp':''}">${glyph}</span></div>`;
+      }
+    }
+    html += '</div>';
+    const coords = '<div class="mh-chess-coords">' + ['a','b','c','d','e','f','g','h'].map(l=>`<span class="mh-chess-coord">${l}</span>`).join('') + '</div>';
+    wrap.innerHTML = html + coords;
+  }
+  function _renderChess3d(board) {
+    const wrap = $('mhChessView2d'), canvas = $('mhChessCanvas3d');
+    if (!canvas) return;
+    if (wrap) wrap.style.display = 'none';
+    canvas.style.display = 'block';
+    const p = getWheelPalette();
+    const DPR = window.devicePixelRatio || 1;
+    const W = (canvas.clientWidth || 640) * DPR;
+    const H = Math.round(W * 0.72);
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#030308';
+    ctx.fillRect(0, 0, W, H);
+    const tileW = W / 10.5;
+    const tileH = tileW * 0.52;
+    const cubeH = tileH * 0.55;
+    const startX = W * 0.5;
+    const startY = H * 0.07;
+    function hexToRgb(h) {
+      const n = parseInt((h||'#888').replace('#',''), 16);
+      return [(n>>16)&255,(n>>8)&255,n&255];
+    }
+    function rgba(r,g,b,a=1){ return `rgba(${r|0},${g|0},${b|0},${a})`; }
+    function tint([r,g,b],f){ return [Math.min(255,r+f*255),Math.min(255,g+f*255),Math.min(255,b+f*255)]; }
+    function shade([r,g,b],f){ return [r*f,g*f,b*f]; }
+    const lightRgb = hexToRgb(p.aHex);
+    const darkRgb  = hexToRgb(p.bHex);
+    function drawCube(sx, sy, rgb, isLight) {
+      const top   = tint(rgb, 0.18);
+      const right = shade(rgb, 0.72);
+      const left  = shade(rgb, 0.46);
+      // top face
+      ctx.fillStyle = rgba(...top);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + tileW*0.5, sy + tileH*0.5);
+      ctx.lineTo(sx, sy + tileH);
+      ctx.lineTo(sx - tileW*0.5, sy + tileH*0.5);
+      ctx.closePath(); ctx.fill();
+      // right face
+      ctx.fillStyle = rgba(...right);
+      ctx.beginPath();
+      ctx.moveTo(sx + tileW*0.5, sy + tileH*0.5);
+      ctx.lineTo(sx + tileW*0.5, sy + tileH*0.5 + cubeH);
+      ctx.lineTo(sx, sy + tileH + cubeH);
+      ctx.lineTo(sx, sy + tileH);
+      ctx.closePath(); ctx.fill();
+      // left face
+      ctx.fillStyle = rgba(...left);
+      ctx.beginPath();
+      ctx.moveTo(sx - tileW*0.5, sy + tileH*0.5);
+      ctx.lineTo(sx, sy + tileH);
+      ctx.lineTo(sx, sy + tileH + cubeH);
+      ctx.lineTo(sx - tileW*0.5, sy + tileH*0.5 + cubeH);
+      ctx.closePath(); ctx.fill();
+      // edge line
+      ctx.strokeStyle = isLight ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.22)';
+      ctx.lineWidth = DPR * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + tileW*0.5, sy + tileH*0.5);
+      ctx.lineTo(sx, sy + tileH);
+      ctx.lineTo(sx - tileW*0.5, sy + tileH*0.5);
+      ctx.closePath(); ctx.stroke();
+    }
+    function drawPiece(sx, sy, piece) {
+      const isWhite = piece === piece.toUpperCase();
+      const glyph = CHESS_GLYPHS[piece] || '';
+      if (!glyph) return;
+      const fs = tileW * 0.3;
+      ctx.font = `${fs}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const cy = sy + tileH * 0.38;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillText(glyph, sx + DPR, cy + DPR);
+      ctx.shadowColor = isWhite ? p.aHex : p.bHex;
+      ctx.shadowBlur = fs * 0.45;
+      ctx.fillStyle = isWhite ? p.aHex : p.bHex;
+      ctx.fillText(glyph, sx, cy);
+      ctx.shadowBlur = 0;
+    }
+    // draw tiles back-to-front (r=7 is visually back)
+    for (let r = 7; r >= 0; r--) {
+      for (let c = 0; c < 8; c++) {
+        const sx = startX + (c - r) * tileW * 0.5;
+        const sy = startY + (c + r) * tileH * 0.5;
+        const isLight = (r + c) % 2 === 0;
+        drawCube(sx, sy, isLight ? lightRgb : darkRgb, isLight);
+      }
+    }
+    // draw pieces on top (FEN rank 8 = board[0], displayed at visual back = iso r=7)
+    for (let r = 7; r >= 0; r--) {
+      for (let c = 0; c < 8; c++) {
+        const fenRow = 7 - r; // FEN row 0 = rank 8 = visual back
+        const piece = board[fenRow] && board[fenRow][c];
+        if (piece) {
+          const sx = startX + (c - r) * tileW * 0.5;
+          const sy = startY + (c + r) * tileH * 0.5;
+          drawPiece(sx, sy, piece);
+        }
+      }
+    }
+    ctx.font = `${tileW * 0.17}px 'Space Mono', monospace`;
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('HEXFIELD CHESS · 3D ISOMETRIC', DPR * 10, H - DPR * 6);
+  }
+  function _exportChessPng() {
+    const mode = (document.querySelector('.mh-chess-mode-btn.active') || {dataset:{mode:'2d'}}).dataset.mode;
+    const status = $('mhChessStatus');
+    if (mode !== '3d') {
+      if (status) { status.textContent = 'Switch to 3D view to export PNG.'; setTimeout(() => { status.textContent = ''; }, 2800); }
+      return;
+    }
+    const canvas = $('mhChessCanvas3d');
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = 'hexfield-chess-3d.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    if (status) { status.textContent = 'PNG exported!'; setTimeout(() => { status.textContent = ''; }, 1800); }
+  }
+
   // Shuffle: randomise hue offsets, ball counts, speeds and re-run
   const _allRules=['avoid','flock','spiral','chaos','seek','no-rep','excl','like-att','like-rep'];
   function _shuffleLogoSim(){
@@ -3032,6 +3238,7 @@
       if (tab === 'fonts' && typeof loadFontEffects === 'function') loadFontEffects();
       if (tab === 'type') { if(typeof renderTypeScale==='function') renderTypeScale(); setTimeout(_startTypeAlpha, 200); }
       if (tab === 'logo') { renderLogoDesigner(); setTimeout(() => { _startLogoSim(); _initVendingMachine(); }, 250); }
+      if (tab === 'chess') setTimeout(renderChessBoard, 60);
     }
     if (paper) {
       paper.classList.remove('mh-paper-cover','mh-paper-reveal');
@@ -3875,6 +4082,13 @@
   $('mhCopyCodeBtn').addEventListener('click', copyBuilderCode);
   $('mhExportGifBtn').addEventListener('click', exportGif);
   document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.addEventListener('click', () => switchSuiteTab(btn.dataset.suiteTab || 'web')));
+  document.querySelectorAll('.mh-chess-mode-btn').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.mh-chess-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderChessBoard();
+  }));
+  if ($('mhChessRender')) $('mhChessRender').addEventListener('click', renderChessBoard);
+  if ($('mhChessExport')) $('mhChessExport').addEventListener('click', _exportChessPng);
   ['mhWebPreset','mhWebDensity'].forEach(id => { const el=$(id); if(el) el.addEventListener('change', renderWebDesigner); });
   $('mhGenerateWebBtn').addEventListener('click', renderWebDesigner);
   $('mhGameBuilderBtn').addEventListener('click', () => { switchSuiteTab('game'); setVal('mhGame','platformer'); render(); });

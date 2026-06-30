@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "HexField Chess",
+  "short_name": "HexField",
+  "version": "1.0.0",
+  "description": "Renders chess.com and lichess.org boards in HexField isometric 3D palette style.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": [
+    "https://www.chess.com/*",
+    "https://chess.com/*",
+    "https://lichess.org/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "HexField Chess",
+    "default_icon": {
+      "16": "icon16.svg",
+      "48": "icon48.svg",
+      "128": "icon128.svg"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.chess.com/*", "https://chess.com/*", "https://lichess.org/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icon16.svg", "icon48.svg", "icon128.svg"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
