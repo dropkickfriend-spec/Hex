@@ -661,6 +661,8 @@
     margin: 12px;
     border-radius: 18px;
     padding: 14px;
+    position: relative;
+    z-index: 1;
   }
   .mh-render-adapter h2 { margin-top: 0; }
   .mh-render-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -1555,6 +1557,11 @@
       <button id="mhLogoSvgDlBtn">Download SVG</button>
     </div>
     <div id="mhLogoHexMark" style="display:flex;justify-content:center;align-items:center;padding:14px 0;min-height:100px"></div>
+    <div class="mh-render-toolbar" style="margin-top:6px">
+      <button id="mhLogoShuffleBtn">&#x21BB; Shuffle variations</button>
+      <button id="mhLogoGifBtn">&#x25CF; Record GIF</button>
+      <span id="mhLogoGifStatus" class="mh-export-status"></span>
+    </div>
     <div id="mhLogoSimGrid"></div>
     <div id="mhLogoLibrary"></div>
     <div class="mh-render-toolbar" style="margin-top:4px">
@@ -2420,6 +2427,98 @@
     }
     _rafLoop();
     _loadLogoLibrary();
+
+    // Wire Shuffle button
+    const shuffleBtn=$('mhLogoShuffleBtn');
+    if(shuffleBtn&&!shuffleBtn._lsWired){
+      shuffleBtn._lsWired=true;
+      shuffleBtn.addEventListener('click',_shuffleLogoSim);
+    }
+    // Wire GIF/WebM record button
+    const gifBtn=$('mhLogoGifBtn');
+    if(gifBtn&&!gifBtn._lsWired){
+      gifBtn._lsWired=true;
+      gifBtn.addEventListener('click',_recordLogoGif);
+    }
+  }
+
+  // Shuffle: randomise hue offsets, ball counts, speeds and re-run
+  const _allRules=['avoid','flock','spiral','chaos','seek','no-rep','excl','like-att','like-rep'];
+  function _shuffleLogoSim(){
+    const rnd=(lo,hi)=>lo+Math.random()*(hi-lo);
+    const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+    for(let i=0;i<_lsRules.length;i++){
+      _lsRules[i].hOff = Math.floor(Math.random()*360);
+      _lsRules[i].rule = pick(_allRules);
+      _lsRules[i].N   = 3+Math.floor(Math.random()*5);
+      _lsRules[i].spd = +(rnd(2,5.5).toFixed(1));
+      _lsRules[i].font= Math.floor(Math.random()*_lsFonts.length);
+    }
+    _startLogoSim();
+  }
+
+  // Record ~3 s of the selected sim panel as WebM and download
+  let _gifRecording=false;
+  function _recordLogoGif(){
+    if(_gifRecording) return;
+    const status=$('mhLogoGifStatus');
+    const btn=$('mhLogoGifBtn');
+    // Find selected sim
+    const selWrap=document.querySelector('.mh-ls-grid-wrap.mh-ls-sel');
+    const simIdx=selWrap?[...document.querySelectorAll('.mh-ls-grid-wrap')].indexOf(selWrap):0;
+    const sim=_lsGrids[simIdx];
+    if(!sim||!sim._cells) return;
+    const {_COLS:C,_ROWS:R,_W:SW,_H:SH,_bgGray,_letterGray,_mask:smask}=sim;
+    // Offscreen canvas — scale 8× for readable export
+    const SCALE=8, cw=C*SCALE, ch=R*SCALE;
+    const oc=document.createElement('canvas'); oc.width=cw; oc.height=ch;
+    const octx=oc.getContext('2d');
+    const stream=oc.captureStream(30);
+    const chunks=[];
+    const mr=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp8',videoBitsPerSecond:800000});
+    mr.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+    mr.onstop=()=>{
+      const blob=new Blob(chunks,{type:'video/webm'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='logo-sim.webm';
+      a.click();
+      _gifRecording=false;
+      if(btn) btn.textContent='⏺ Record GIF';
+      if(status) status.textContent='Downloaded ✓';
+      setTimeout(()=>{if(status)status.textContent='';},3000);
+    };
+    mr.start();
+    _gifRecording=true;
+    if(btn) btn.textContent='⏹ Recording…';
+    if(status) status.textContent='3 s…';
+    // Draw sim state to offscreen canvas each animation frame during recording
+    const FRAMES=90, frameDur=1000/30;
+    let drawn=0, lastDraw=0;
+    function drawFrame(ts){
+      if(!_gifRecording){mr.stop();return;}
+      if(ts-lastDraw>=frameDur){
+        lastDraw=ts;
+        const st=sim._state;
+        octx.clearRect(0,0,cw,ch);
+        for(let i=0;i<C*R;i++){
+          const si=i*3, l=st[si+2];
+          let col;
+          if(l<3){
+            const mx=Math.floor((i%C)/C*SW), my=Math.floor((i/C|0)/R*SH);
+            col=smask[my*SW+mx]===1?_letterGray:_bgGray;
+          } else {
+            col=`hsl(${st[si]|0},${st[si+1]|0}%,${l|0}%)`;
+          }
+          octx.fillStyle=col;
+          octx.fillRect((i%C)*SCALE,(i/C|0)*SCALE,SCALE,SCALE);
+        }
+        if(++drawn>=FRAMES){mr.stop();return;}
+        if(status) status.textContent=`${Math.ceil((FRAMES-drawn)/30)} s…`;
+      }
+      requestAnimationFrame(drawFrame);
+    }
+    requestAnimationFrame(drawFrame);
   }
 
   function switchSuiteTab(tab){
