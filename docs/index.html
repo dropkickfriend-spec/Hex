@@ -1302,6 +1302,16 @@
   .mh-ls-t { clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%); filter:brightness(1.55); animation:mhBgFaceTop var(--mh-face-speed,9s) linear infinite alternate; }
   .mh-ls-r { clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%); filter:brightness(0.88); animation:mhBgFaceRight var(--mh-face-speed,9s) linear infinite alternate; }
   .mh-ls-l { clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%); filter:brightness(0.48); animation:mhBgFaceLeft var(--mh-face-speed,9s) linear infinite alternate; }
+  /* Munker illusion stripe overlay — pointer-events:none so cubes stay interactive */
+  .mh-ls-munker {
+    position:absolute; inset:0; pointer-events:none; z-index:4;
+    mix-blend-mode:screen; border-radius:4px;
+  }
+  /* Munker illusion stripe overlay — pointer-events:none so cubes stay interactive */
+  .mh-ls-munker {
+    position:absolute; inset:0; pointer-events:none; z-index:4;
+    mix-blend-mode:screen; border-radius:4px;
+  }
   /* ── Logo library: saved picks ── */
   #mhLogoLibrary { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px; min-height:0; }
   .mh-lib-chip {
@@ -2266,16 +2276,26 @@
     // Cube grid dims — 2:1 aspect to match the iso-face diamond letter space
     const COLS=20, ROWS=10, SZ=8; // SZ = px per cube cell
     const W=60, H=30; // sim coordinate space
-    const darkHex=(getComputedStyle(document.documentElement).getPropertyValue('--mh-dark').trim()||'#0a0a14');
     const baseHue=(typeof getWheelPalette==='function'?getWheelPalette().hue:220);
     const hexH=SZ/0.866, rowStep=hexH*0.75, colStep=SZ;
     const totalW=Math.ceil(colStep*COLS+SZ*0.5), totalH=Math.ceil(rowStep*(ROWS-1)+hexH);
+    // Munker stripe angles keyed by rule
+    const _munkerAngles={avoid:0,flock:90,spiral:45,chaos:135,seek:0,'no-rep':90,'excl':45,'like-att':135,'like-rep':72};
     // 30 fps cap: only tick every ~33 ms
     let _lastTick=0;
 
     _lsRules.forEach((v,vi)=>{
+      // ── Per-panel color scheme derived from the color wheel ─────────────────
+      const schemeHue=(baseHue+v.hOff)%360;
+      const compHue=(schemeHue+174+(vi%3)*12)%360; // near-complement with slight variety per panel
+      const bgDark=`hsl(${schemeHue},55%,7%)`;      // rich dark tint — not plain black
+      const letterGray=`hsl(0,0%,30%)`;              // neutral gray: Munker stripes control perceived hue
+      const bgGray=`hsl(${schemeHue},30%,12%)`;      // slightly tinted dark for non-letter cells
+
       const wrap=document.createElement('div');
       wrap.className='mh-ls-grid-wrap';
+      wrap.style.background=bgDark;
+      wrap.style.setProperty('--mh-a',`hsl(${schemeHue},100%,62%)`); // selection ring matches scheme
       const cubeGrid=document.createElement('div');
       cubeGrid.className='mh-ls-grid';
       cubeGrid.style.cssText=`width:${totalW}px;height:${totalH}px;--mh-ls-sz:${SZ}px`;
@@ -2284,8 +2304,9 @@
 
       const font=fontOverride||_lsFonts[v.font||0];
       const mask=_buildLetterMask(text,W,H,font);
-      const sim=new BilliardsLogoSim(W,H,mask,v.N,v.spd,(baseHue+v.hOff)%360);
+      const sim=new BilliardsLogoSim(W,H,mask,v.N,v.spd,(schemeHue+vi*15)%360);
       sim._rule=v.rule; sim._v=v;
+      sim._bgDark=bgDark; sim._bgGray=bgGray; sim._letterGray=letterGray; sim._mask=mask;
       _lsGrids.push(sim);
 
       // Build isometric cube cell grid
@@ -2299,10 +2320,11 @@
           cell.className='mh-ls-cube';
           cell.style.left=(col*colStep+offsetX).toFixed(1)+'px';
           cell.style.top=yPx.toFixed(1)+'px';
-          // Faint letter-shape hint on dark cells
           const mx=Math.floor(col/COLS*W), my=Math.floor(row/ROWS*H);
           const inLetter=mask[my*W+mx]===1;
-          cell.style.setProperty('--pxc', inLetter?'rgba(255,255,255,0.09)':darkHex);
+          // Letter cells: neutral gray so Munker stripes dominate perceived color
+          // Background cells: dark tinted so letter shape reads structurally
+          cell.style.setProperty('--pxc', inLetter ? letterGray : bgGray);
           const fT=document.createElement('div'); fT.className='mh-ls-f mh-ls-t';
           const fR=document.createElement('div'); fR.className='mh-ls-f mh-ls-r';
           const fL=document.createElement('div'); fL.className='mh-ls-f mh-ls-l';
@@ -2319,6 +2341,27 @@
       }
       sim._cells=cells; sim._state=state;
       sim._COLS=COLS; sim._ROWS=ROWS; sim._W=W; sim._H=H;
+
+      // ── Munker illusion stripe overlay ──────────────────────────────────────
+      // Two near-complement hue bands at ~38% opacity via screen blend.
+      // Letter-region cubes (neutral gray) appear tinted by whichever stripe
+      // lands on them — the illusion makes physically identical grays read as
+      // two distinct vivid hues. Ball trails punch through at full chroma.
+      const munker=document.createElement('div');
+      munker.className='mh-ls-munker';
+      const ang=_munkerAngles[v.rule]||((vi*23)%180);
+      const period=Math.round(totalH/(3+vi%3)); // vary stripe density per panel
+      const sw=2, gap=period-sw*2;
+      munker.style.background=`repeating-linear-gradient(${ang}deg,
+        hsla(${schemeHue},95%,60%,0.42) 0px,
+        hsla(${schemeHue},95%,60%,0.42) ${sw}px,
+        transparent ${sw}px,
+        transparent ${sw+gap}px,
+        hsla(${compHue},95%,58%,0.38) ${sw+gap}px,
+        hsla(${compHue},95%,58%,0.38) ${sw+gap+sw}px,
+        transparent ${sw+gap+sw}px,
+        transparent ${period}px)`;
+      cubeGrid.appendChild(munker);
 
       wrap.addEventListener('click',()=>{
         document.querySelectorAll('.mh-ls-grid-wrap').forEach(w=>w.classList.remove('mh-ls-sel'));
@@ -2337,7 +2380,7 @@
         if(!sim||!sim._cells) continue;
         sim._applyRule(sim._rule);
         sim.step(); sim.step(); sim.step();
-        const {_cells:cells,_state:st,_COLS:C,_ROWS:R,_W:SW,_H:SH}=sim;
+        const {_cells:cells,_state:st,_COLS:C,_ROWS:R,_W:SW,_H:SH,_bgGray,_letterGray,_mask:smask}=sim;
         // Fade all cells toward dark each tick
         for(let i=0;i<st.length;i+=3) st[i+2]*=0.87;
         // Paint trail positions
@@ -2355,18 +2398,22 @@
           const cy=Math.min(R-1,Math.max(0,b.y/SH*R|0));
           const idx=cy*C+cx;
           const si=idx*3;
-          st[si]=b.hue; st[si+1]=100; st[si+2]=84;
+          st[si]=b.hue; st[si+1]=100; st[si+2]=88;
           if(b._ci!==idx){
             const cell=cells[idx];
             if(cell){cell.classList.remove('pulsing');void cell.offsetWidth;cell.classList.add('pulsing');setTimeout(()=>cell.classList.remove('pulsing'),720);}
             b._ci=idx;
           }
         }
-        // Flush state → DOM (only update cells that actually changed)
+        // Flush state → DOM; restore resting color for faded cells
         for(let i=0;i<cells.length;i++){
           const si=i*3, l=st[si+2];
-          const col=l<2?darkHex:`hsl(${st[si]|0},${st[si+1]|0}%,${l|0}%)`;
-          cells[i].style.setProperty('--pxc',col);
+          if(l<3){
+            const mx=Math.floor((i%C)/C*SW), my=Math.floor((i/C|0)/R*SH);
+            cells[i].style.setProperty('--pxc', smask[my*SW+mx]===1 ? _letterGray : _bgGray);
+          } else {
+            cells[i].style.setProperty('--pxc',`hsl(${st[si]|0},${st[si+1]|0}%,${l|0}%)`);
+          }
         }
       }
       if(_lsGrids[0]&&_lsGrids[0].tick%120===0) _logBilliards(_lsGrids[0]);
