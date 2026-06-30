@@ -3897,6 +3897,46 @@ async def stripe_webhook(request: Request):
     return await handle_webhook(request, db)
 
 
+class CheckoutSessionRequest(BaseModel):
+    success_url: str
+    cancel_url: str
+
+
+@api_router.post("/create-checkout-session")
+async def create_checkout_session(body: CheckoutSessionRequest):
+    if not stripe.api_key:
+        raise HTTPException(status_code=503, detail="Stripe not configured. Set STRIPE_SECRET_KEY env var.")
+    try:
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "unit_amount": 100,
+                    "product_data": {"name": "Hexfield Logo Art — Unique Colour Render"},
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            success_url=body.success_url,
+            cancel_url=body.cancel_url,
+        )
+        return {"checkout_url": session.url}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@api_router.get("/verify-payment")
+async def verify_payment(session_id: str):
+    if not stripe.api_key:
+        raise HTTPException(status_code=503, detail="Stripe not configured.")
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        return {"paid": session.payment_status == "paid"}
+    except Exception:
+        return {"paid": False}
+
+
 # Include the router in the main app
 app.include_router(api_router)
 

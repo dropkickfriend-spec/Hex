@@ -1,0 +1,33 @@
+/* HexField Chess — injected button style */
+#hf-chess-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0;
+}
+
+#hf-chess-btn {
+  background: linear-gradient(135deg, #1a1a28, #0d0d18);
+  border: 1px solid rgba(255, 255, 0, 0.35);
+  border-radius: 6px;
+  color: #ffff00;
+  cursor: pointer;
+  font: 700 11px 'Space Mono', 'Courier New', monospace;
+  letter-spacing: 0.1em;
+  padding: 7px 14px;
+  text-shadow: 0 0 8px #ffff00;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  user-select: none;
+  white-space: nowrap;
+  box-shadow: 0 0 0 1px rgba(255, 255, 0, 0.15), 0 3px 12px rgba(0, 0, 0, 0.5);
+}
+
+#hf-chess-btn:hover {
+  background: linear-gradient(135deg, #282838, #151524);
+  box-shadow: 0 0 0 1px rgba(255, 255, 0, 0.55), 0 0 16px rgba(255, 255, 0, 0.25), 0 4px 16px rgba(0, 0, 0, 0.6);
+  transform: translateY(-1px);
+}
+
+#hf-chess-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.5);
+}

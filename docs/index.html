@@ -1066,11 +1066,11 @@
     text-shadow:0 0 16px var(--mh-a,#ffff00); margin-top:18px;
   }
   .mh-splash-h {
-    font:700 24px/1.05 'Space Mono',monospace; color:#fff; text-align:center;
-    margin-bottom:7px; text-shadow:0 2px 24px rgba(0,0,0,.9);
+    font:700 24px/1.05 'Space Mono',monospace; color:var(--mh-comp,#fff); text-align:center;
+    margin-bottom:7px; text-shadow:0 2px 24px rgba(0,0,0,.9),0 0 28px var(--mh-comp-glow,transparent);
   }
   .mh-splash-sub {
-    font:11px/1.6 'Space Mono',monospace; color:rgba(200,200,220,.6); text-align:center;
+    font:11px/1.6 'Space Mono',monospace; color:var(--mh-comp-dim,rgba(200,200,220,.6)); text-align:center;
     margin-bottom:28px; max-width:420px;
   }
   .mh-splash-grid {
@@ -1098,8 +1098,8 @@
     width:100%; height:96px; border-radius:10px; overflow:hidden;
     position:relative; margin-bottom:11px; background:#08080f;
   }
-  .mh-sc-title { font:700 11px 'Space Mono',monospace; color:#fff; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; text-shadow:0 1px 4px rgba(0,0,0,.9); display:block; transform:skewY(14deg) scaleX(0.92); transform-origin:left top; }
-  .mh-sc-desc { font:10px/1.5 'Space Mono',monospace; color:rgba(175,175,210,.58); }
+  .mh-sc-title { font:700 11px 'Space Mono',monospace; color:var(--mh-comp,#fff); letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; text-shadow:0 1px 4px rgba(0,0,0,.9),0 0 14px var(--mh-comp-glow,transparent); display:block; transform:skewY(14deg) scaleX(0.92); transform-origin:left top; }
+  .mh-sc-desc { font:10px/1.5 'Space Mono',monospace; color:var(--mh-comp-dim,rgba(175,175,210,.58)); }
   /* Preview: colour wheel — hexagonal donut (flat-top hex outline + a
      smaller hex "hole" stacked on top) instead of a circle, to match the
      sharp-edged cube grid. clip-path supports a hard hex edge; CSS masks
@@ -1338,6 +1338,67 @@
     position:absolute; inset:0; pointer-events:none; z-index:4;
     mix-blend-mode:screen; border-radius:4px;
   }
+  /* Sheen sweep played once after a sim panel settles (coverage > 85%) */
+  @keyframes mhLogoSheen {
+    0%   { background-position: -200% 0; opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { background-position: 280% 0; opacity: 0; }
+  }
+  .mh-ls-grid-wrap.mh-ls-sheen::after {
+    content:''; position:absolute; inset:0; pointer-events:none; z-index:8;
+    background: linear-gradient(110deg, transparent 28%, rgba(255,255,255,0.26) 48%, rgba(255,255,255,0.10) 52%, transparent 68%);
+    background-size: 250% 100%;
+    animation: mhLogoSheen 1.8s ease-in-out forwards;
+  }
+  /* ── Retro vending machine ── */
+  .mh-vending {
+    display:flex; align-items:stretch; gap:0; margin:10px 0;
+    background:linear-gradient(145deg,#1a1a28 0%,#0d0d18 60%,#222234 100%);
+    border:3px solid #3a3a58; border-radius:8px; overflow:hidden;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 4px 24px rgba(0,0,0,.7);
+  }
+  .mh-vend-screen {
+    flex:0 0 130px; padding:10px; background:#05050c;
+    border-right:2px solid #2a2a40; position:relative;
+  }
+  .mh-vend-preview {
+    display:block; width:100%; image-rendering:pixelated;
+    filter:var(--vend-filter,grayscale(100%) contrast(0.8));
+    border:1px solid #1a1a2a;
+  }
+  .mh-vend-lock-overlay {
+    position:absolute; inset:10px; display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  .mh-vend-bw-label {
+    font:bold 10px 'Space Mono',monospace; letter-spacing:.2em; color:rgba(255,255,255,.35);
+    text-shadow:0 0 8px rgba(255,255,255,.2);
+  }
+  .mh-vend-panel {
+    flex:1; padding:10px 12px; display:flex; flex-direction:column; gap:5px; align-items:flex-start;
+  }
+  .mh-vend-price {
+    font:bold 22px 'Space Mono',monospace; color:var(--mh-a,#ffff00);
+    text-shadow:0 0 12px var(--mh-a,#ffff00); letter-spacing:.12em;
+  }
+  .mh-vend-coin { font-size:18px; color:#888; animation:mhVendCoinBlink 1.4s ease-in-out infinite; }
+  @keyframes mhVendCoinBlink{0%,100%{opacity:.35}50%{opacity:1}}
+  .mh-vend-btn {
+    background:linear-gradient(180deg,#ffcc00 0%,#ff8800 100%);
+    border:none; border-radius:4px; cursor:pointer;
+    font:bold 10px 'Space Mono',monospace; letter-spacing:.14em;
+    color:#05050a; padding:7px 14px;
+    box-shadow:0 3px 0 #aa5500,0 4px 12px rgba(255,140,0,.4);
+    transition:transform .1s,box-shadow .1s;
+  }
+  .mh-vend-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #aa5500;}
+  .mh-vend-btn.unlocked{background:linear-gradient(180deg,#44ff88 0%,#00cc44 100%);box-shadow:0 3px 0 #008833,0 0 18px rgba(80,255,150,.4);color:#020a04;}
+  .mh-vend-stripe-icons{display:flex;gap:5px;margin-top:2px;}
+  .mh-vend-cc{font:bold 7px 'Space Mono',monospace;letter-spacing:.1em;border:1px solid #444;border-radius:3px;padding:2px 4px;color:#888;}
+  .mh-vend-status{font:9px 'Space Mono',monospace;color:var(--mh-a,#ffff00);min-height:14px;}
+  #mhVending.mh-vend-paid .mh-vend-bw-label{display:none;}
+  #mhVending.mh-vend-paid .mh-vend-preview{filter:none;}
   /* ── Logo + Type panels: transparent so cube bg bleeds through ── */
   #mhBuilderLogo, #mhBuilderType { background:transparent !important; }
   /* ── Live type alphabet grid ── */
@@ -1436,6 +1497,19 @@
   }
   @keyframes mhRetroTick { 0%,100%{opacity:1} 50%{opacity:0} }
   @keyframes mhRetroScroll { 0%{transform:translateX(100%)} 100%{transform:translateX(-900%)} }
+  /* ── Chess board ── */
+  .mh-chess-2d-wrap { position:relative; overflow:auto; }
+  .mh-chess-2d { display:grid; grid-template-columns:repeat(8,1fr); border:2px solid rgba(255,255,255,.12); border-radius:8px; overflow:hidden; aspect-ratio:1; max-width:420px; margin:0 auto; }
+  .mh-chess-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:clamp(14px,3.5vw,28px); }
+  .mh-chess-cell.light { background:rgba(255,255,255,.10); }
+  .mh-chess-cell.dark { background:rgba(0,0,0,.25); }
+  .mh-chess-piece { text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 10px var(--mh-a,#ffff00); line-height:1; pointer-events:none; color:#f0f0f0; }
+  .mh-chess-piece.bp { color:var(--mh-b,#0000ff); text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 10px var(--mh-b,#0000ff); }
+  .mh-chess-canvas { border:1px solid rgba(255,255,255,.1); border-radius:10px; }
+  .mh-chess-mode-btn { min-width:auto; padding:6px 12px; font:10px 'Space Mono',monospace; letter-spacing:.1em; }
+  .mh-chess-mode-btn.active { background:rgba(255,255,255,.14); color:var(--mh-a,#ffff00); box-shadow:0 0 8px var(--mh-a,#ffff00); }
+  .mh-chess-coords { display:flex; justify-content:center; gap:0; max-width:420px; margin:0 auto; }
+  .mh-chess-coord { flex:1; text-align:center; font:9px 'Space Mono',monospace; color:rgba(255,255,255,.3); }
 </style>
 <div id="mhPageFold"></div>
 <div id="mhSplash">
@@ -1558,6 +1632,7 @@
     <button class="mh-suite-tab" data-suite-tab="qr"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">QR</span></button>
     <button class="mh-suite-tab" data-suite-tab="logo"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Logo</span></button>
     <button class="mh-suite-tab" data-suite-tab="type"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Type</span></button>
+    <button class="mh-suite-tab" data-suite-tab="chess"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Chess</span></button>
   </div>
   <div class="mh-panels-wrap" id="mhPanelsWrap">
   <div id="mhFoldPaper"></div>
@@ -1637,6 +1712,26 @@
     <div class="mh-render-toolbar" style="margin-top:4px">
       <button id="mhLogoNftBtn">Export Unique Art (PNG)</button>
     </div>
+    <!-- Retro vending machine — $1 unlocks colour render download via Stripe -->
+    <div id="mhVending" class="mh-vending">
+      <div class="mh-vend-screen">
+        <canvas id="mhVendPreview" width="120" height="60"></canvas>
+        <div class="mh-vend-lock-overlay" id="mhVendLock">
+          <span class="mh-vend-bw-label">B&amp;W</span>
+        </div>
+      </div>
+      <div class="mh-vend-panel">
+        <div class="mh-vend-price">$ 1.00</div>
+        <div class="mh-vend-coin" title="coin slot">◎</div>
+        <button class="mh-vend-btn" id="mhVendPayBtn">INSERT $1</button>
+        <div class="mh-vend-stripe-icons">
+          <span class="mh-vend-cc">VISA</span>
+          <span class="mh-vend-cc">MC</span>
+          <span class="mh-vend-cc">AMEX</span>
+        </div>
+        <div class="mh-vend-status" id="mhVendStatus">Pay to unlock colour download</div>
+      </div>
+    </div>
     <div class="mh-render-toolbar" style="margin-top:10px;flex-wrap:wrap">
       <input id="mhLogoTextLogo" maxlength="24" value="HEXFIELD" placeholder="Brand name" style="flex:2" />
       <select id="mhLogoMarkLogo"><option value="hex">Hex mark</option><option value="cube">Cube mark</option><option value="none">Text only</option></select>
@@ -1676,6 +1771,22 @@
     <div id="mhTypeSelectedPreview" style="margin-top:12px;display:none">
       <div class="mh-builder-title" style="margin-bottom:6px">Selected style preview</div>
       <div id="mhTypeSelectedRow" style="display:flex;flex-wrap:wrap;gap:2px;align-items:flex-end"></div>
+    </div>
+  </div>
+  <div class="mh-builder-panel" id="mhBuilderChess">
+    <div class="mh-builder-title">Chess · 2D + 3D isometric board renders</div>
+    <div class="mh-render-toolbar" style="margin-bottom:8px;gap:6px;flex-wrap:wrap">
+      <button class="mh-chess-mode-btn active" data-mode="2d">2D Flat</button>
+      <button class="mh-chess-mode-btn" data-mode="3d">3D Iso</button>
+      <input id="mhChessFen" placeholder="Paste FEN position…" style="flex:1;font:10px 'Space Mono',monospace;min-width:160px" value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"/>
+      <button id="mhChessRender">Render</button>
+      <button id="mhChessExport">Export PNG</button>
+    </div>
+    <div id="mhChessView2d" class="mh-chess-2d-wrap"></div>
+    <canvas id="mhChessCanvas3d" class="mh-chess-canvas" style="display:none;width:100%;max-height:480px;"></canvas>
+    <div class="mh-export-status" id="mhChessStatus" style="margin-top:6px"></div>
+    <div class="mh-painter-tip" style="margin-top:10px">
+      Chrome extension: <a href="../extension/README.md" style="color:var(--mh-a,#ffff00);text-decoration:none">install /extension</a> to inject HexField renders on chess.com + lichess.org
     </div>
   </div>
   </div>
@@ -2473,7 +2584,9 @@
       const mask=_buildLetterMask(text,W,H,font);
       const sim=new BilliardsLogoSim(W,H,mask,v.N,v.spd,(schemeHue+vi*15)%360);
       sim._rule=v.rule; sim._v=v;
-      sim._bgDark=bgDark; sim._bgGray=bgGray; sim._letterGray=letterGray; sim._mask=mask;
+      sim._schemeHue=schemeHue; sim._compHue=compHue;
+      const letterTint=`hsl(${compHue},38%,14%)`;
+      sim._bgDark=bgDark; sim._bgGray=bgGray; sim._letterGray=letterTint; sim._mask=mask;
       _lsGrids.push(sim);
 
       // Build isometric cube cell grid
@@ -2507,7 +2620,7 @@
         }
       }
       sim._cells=cells; sim._state=state;
-      sim._COLS=COLS; sim._ROWS=ROWS; sim._W=W; sim._H=H;
+      sim._COLS=COLS; sim._ROWS=ROWS; sim._W=W; sim._H=H; sim._wrap=wrap;
 
       // ── Munker illusion stripe overlay ──────────────────────────────────────
       // Two near-complement hue bands at ~38% opacity via screen blend.
@@ -2536,17 +2649,32 @@
         _saveLogoLibEntry(v,sim);
       });
       if(vi===0) wrap.classList.add('mh-ls-sel');
+      wrap.addEventListener('animationend', e => {
+        if(e.animationName==='mhLogoSheen') wrap.classList.remove('mh-ls-sheen');
+      });
     });
 
     function _rafLoop(){
       _lsRafId=requestAnimationFrame(_rafLoop);
       const now=performance.now();
-      if(now-_lastTick<33) return; // ~30 fps cap
+      if(now-_lastTick<10) return; // ~90 fps cap (play as fast as possible)
       _lastTick=now;
       for(const sim of _lsGrids){
         if(!sim||!sim._cells) continue;
         sim._applyRule(sim._rule);
-        sim.step(); sim.step(); sim.step();
+        sim.step(); sim.step(); sim.step(); sim.step(); sim.step();
+        // Anchor ball hues toward scheme (outside) or comp (inside) for
+        // a strong color-scheme read: letter interior vs boundary are distinct.
+        if(sim._schemeHue!=null){
+          for(const b of sim.balls){
+            const tgt = b.inside ? sim._compHue : sim._schemeHue;
+            b.hue = (b.hue * 0.92 + tgt * 0.08 + 360) % 360;
+          }
+        }
+        // Trigger sheen once when coverage settles above ~85%
+        if(sim.expanded && sim._wrap && !sim._wrap.classList.contains('mh-ls-sheen')){
+          sim._wrap.classList.add('mh-ls-sheen');
+        }
         const {_cells:cells,_state:st,_COLS:C,_ROWS:R,_W:SW,_H:SH,_bgGray,_letterGray,_mask:smask}=sim;
         // Fade all cells toward dark each tick
         for(let i=0;i<st.length;i+=3) st[i+2]*=0.87;
@@ -2600,6 +2728,244 @@
       gifBtn._lsWired=true;
       gifBtn.addEventListener('click',_recordLogoGif);
     }
+  }
+
+  // ── Retro vending machine: $1 Stripe paywall for colour render download ──
+  // Set window.MH_BACKEND_URL to your deployed backend URL after deploying
+  // backend/server.py, e.g. 'https://your-app.onrender.com'.
+  // Leave empty to test UI without backend (payment redirect will fail gracefully).
+  const MH_BACKEND_URL = window.MH_BACKEND_URL || '';
+  function _initVendingMachine() {
+    const vending = $('mhVending');
+    if (!vending) return;
+    const payBtn = $('mhVendPayBtn');
+    const status = $('mhVendStatus');
+    const previewCanvas = $('mhVendPreview');
+    const _checkPaid = () => localStorage.getItem('mh_logo_paid') === '1';
+    const _setPaid = () => {
+      localStorage.setItem('mh_logo_paid', '1');
+      vending.classList.add('mh-vend-paid');
+      if (payBtn) { payBtn.textContent = 'DOWNLOAD ✓'; payBtn.classList.add('unlocked'); }
+      if (status) status.textContent = 'Colour unlocked!';
+    };
+    if (_checkPaid()) _setPaid();
+    // Check for Stripe return ?logo_session=SESSION_ID in URL
+    const urlP = new URLSearchParams(window.location.search);
+    const retSession = urlP.get('logo_session');
+    if (retSession && !_checkPaid() && MH_BACKEND_URL) {
+      if (status) status.textContent = 'Verifying payment…';
+      fetch(`${MH_BACKEND_URL}/api/verify-payment?session_id=${encodeURIComponent(retSession)}`)
+        .then(r => r.json()).then(d => { if (d.paid) _setPaid(); else if (status) status.textContent = 'Payment not confirmed.'; })
+        .catch(() => { if (status) status.textContent = 'Could not verify — try again.'; });
+    }
+    // Refresh vend preview from selected sim state every 250 ms
+    setInterval(() => {
+      const selWrap = document.querySelector('.mh-ls-grid-wrap.mh-ls-sel');
+      if (!selWrap || !previewCanvas) return;
+      const simIdx = [...document.querySelectorAll('.mh-ls-grid-wrap')].indexOf(selWrap);
+      const sim = _lsGrids[simIdx];
+      if (!sim || !sim._cells) return;
+      const {_cells:cells,_state:st,_COLS:C,_ROWS:R} = sim;
+      const ctx = previewCanvas.getContext('2d');
+      const PW = previewCanvas.width, PH = previewCanvas.height;
+      ctx.clearRect(0, 0, PW, PH);
+      for (let row = 0; row < R; row++) for (let col = 0; col < C; col++) {
+        const si = (row * C + col) * 3;
+        ctx.fillStyle = st[si+2] > 2 ? `hsl(${st[si]|0},${st[si+1]|0}%,${st[si+2]|0}%)` : sim._bgGray;
+        ctx.fillRect(col*PW/C|0, row*PH/R|0, Math.ceil(PW/C)+1, Math.ceil(PH/R)+1);
+      }
+    }, 250);
+    if (payBtn) payBtn.addEventListener('click', () => {
+      if (_checkPaid()) { $('mhLogoNftBtn')?.click(); return; }
+      if (!MH_BACKEND_URL) { status.textContent = 'Backend not deployed yet.'; return; }
+      status.textContent = 'Connecting to Stripe…';
+      const base = window.location.href.split('?')[0];
+      fetch(`${MH_BACKEND_URL}/api/create-checkout-session`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          success_url: base + '?logo_session={CHECKOUT_SESSION_ID}',
+          cancel_url:  base + '?logo_cancel=1'
+        })
+      }).then(r => r.json()).then(d => {
+        if (d.checkout_url) window.location.href = d.checkout_url;
+        else if (status) status.textContent = 'Checkout error.';
+      }).catch(() => { if (status) status.textContent = 'Backend unreachable.'; });
+    });
+  }
+
+  // ── Chess Board Renderer ──────────────────────────────────────────────────
+  const CHESS_GLYPHS = {
+    K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙',
+    k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'
+  };
+  function _parseFen(fen) {
+    const board = [];
+    const rows = (fen || '').trim().split(' ')[0].split('/');
+    for (const row of rows) {
+      const cells = [];
+      for (const ch of row) {
+        const n = parseInt(ch);
+        if (!isNaN(n)) for (let i = 0; i < n; i++) cells.push(null);
+        else cells.push(ch);
+      }
+      board.push(cells);
+    }
+    return board;
+  }
+  function renderChessBoard() {
+    const fenEl = $('mhChessFen');
+    const fen = fenEl ? fenEl.value : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
+    const board = _parseFen(fen);
+    const mode = (document.querySelector('.mh-chess-mode-btn.active') || {dataset:{mode:'2d'}}).dataset.mode;
+    if (mode === '3d') _renderChess3d(board);
+    else _renderChess2d(board);
+  }
+  function _renderChess2d(board) {
+    const wrap = $('mhChessView2d'), canvas = $('mhChessCanvas3d');
+    if (!wrap) return;
+    if (canvas) canvas.style.display = 'none';
+    wrap.style.display = '';
+    const p = getWheelPalette();
+    const lightColor = p.aHex + '28';
+    const darkColor  = p.bHex + '38';
+    let html = `<div class="mh-chess-2d" style="--cl:${lightColor};--cd:${darkColor}">`;
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const sq = (r + c) % 2 === 0 ? 'light' : 'dark';
+        const piece = board[r] && board[r][c];
+        const glyph = piece ? (CHESS_GLYPHS[piece] || '') : '';
+        const isBlack = piece && piece === piece.toLowerCase();
+        html += `<div class="mh-chess-cell ${sq}" style="background:var(--${sq==='light'?'cl':'cd'})"><span class="mh-chess-piece${isBlack?' bp':''}">${glyph}</span></div>`;
+      }
+    }
+    html += '</div>';
+    const coords = '<div class="mh-chess-coords">' + ['a','b','c','d','e','f','g','h'].map(l=>`<span class="mh-chess-coord">${l}</span>`).join('') + '</div>';
+    wrap.innerHTML = html + coords;
+  }
+  function _renderChess3d(board) {
+    const wrap = $('mhChessView2d'), canvas = $('mhChessCanvas3d');
+    if (!canvas) return;
+    if (wrap) wrap.style.display = 'none';
+    canvas.style.display = 'block';
+    const p = getWheelPalette();
+    const DPR = window.devicePixelRatio || 1;
+    const W = (canvas.clientWidth || 640) * DPR;
+    const H = Math.round(W * 0.72);
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#030308';
+    ctx.fillRect(0, 0, W, H);
+    const tileW = W / 10.5;
+    const tileH = tileW * 0.52;
+    const cubeH = tileH * 0.55;
+    const startX = W * 0.5;
+    const startY = H * 0.07;
+    function hexToRgb(h) {
+      const n = parseInt((h||'#888').replace('#',''), 16);
+      return [(n>>16)&255,(n>>8)&255,n&255];
+    }
+    function rgba(r,g,b,a=1){ return `rgba(${r|0},${g|0},${b|0},${a})`; }
+    function tint([r,g,b],f){ return [Math.min(255,r+f*255),Math.min(255,g+f*255),Math.min(255,b+f*255)]; }
+    function shade([r,g,b],f){ return [r*f,g*f,b*f]; }
+    const lightRgb = hexToRgb(p.aHex);
+    const darkRgb  = hexToRgb(p.bHex);
+    function drawCube(sx, sy, rgb, isLight) {
+      const top   = tint(rgb, 0.18);
+      const right = shade(rgb, 0.72);
+      const left  = shade(rgb, 0.46);
+      // top face
+      ctx.fillStyle = rgba(...top);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + tileW*0.5, sy + tileH*0.5);
+      ctx.lineTo(sx, sy + tileH);
+      ctx.lineTo(sx - tileW*0.5, sy + tileH*0.5);
+      ctx.closePath(); ctx.fill();
+      // right face
+      ctx.fillStyle = rgba(...right);
+      ctx.beginPath();
+      ctx.moveTo(sx + tileW*0.5, sy + tileH*0.5);
+      ctx.lineTo(sx + tileW*0.5, sy + tileH*0.5 + cubeH);
+      ctx.lineTo(sx, sy + tileH + cubeH);
+      ctx.lineTo(sx, sy + tileH);
+      ctx.closePath(); ctx.fill();
+      // left face
+      ctx.fillStyle = rgba(...left);
+      ctx.beginPath();
+      ctx.moveTo(sx - tileW*0.5, sy + tileH*0.5);
+      ctx.lineTo(sx, sy + tileH);
+      ctx.lineTo(sx, sy + tileH + cubeH);
+      ctx.lineTo(sx - tileW*0.5, sy + tileH*0.5 + cubeH);
+      ctx.closePath(); ctx.fill();
+      // edge line
+      ctx.strokeStyle = isLight ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.22)';
+      ctx.lineWidth = DPR * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + tileW*0.5, sy + tileH*0.5);
+      ctx.lineTo(sx, sy + tileH);
+      ctx.lineTo(sx - tileW*0.5, sy + tileH*0.5);
+      ctx.closePath(); ctx.stroke();
+    }
+    function drawPiece(sx, sy, piece) {
+      const isWhite = piece === piece.toUpperCase();
+      const glyph = CHESS_GLYPHS[piece] || '';
+      if (!glyph) return;
+      const fs = tileW * 0.3;
+      ctx.font = `${fs}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const cy = sy + tileH * 0.38;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillText(glyph, sx + DPR, cy + DPR);
+      ctx.shadowColor = isWhite ? p.aHex : p.bHex;
+      ctx.shadowBlur = fs * 0.45;
+      ctx.fillStyle = isWhite ? p.aHex : p.bHex;
+      ctx.fillText(glyph, sx, cy);
+      ctx.shadowBlur = 0;
+    }
+    // draw tiles back-to-front (r=7 is visually back)
+    for (let r = 7; r >= 0; r--) {
+      for (let c = 0; c < 8; c++) {
+        const sx = startX + (c - r) * tileW * 0.5;
+        const sy = startY + (c + r) * tileH * 0.5;
+        const isLight = (r + c) % 2 === 0;
+        drawCube(sx, sy, isLight ? lightRgb : darkRgb, isLight);
+      }
+    }
+    // draw pieces on top (FEN rank 8 = board[0], displayed at visual back = iso r=7)
+    for (let r = 7; r >= 0; r--) {
+      for (let c = 0; c < 8; c++) {
+        const fenRow = 7 - r; // FEN row 0 = rank 8 = visual back
+        const piece = board[fenRow] && board[fenRow][c];
+        if (piece) {
+          const sx = startX + (c - r) * tileW * 0.5;
+          const sy = startY + (c + r) * tileH * 0.5;
+          drawPiece(sx, sy, piece);
+        }
+      }
+    }
+    ctx.font = `${tileW * 0.17}px 'Space Mono', monospace`;
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('HEXFIELD CHESS · 3D ISOMETRIC', DPR * 10, H - DPR * 6);
+  }
+  function _exportChessPng() {
+    const mode = (document.querySelector('.mh-chess-mode-btn.active') || {dataset:{mode:'2d'}}).dataset.mode;
+    const status = $('mhChessStatus');
+    if (mode !== '3d') {
+      if (status) { status.textContent = 'Switch to 3D view to export PNG.'; setTimeout(() => { status.textContent = ''; }, 2800); }
+      return;
+    }
+    const canvas = $('mhChessCanvas3d');
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = 'hexfield-chess-3d.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    if (status) { status.textContent = 'PNG exported!'; setTimeout(() => { status.textContent = ''; }, 1800); }
   }
 
   // Shuffle: randomise hue offsets, ball counts, speeds and re-run
@@ -2871,7 +3237,8 @@
       if (tab === 'kit' && typeof renderKitGrid === 'function') renderKitGrid();
       if (tab === 'fonts' && typeof loadFontEffects === 'function') loadFontEffects();
       if (tab === 'type') { if(typeof renderTypeScale==='function') renderTypeScale(); setTimeout(_startTypeAlpha, 200); }
-      if (tab === 'logo') { renderLogoDesigner(); setTimeout(_startLogoSim, 250); }
+      if (tab === 'logo') { renderLogoDesigner(); setTimeout(() => { _startLogoSim(); _initVendingMachine(); }, 250); }
+      if (tab === 'chess') setTimeout(renderChessBoard, 60);
     }
     if (paper) {
       paper.classList.remove('mh-paper-cover','mh-paper-reveal');
@@ -3229,6 +3596,10 @@
     document.documentElement.style.setProperty('--mh-c', p.cHex);
     document.documentElement.style.setProperty('--mh-grid-line',
       `rgba(${p.centre[0]},${p.centre[1]},${p.centre[2]},.09)`);
+    const compH = (p.hue + 180) % 360;
+    document.documentElement.style.setProperty('--mh-comp', `hsl(${compH},100%,78%)`);
+    document.documentElement.style.setProperty('--mh-comp-dim', `hsl(${compH},75%,58%)`);
+    document.documentElement.style.setProperty('--mh-comp-glow', `hsla(${compH},100%,70%,.35)`);
     const sz = 80, hexH = sz / 0.866, rowStep = hexH * 0.75 + 2, colStep = sz + 2;
     const cols = Math.ceil(window.innerWidth / colStep) + 2;
     const rows = Math.ceil((window.innerHeight + 200) / rowStep) + 2;
@@ -3711,6 +4082,13 @@
   $('mhCopyCodeBtn').addEventListener('click', copyBuilderCode);
   $('mhExportGifBtn').addEventListener('click', exportGif);
   document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.addEventListener('click', () => switchSuiteTab(btn.dataset.suiteTab || 'web')));
+  document.querySelectorAll('.mh-chess-mode-btn').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.mh-chess-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderChessBoard();
+  }));
+  if ($('mhChessRender')) $('mhChessRender').addEventListener('click', renderChessBoard);
+  if ($('mhChessExport')) $('mhChessExport').addEventListener('click', _exportChessPng);
   ['mhWebPreset','mhWebDensity'].forEach(id => { const el=$(id); if(el) el.addEventListener('change', renderWebDesigner); });
   $('mhGenerateWebBtn').addEventListener('click', renderWebDesigner);
   $('mhGameBuilderBtn').addEventListener('click', () => { switchSuiteTab('game'); setVal('mhGame','platformer'); render(); });

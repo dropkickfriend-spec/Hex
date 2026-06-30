@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HexField Chess</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 320px;
+    min-height: 380px;
+    background: #030308;
+    color: #dddde8;
+    font: 11px 'Space Mono', 'Courier New', monospace;
+    padding: 0;
+    overflow: hidden;
+  }
+  .hf-header {
+    background: linear-gradient(135deg, #1a1a28, #0d0d18);
+    border-bottom: 1px solid rgba(255,255,0,.18);
+    padding: 10px 14px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hf-logo {
+    width: 28px; height: 28px;
+    flex-shrink: 0;
+  }
+  .hf-title {
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: .14em;
+    color: #ffff00;
+    text-shadow: 0 0 10px #ffff00;
+    text-transform: uppercase;
+  }
+  .hf-sub {
+    font-size: 9px;
+    color: rgba(255,255,255,.38);
+    letter-spacing: .1em;
+  }
+  .hf-body { padding: 10px 12px; }
+  .hf-status {
+    font-size: 10px;
+    color: rgba(255,255,255,.45);
+    margin-bottom: 8px;
+    min-height: 14px;
+  }
+  .hf-canvas-wrap {
+    border-radius: 8px;
+    overflow: hidden;
+    background: #06060e;
+    border: 1px solid rgba(255,255,0,.1);
+    margin-bottom: 8px;
+    position: relative;
+  }
+  canvas { display: block; width: 100%; }
+  .hf-fen {
+    width: 100%;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 5px;
+    color: #dddde8;
+    font: 9px 'Space Mono', monospace;
+    padding: 5px 7px;
+    margin-bottom: 7px;
+    outline: none;
+  }
+  .hf-fen:focus { border-color: rgba(255,255,0,.4); }
+  .hf-row { display: flex; gap: 5px; margin-bottom: 7px; }
+  button {
+    flex: 1;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 5px;
+    color: #dddde8;
+    font: 9px 'Space Mono', monospace;
+    letter-spacing: .08em;
+    padding: 7px 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background .12s, color .12s;
+  }
+  button:hover { background: rgba(255,255,0,.12); color: #ffff00; border-color: rgba(255,255,0,.3); }
+  button.primary {
+    background: rgba(255,255,0,.15);
+    color: #ffff00;
+    border-color: rgba(255,255,0,.35);
+    text-shadow: 0 0 8px #ffff00;
+  }
+  button.primary:hover { background: rgba(255,255,0,.28); }
+  .hf-footer {
+    border-top: 1px solid rgba(255,255,255,.06);
+    padding: 7px 12px;
+    font-size: 9px;
+    color: rgba(255,255,255,.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  a { color: rgba(255,255,0,.6); text-decoration: none; }
+  a:hover { color: #ffff00; }
+</style>
+</head>
+<body>
+<div class="hf-header">
+  <svg class="hf-logo" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="14,2 26,8 26,20 14,26 2,20 2,8" fill="#ffff00" opacity=".9"/>
+    <polygon points="14,2 26,8 14,14 2,8" fill="#fff" opacity=".5"/>
+    <polygon points="26,8 26,20 14,26 14,14" fill="#888800" opacity=".9"/>
+    <polygon points="2,8 14,14 14,26 2,20" fill="#555500" opacity=".9"/>
+  </svg>
+  <div>
+    <div class="hf-title">HexField Chess</div>
+    <div class="hf-sub">Isometric board renderer</div>
+  </div>
+</div>
+<div class="hf-body">
+  <div class="hf-status" id="hfStatus">Detecting board…</div>
+  <div class="hf-canvas-wrap">
+    <canvas id="hfCanvas" width="296" height="210"></canvas>
+  </div>
+  <input class="hf-fen" id="hfFen" placeholder="FEN position (auto-detected or paste here)" spellcheck="false"/>
+  <div class="hf-row">
+    <button class="primary" id="hfRender">Render board</button>
+    <button id="hfGetFen">Get from page</button>
+    <button id="hfExport">Save PNG</button>
+  </div>
+  <div class="hf-row">
+    <button id="hfOpen">Open in HexField</button>
+  </div>
+</div>
+<div class="hf-footer">
+  <span>HexField · Palette Engine</span>
+  <a href="https://dropkickfriend-spec.github.io/hex/" target="_blank">hexfield.io</a>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>
