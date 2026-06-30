@@ -456,7 +456,8 @@
   }
   body.munker-on .wheel-wrap::after {
     content: ''; position: absolute; inset: 0; pointer-events: none;
-    border-radius: 50%;
+    clip-path: polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%);
+    -webkit-clip-path: polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%);
     background-image: var(--munker-pattern, none);
     background-size: var(--munker-tile, auto);
     z-index: 5;
@@ -779,6 +780,23 @@
   @keyframes mhBgFaceTop  {0%{background-position:0 0}100%{background-position:69px -40px}}
   @keyframes mhBgFaceRight{0%{background-position:0 0}100%{background-position:69px  40px}}
   @keyframes mhBgFaceLeft {0%{background-position:0 0}100%{background-position:80px   0px}}
+  /* One-time construct-in sweep on first load: tiles pop up from the floor
+     in the same diagonal order their ambient pulse is already delayed by. */
+  @keyframes mhTileSpawn {
+    0%   { transform:scaleY(.05) translateY(40%); opacity:0; }
+    60%  { opacity:1; }
+    100% { transform:scaleY(1) translateY(0); opacity:1; }
+  }
+  .mh-pxhex.mh-spawn-in { animation:mhTileSpawn .46s cubic-bezier(.2,.8,.3,1.15) backwards; animation-delay:var(--spawn-delay,0s); transform-origin:center bottom; }
+  /* Procedurally stamped objects (TV/car/person/etc.) materialize with a
+     sharper flip-pop instead of the ambient pulse, so they read as freshly
+     generated rather than part of the static field. */
+  @keyframes mhObjSpawn {
+    0%   { transform:scale(.2) rotateX(40deg); opacity:0; filter:brightness(2.4); }
+    55%  { transform:scale(1.08) rotateX(0deg); opacity:1; }
+    100% { transform:scale(1) rotateX(0deg); opacity:1; filter:brightness(1); }
+  }
+  .mh-pxhex.mh-obj-spawn { animation:mhObjSpawn .5s cubic-bezier(.25,.7,.3,1.3) backwards; animation-delay:var(--spawn-delay,0s); }
   /* Template card picker */
   .mh-tpl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
   .mh-tpl-card{border-radius:6px;padding:6px 4px;cursor:pointer;background:rgba(255,255,255,.04);box-shadow:0 0 0 1px rgba(255,255,255,.06);text-align:center;font:9px ui-monospace,monospace;color:var(--ink-dim);transition:box-shadow .15s,background .15s;user-select:none}
@@ -1059,31 +1077,46 @@
     display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px;
     max-width:660px; width:100%;
   }
+  /* Splash tabs are built from the same isometric cube primitive as the
+     live background field (.mh-ctab-f / mh-pxf-*) — no card box, no
+     border-radius, no opaque fill. The cluster is the only surface. */
   .mh-splash-card {
-    border-radius:16px; padding:15px; cursor:pointer; position:relative; overflow:hidden;
-    transition:transform .15s cubic-bezier(.2,.8,.35,1.3);
-    filter:drop-shadow(0 7px 24px rgba(0,0,0,.6));
+    position:relative; cursor:pointer; padding:0; min-height:168px; overflow:hidden;
+    filter:drop-shadow(0 8px 22px rgba(0,0,0,.6));
+    transition:filter .15s, transform .15s cubic-bezier(.2,.8,.35,1.3);
   }
-  .mh-splash-card:hover { transform:translateY(-5px) scale(1.01); filter:drop-shadow(0 14px 38px rgba(0,0,0,.75)); }
-  .mh-splash-card:active { transform:scale(.97); }
-  .mh-splash-accent {
-    position:absolute; inset:0; border-radius:16px; pointer-events:none;
-    box-shadow:inset 0 0 0 1px var(--mh-a,#ffff00); opacity:0; transition:opacity .18s;
-  }
-  .mh-splash-card:hover .mh-splash-accent { opacity:.55; }
+  .mh-splash-card:hover { transform:translateY(-4px); filter:drop-shadow(0 14px 34px rgba(0,0,0,.75)); }
+  .mh-splash-card:active { transform:translateY(1px) scale(.98); }
+  .mh-splash-cluster { position:absolute; inset:0; z-index:0; pointer-events:none; }
+  .mh-spc-cube { position:absolute; }
+  .mh-spc-cube .mh-ctab-f { background:var(--pxc, var(--mh-b,#0000ff)); }
+  .mh-spc-cube .mh-ctab-t { animation:mhPxPulse 4s ease-in-out infinite alternate; animation-delay:var(--spc-delay,0s); }
+  .mh-splash-card:hover .mh-spc-cube .mh-ctab-t { filter:brightness(1.85); }
+  .mh-splash-card:hover .mh-spc-cube .mh-ctab-r { filter:brightness(1.0); }
+  .mh-splash-content { position:relative; z-index:1; padding:16px; }
   .mh-spr {
     width:100%; height:96px; border-radius:10px; overflow:hidden;
     position:relative; margin-bottom:11px; background:#08080f;
   }
   .mh-sc-title { font:700 11px 'Space Mono',monospace; color:#fff; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; text-shadow:0 1px 4px rgba(0,0,0,.9); display:block; transform:skewY(14deg) scaleX(0.92); transform-origin:left top; }
   .mh-sc-desc { font:10px/1.5 'Space Mono',monospace; color:rgba(175,175,210,.58); }
-  /* Preview: colour wheel */
+  /* Preview: colour wheel — hexagonal donut (flat-top hex outline + a
+     smaller hex "hole" stacked on top) instead of a circle, to match the
+     sharp-edged cube grid. clip-path supports a hard hex edge; CSS masks
+     can't punch a hex-shaped hole cleanly, so we fake the donut with two
+     stacked hexagons instead. */
   .mh-spr-ring {
-    position:absolute; inset:14%; border-radius:50%;
+    position:absolute; inset:14%;
+    -webkit-clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+    clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
     background:conic-gradient(var(--mh-a,#ffff00),var(--mh-b,#0000ff),var(--mh-c,#00ffff),var(--mh-a,#ffff00));
     animation:mhSprSpin 9s linear infinite;
-    -webkit-mask:radial-gradient(circle,transparent 34%,#000 35%);
-    mask:radial-gradient(circle,transparent 34%,#000 35%);
+  }
+  .mh-spr-ring-hole {
+    position:absolute; inset:33%;
+    -webkit-clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+    clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+    background:#08080f;
   }
   @keyframes mhSprSpin{to{transform:rotate(360deg)}}
   /* Preview: website mockup */
@@ -1175,11 +1208,8 @@
   }
   .mh-splash-eye { animation:mhArcadeGlow 4s ease-in-out infinite reverse; }
   .mh-builder-title { animation:mhBuilderPulse 3s ease-in-out infinite; }
-  /* ── Cube-face diagonal layout for splash cards ── */
-  .mh-splash-card:nth-child(odd)  { transform:perspective(900px) rotateY(10deg) skewY(2deg); }
-  .mh-splash-card:nth-child(even) { transform:perspective(900px) rotateY(-10deg) skewY(-2deg); }
-  .mh-splash-card:hover { transform:perspective(900px) rotateY(0deg) skewY(0deg) translateY(-5px) scale(1.02) !important; filter:drop-shadow(0 14px 38px rgba(0,0,0,.75)); }
-  .mh-splash-card:active { transform:scale(.97) !important; }
+  /* ── Splash cube clusters: cubes already carry the 3D illusion via their
+     own clip-path faces, so the card itself stays flat — no extra tilt ── */
   /* ── Builder panel rise animation on tab switch ── */
   .mh-builder-panel.active { animation:mhPanelRise .38s cubic-bezier(.2,.8,.35,1.3) forwards; }
   @keyframes mhPanelRise {
@@ -1206,7 +1236,6 @@
   html, body { background: var(--mh-dark, #030308) !important; }
   .mh-render-adapter, .mh-builder-panel, .mh-unified-munker,
   .mh-export-panel, .mh-painter-tip { background: none !important; }
-  .mh-splash-card { background: rgba(var(--mh-dark-rgb, 3,3,8), .82); }
   /* ── Text contrast: single deep shadow, no white backfill ── */
   .mh-render-adapter *, .mh-builder-panel *, .mh-unified-munker *,
   .mh-export-panel *, .mh-painter-tip *, .mh-splash-card * {
@@ -1364,12 +1393,10 @@
     animation:mhDomino 0.5s calc(var(--row,0) * 38ms) ease-in-out both !important;
     transform-origin:center bottom !important;
   }
-  /* ── Retro 1995 Nike LED ad splash card ── */
-  .mh-card-retro {
-    border:3px solid var(--mh-a,#ff0) !important;
-    box-shadow:0 0 0 1px #000, 0 0 18px var(--mh-a,#ff0), 0 0 38px var(--mh-a,#ff0), inset 0 0 18px rgba(0,0,0,.85) !important;
-    background:#000 !important;
-  }
+  /* ── Retro 1995 Nike LED ad splash card: same cube cluster underneath,
+     just a brighter neon glow instead of a bordered box ── */
+  .mh-card-retro { filter:drop-shadow(0 0 16px var(--mh-a,#ff0)) drop-shadow(0 8px 22px rgba(0,0,0,.6)); }
+  .mh-card-retro:hover { filter:drop-shadow(0 0 26px var(--mh-a,#ff0)) drop-shadow(0 14px 34px rgba(0,0,0,.75)); }
   .mh-retro-screen {
     position:relative; width:100%; height:96px; border-radius:10px; overflow:hidden;
     background:#000;
@@ -1417,88 +1444,102 @@
   <p class="mh-splash-sub">Palette-calibrated Munker optics for every medium. Pick a tool and the animated hex grid becomes your canvas.</p>
   <div class="mh-splash-grid">
     <div class="mh-splash-card" data-dest="colour">
-      <div class="mh-spr"><div class="mh-spr-ring"></div></div>
-      <div class="mh-sc-title">Colour Theory</div>
-      <div class="mh-sc-desc">CMY wheel · 3D hue cube · tonal analysis</div>
-      <div class="mh-splash-accent"></div>
+      <div class="mh-splash-cluster"></div>
+      <div class="mh-splash-content">
+        <div class="mh-spr"><div class="mh-spr-ring"><div class="mh-spr-ring-hole"></div></div></div>
+        <div class="mh-sc-title">Colour Theory</div>
+        <div class="mh-sc-desc">CMY wheel · 3D hue cube · tonal analysis</div>
+      </div>
     </div>
     <div class="mh-splash-card" data-dest="web">
-      <div class="mh-spr mh-spr-browser">
-        <div class="mh-spr-topbar"><span class="mh-spr-dot"></span><span class="mh-spr-dot"></span><span class="mh-spr-url"></span></div>
-        <div class="mh-spr-hero"></div>
-        <div class="mh-spr-cards"><div class="mh-spr-card"></div><div class="mh-spr-card"></div><div class="mh-spr-card"></div></div>
+      <div class="mh-splash-cluster"></div>
+      <div class="mh-splash-content">
+        <div class="mh-spr mh-spr-browser">
+          <div class="mh-spr-topbar"><span class="mh-spr-dot"></span><span class="mh-spr-dot"></span><span class="mh-spr-url"></span></div>
+          <div class="mh-spr-hero"></div>
+          <div class="mh-spr-cards"><div class="mh-spr-card"></div><div class="mh-spr-card"></div><div class="mh-spr-card"></div></div>
+        </div>
+        <div class="mh-sc-title">Website Design</div>
+        <div class="mh-sc-desc">Full-page templates · palette tokens · export</div>
       </div>
-      <div class="mh-sc-title">Website Design</div>
-      <div class="mh-sc-desc">Full-page templates · palette tokens · export</div>
-      <div class="mh-splash-accent"></div>
     </div>
     <div class="mh-splash-card" data-dest="logo">
-      <div class="mh-spr mh-spr-logo">
-        <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
-        <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
-        <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-c,#00ffff);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-c,#00ffff);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-c,#00ffff);filter:brightness(.45)"></div></div>
-        <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
-        <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
+      <div class="mh-splash-cluster"></div>
+      <div class="mh-splash-content">
+        <div class="mh-spr mh-spr-logo">
+          <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
+          <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
+          <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-c,#00ffff);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-c,#00ffff);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-c,#00ffff);filter:brightness(.45)"></div></div>
+          <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
+          <div class="mh-spr-logo-c"><div class="mh-spr-lf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-lf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-lf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
+        </div>
+        <div class="mh-sc-title">Logo Design</div>
+        <div class="mh-sc-desc">Animated hex mark · randomised seed · brand type</div>
       </div>
-      <div class="mh-sc-title">Logo Design</div>
-      <div class="mh-sc-desc">Animated hex mark · randomised seed · brand type</div>
-      <div class="mh-splash-accent"></div>
     </div>
     <div class="mh-splash-card" data-dest="qr">
-      <div class="mh-spr mh-spr-qr">
-        <div class="mh-spr-qr-g">
-          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div>
-          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
-          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
-          <div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div>
-          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
-          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
-          <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div>
+      <div class="mh-splash-cluster"></div>
+      <div class="mh-splash-content">
+        <div class="mh-spr mh-spr-qr">
+          <div class="mh-spr-qr-g">
+            <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div>
+            <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
+            <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
+            <div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div>
+            <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
+            <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qb"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div>
+            <div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qx"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div><div class="mh-spr-qd qa"></div>
+          </div>
         </div>
+        <div class="mh-sc-title">QR Code</div>
+        <div class="mh-sc-desc">Palette-calibrated QR · Munker overlay export</div>
       </div>
-      <div class="mh-sc-title">QR Code</div>
-      <div class="mh-sc-desc">Palette-calibrated QR · Munker overlay export</div>
-      <div class="mh-splash-accent"></div>
     </div>
     <div class="mh-splash-card" data-dest="game">
-      <div class="mh-spr mh-spr-game">
-        <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .0s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
-        <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .3s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
-        <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .6s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-c,#00ffff);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-c,#00ffff);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-c,#00ffff);filter:brightness(.45)"></div></div>
-        <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .9s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
-        <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .5s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
+      <div class="mh-splash-cluster"></div>
+      <div class="mh-splash-content">
+        <div class="mh-spr mh-spr-game">
+          <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .0s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
+          <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .3s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
+          <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .6s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-c,#00ffff);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-c,#00ffff);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-c,#00ffff);filter:brightness(.45)"></div></div>
+          <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .9s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-a,#ffff00);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-a,#ffff00);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-a,#ffff00);filter:brightness(.45)"></div></div>
+          <div class="mh-spr-gc" style="animation:mhSprHex 2.2s .5s ease-in-out infinite"><div class="mh-spr-gf t" style="background:var(--mh-b,#0000ff);filter:brightness(1.5)"></div><div class="mh-spr-gf r" style="background:var(--mh-b,#0000ff);filter:brightness(.85)"></div><div class="mh-spr-gf l" style="background:var(--mh-b,#0000ff);filter:brightness(.45)"></div></div>
+        </div>
+        <div class="mh-sc-title">Game Scene</div>
+        <div class="mh-sc-desc">Hex platformer · Munker ground · level builder</div>
       </div>
-      <div class="mh-sc-title">Game Scene</div>
-      <div class="mh-sc-desc">Hex platformer · Munker ground · level builder</div>
-      <div class="mh-splash-accent"></div>
     </div>
     <div class="mh-splash-card" data-dest="gif">
-      <div class="mh-spr mh-spr-gif">
-        <div style="width:90%;display:flex;flex-direction:column;gap:5px">
-          <div class="mh-spr-gbar" style="background:var(--mh-a,#ffff00);animation-delay:0s"></div>
-          <div class="mh-spr-gbar" style="background:var(--mh-b,#0000ff);animation-delay:.35s"></div>
-          <div class="mh-spr-gbar" style="background:var(--mh-c,#00ffff);animation-delay:.7s"></div>
-          <div class="mh-spr-gbar" style="background:rgba(255,255,255,.42);animation-delay:.18s"></div>
+      <div class="mh-splash-cluster"></div>
+      <div class="mh-splash-content">
+        <div class="mh-spr mh-spr-gif">
+          <div style="width:90%;display:flex;flex-direction:column;gap:5px">
+            <div class="mh-spr-gbar" style="background:var(--mh-a,#ffff00);animation-delay:0s"></div>
+            <div class="mh-spr-gbar" style="background:var(--mh-b,#0000ff);animation-delay:.35s"></div>
+            <div class="mh-spr-gbar" style="background:var(--mh-c,#00ffff);animation-delay:.7s"></div>
+            <div class="mh-spr-gbar" style="background:rgba(255,255,255,.42);animation-delay:.18s"></div>
+          </div>
         </div>
+        <div class="mh-sc-title">GIF Export</div>
+        <div class="mh-sc-desc">Timeline presets · animated palette renders</div>
       </div>
-      <div class="mh-sc-title">GIF Export</div>
-      <div class="mh-sc-desc">Timeline presets · animated palette renders</div>
-      <div class="mh-splash-accent"></div>
     </div>
     <div class="mh-splash-card mh-card-retro" data-dest="logo">
-      <div class="mh-retro-screen">
-        <div class="mh-retro-scanlines"></div>
-        <div class="mh-retro-copy">
-          <div class="mh-retro-eyebrow">HEXFIELD · EST. MMXXVI</div>
-          <div class="mh-retro-line1">JUST</div>
-          <div class="mh-retro-line2">MAKE</div>
-          <div class="mh-retro-line3">ART.</div>
+      <div class="mh-splash-cluster"></div>
+      <div class="mh-splash-content">
+        <div class="mh-retro-screen">
+          <div class="mh-retro-scanlines"></div>
+          <div class="mh-retro-copy">
+            <div class="mh-retro-eyebrow">HEXFIELD · EST. MMXXVI</div>
+            <div class="mh-retro-line1">JUST</div>
+            <div class="mh-retro-line2">MAKE</div>
+            <div class="mh-retro-line3">ART.</div>
+          </div>
+          <div class="mh-retro-ticker">[ PALETTE ENGINE · NEON EDITION · V2 · MUNKER OPTICS · COLOUR THEORY · ] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [ JUST MAKE ART · HEXFIELD · ]</div>
         </div>
-        <div class="mh-retro-ticker">[ PALETTE ENGINE · NEON EDITION · V2 · MUNKER OPTICS · COLOUR THEORY · ] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [ JUST MAKE ART · HEXFIELD · ]</div>
+        <div class="mh-sc-title">Retro Ad</div>
+        <div class="mh-sc-desc">1995 LED screen · neon poster · ad generator</div>
       </div>
-      <div class="mh-sc-title">Retro Ad</div>
-      <div class="mh-sc-desc">1995 LED screen · neon poster · ad generator</div>
-      <div class="mh-splash-accent"></div>
     </div>
   </div>
 </div>
@@ -3224,16 +3265,134 @@
       }
       return;
     }
+    const firstBuild = !bg.dataset.built;
+    const occupied = firstBuild ? collectSplashOccupancy(sz, hexH, rowStep, colStep, cols, rows) : null;
     let h = '';
     for (let r = 0; r < rows; r++) {
       const off = r % 2 ? (colStep * 0.5).toFixed(0) : 0;
       for (let c = 0; c < cols; c++) {
         const delay = Math.min(maxDelay, ((r + c) * 0.04)).toFixed(2);
         const cls = (r+c)%2===1 ? 'mh-pxhex mh-pxhex-b' : 'mh-pxhex';
-        h += `<div class="${cls}" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};--row:${r};animation-delay:-${delay}s"><div class="mh-pxf mh-pxf-t" style="background-image:${sT}"></div><div class="mh-pxf mh-pxf-r" style="background-image:${sR}"></div><div class="mh-pxf mh-pxf-l" style="background-image:${sL}"></div></div>`;
+        const spawnCls = firstBuild ? ' mh-spawn-in' : '';
+        h += `<div class="${cls}${spawnCls}" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};--row:${r};animation-delay:-${delay}s;--spawn-delay:${delay}s"><div class="mh-pxf mh-pxf-t" style="background-image:${sT}"></div><div class="mh-pxf mh-pxf-r" style="background-image:${sR}"></div><div class="mh-pxf mh-pxf-l" style="background-image:${sL}"></div></div>`;
       }
     }
     bg.innerHTML = h;
+    bg.dataset.built = '1';
+    if (firstBuild) stampObjects(bg, occupied, cols, rows, p);
+  }
+
+  // Marks background grid cells that fall under a splash tab card as
+  // occupied, so the object-stamping pass below leaves them alone.
+  function collectSplashOccupancy(sz, hexH, rowStep, colStep, cols, rows) {
+    const occupied = new Set();
+    document.querySelectorAll('.mh-splash-card').forEach(card => {
+      const rect = card.getBoundingClientRect();
+      const r0 = Math.max(0, Math.floor((rect.top + window.scrollY) / rowStep) - 1);
+      const r1 = Math.min(rows - 1, Math.ceil((rect.bottom + window.scrollY) / rowStep) + 1);
+      const c0 = Math.max(0, Math.floor(rect.left / colStep) - 1);
+      const c1 = Math.min(cols - 1, Math.ceil(rect.right / colStep) + 1);
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) occupied.add(r + ',' + c);
+    });
+    return occupied;
+  }
+
+  // ── First-pass procedural object stamping ───────────────────────────────
+  // Small hand-authored retro-cartoon silhouettes, each a list of cube-cell
+  // offsets from an anchor tile. 'role' maps to the live palette so objects
+  // always match whatever colours the rest of the field is using.
+  // Future work (not built here): mirror hex_sim_states/syncSimState with a
+  // hex_shape_states table — hash (template id, anchor, palette seed),
+  // check Supabase for prior-seen hashes, broadcast accepted placements over
+  // the same Realtime channel pattern so shapes are globally unique too.
+  const OBJECT_TEMPLATES = [
+    { name:'tv', cells:[
+      {dr:0,dc:0,role:'dark'},{dr:0,dc:1,role:'dark'},{dr:0,dc:2,role:'dark'},
+      {dr:1,dc:0,role:'body'},{dr:1,dc:1,role:'accent'},{dr:1,dc:2,role:'body'},
+      {dr:2,dc:1,role:'dark'}
+    ]},
+    { name:'car', cells:[
+      {dr:-1,dc:1,role:'highlight'},{dr:-1,dc:2,role:'highlight'},
+      {dr:0,dc:0,role:'body'},{dr:0,dc:1,role:'body'},{dr:0,dc:2,role:'body'},{dr:0,dc:3,role:'body'},
+      {dr:1,dc:0,role:'dark'},{dr:1,dc:3,role:'dark'}
+    ]},
+    { name:'person', cells:[
+      {dr:-1,dc:0,role:'highlight'},
+      {dr:0,dc:0,role:'body'},
+      {dr:1,dc:-1,role:'dark'},{dr:1,dc:1,role:'dark'}
+    ]},
+    { name:'tree', cells:[
+      {dr:-1,dc:-1,role:'accent'},{dr:-1,dc:0,role:'accent'},{dr:-1,dc:1,role:'accent'},
+      {dr:0,dc:0,role:'accent'},
+      {dr:1,dc:0,role:'dark'}
+    ]},
+    { name:'robot', cells:[
+      {dr:-1,dc:0,role:'highlight'},
+      {dr:0,dc:-1,role:'body'},{dr:0,dc:0,role:'body'},{dr:0,dc:1,role:'body'},
+      {dr:1,dc:-1,role:'dark'},{dr:1,dc:1,role:'dark'}
+    ]}
+  ];
+
+  function _shadeHex(hex, amt) {
+    const n = parseInt(hex.replace('#',''), 16);
+    const clamp = v => Math.max(0, Math.min(255, v));
+    const r = clamp(((n>>16)&255) + amt), g = clamp(((n>>8)&255) + amt), b = clamp((n&255) + amt);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  function stampObjects(bg, occupied, cols, rows, p) {
+    const roleColor = {
+      accent: p.aHex, body: p.bHex, dark: _shadeHex(p.cHex, -60), highlight: _shadeHex(p.aHex, 70)
+    };
+    const tiles = bg.children;
+    const taken = new Set(occupied);
+    const count = 5 + Math.floor(Math.random() * 3);
+    let placed = 0, attempts = 0;
+    while (placed < count && attempts < 60) {
+      attempts++;
+      const tpl = OBJECT_TEMPLATES[(Math.random() * OBJECT_TEMPLATES.length) | 0];
+      const anchorR = 2 + Math.floor(Math.random() * (rows - 4));
+      const anchorC = 2 + Math.floor(Math.random() * (cols - 4));
+      const footprint = tpl.cells.map(cell => ({ r: anchorR + cell.dr, c: anchorC + cell.dc, role: cell.role }));
+      const fits = footprint.every(({r,c}) => r >= 0 && r < rows && c >= 0 && c < cols && !taken.has(r+','+c));
+      if (!fits) continue;
+      footprint.forEach(({r,c,role}, i) => {
+        taken.add(r+','+c);
+        const el = tiles[r*cols+c];
+        if (!el) return;
+        el.style.setProperty('--pxc', roleColor[role] || p.bHex);
+        el.classList.remove('mh-spawn-in');
+        el.classList.add('mh-obj-spawn');
+        el.style.setProperty('--spawn-delay', (1.0 + i * 0.05).toFixed(2) + 's');
+      });
+      placed++;
+    }
+  }
+
+  // ── Splash tabs: built from the same cube primitive as the bg field,
+  // each card gets its own small cluster sized to its own box. ──────────────
+  function buildSplashClusters() {
+    const p = getWheelPalette();
+    const pal = [p.aHex, p.bHex, p.cHex, ...p.colors];
+    const sz = 34, hexH = sz / 0.866, rowStep = hexH * 0.75, colStep = sz;
+    document.querySelectorAll('.mh-splash-cluster').forEach(cluster => {
+      const card = cluster.closest('.mh-splash-card');
+      if (!card) return;
+      const w = card.clientWidth || 320, h = card.clientHeight || 168;
+      const cols = Math.ceil(w / colStep) + 2;
+      const rows = Math.ceil(h / rowStep) + 2;
+      let html = '';
+      for (let r = 0; r < rows; r++) {
+        const off = r % 2 ? colStep * 0.5 : 0;
+        for (let c = 0; c < cols; c++) {
+          const delay = (((r + c) * 0.05) % 1.2).toFixed(2);
+          const left = (c * colStep + off - colStep).toFixed(0);
+          const top = (r * rowStep - rowStep).toFixed(0);
+          html += `<div class="mh-spc-cube" style="left:${left}px;top:${top}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};--spc-delay:${delay}s"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div>`;
+        }
+      }
+      cluster.innerHTML = html;
+    });
   }
 
   // ── Gray-Scott reaction-diffusion driving the hex background ──────────────
@@ -3608,8 +3767,9 @@
     }
     syncLineThickness($('mhLineThickness') ? $('mhLineThickness').value : 5, false);
     buildPageHexBg();
+    buildSplashClusters();
     buildTplGrid();
-    window.addEventListener('resize', () => { clearTimeout(window._mhBgTimer); window._mhBgTimer = setTimeout(buildPageHexBg, 220); });
+    window.addEventListener('resize', () => { clearTimeout(window._mhBgTimer); window._mhBgTimer = setTimeout(() => { buildPageHexBg(); buildSplashClusters(); }, 220); });
     $('mhSaveWebBtn')?.addEventListener('click', downloadWebHtml);
     $('mhCopyWebBtn')?.addEventListener('click', copyBuilderCode);
     syncMunker(); render(); renderWebDesigner(); renderCharacterDesigner();
@@ -3623,25 +3783,35 @@
       $('mhQrSize')?.addEventListener('change', generateQr);
     }
     // ── Splash navigation ──
-    function goToTool(dest) {
+    function goToTool(dest, originCard) {
       const fold = document.getElementById('mhPageFold');
       if (!fold) return;
-      fold.className = 'mh-pf-cover';
+      const bg = document.getElementById('mhPageHexBg');
+      if (originCard) {
+        originCard.querySelectorAll('.mh-spc-cube .mh-ctab-t').forEach(t => { t.style.filter = 'brightness(2.4)'; });
+      }
+      if (bg) {
+        bg.classList.add('mh-domino', 'mh-bg-pulse');
+        setTimeout(() => bg.classList.remove('mh-domino', 'mh-bg-pulse'), 1600);
+      }
       setTimeout(() => {
-        const splash = document.getElementById('mhSplash');
-        const adapter = document.getElementById('mhRenderAdapter');
-        if (splash) splash.classList.add('mh-hidden');
-        if (dest === 'colour') {
-          if (adapter) adapter.style.display = 'none';
-          // Show colour theory tool by scrolling below adapter
-          document.body.scrollTop = 0; document.documentElement.scrollTop = 0;
-        } else {
-          if (adapter) adapter.style.display = 'block';
-          if (typeof switchSuiteTab === 'function') switchSuiteTab(dest);
-        }
-        fold.className = 'mh-pf-reveal';
-        setTimeout(() => { fold.className = ''; }, 360);
-      }, 280);
+        fold.className = 'mh-pf-cover';
+        setTimeout(() => {
+          const splash = document.getElementById('mhSplash');
+          const adapter = document.getElementById('mhRenderAdapter');
+          if (splash) splash.classList.add('mh-hidden');
+          if (dest === 'colour') {
+            if (adapter) adapter.style.display = 'none';
+            // Show colour theory tool by scrolling below adapter
+            document.body.scrollTop = 0; document.documentElement.scrollTop = 0;
+          } else {
+            if (adapter) adapter.style.display = 'block';
+            if (typeof switchSuiteTab === 'function') switchSuiteTab(dest);
+          }
+          fold.className = 'mh-pf-reveal';
+          setTimeout(() => { fold.className = ''; }, 360);
+        }, 280);
+      }, 170);
     }
     function backToSplash() {
       const fold = document.getElementById('mhPageFold');
@@ -3658,7 +3828,7 @@
       }, 280);
     }
     document.querySelectorAll('.mh-splash-card').forEach(card => {
-      card.addEventListener('click', () => { const d = card.dataset.dest; if (d) goToTool(d); });
+      card.addEventListener('click', () => { const d = card.dataset.dest; if (d) goToTool(d, card); });
     });
     const backBtn = $('mhBackBtn');
     if (backBtn) backBtn.addEventListener('click', backToSplash);
@@ -4281,6 +4451,14 @@ const TAU = Math.PI * 2;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const mod = (a, n) => ((a % n) + n) % n;
 const lerp = (a, b, t) => a + (b - a) * t;
+// Distance from centre to a pointy-top hexagon's boundary at a given angle
+// (0deg = up, clockwise), so the colour wheel's silhouette reads as a hex
+// instead of a circle while keeping the same hue-mapping math. R is the
+// hexagon's vertex (circumscribed) radius.
+function hexRadius(angleDeg, R) {
+  const a = (mod(angleDeg, 60) - 30) * Math.PI / 180;
+  return R * Math.cos(30 * Math.PI / 180) / Math.cos(a);
+}
 
 // Calibration: where on the wheel each named primary sits (degrees, 0 = up, CW).
 // Defaults pick: Y=90 (top in math = 0° = right; we transform), M=330, C=210
@@ -5671,12 +5849,12 @@ function drawWheel() {
       const dx = x - cx, dy = y - cy;
       const r = Math.hypot(dx, dy);
       const i = (y * W + x) * 4;
-      if (r > rOuter || r < rInner) {
-        data[i+3] = 0; continue;
-      }
       // Angle: 0 at top, increasing CW
       let ang = Math.atan2(dx, -dy) * 180 / Math.PI;
       ang = mod(ang, 360);
+      if (r > hexRadius(ang, rOuter) || r < hexRadius(ang, rInner)) {
+        data[i+3] = 0; continue;
+      }
       const rgb = rgbAt(ang, 50, cal.chroma);
       data[i] = rgb[0]; data[i+1] = rgb[1]; data[i+2] = rgb[2]; data[i+3] = 255;
     }
@@ -5690,10 +5868,12 @@ function drawWheel() {
   wctx.translate(cx, cy);
   for (const a of anchors) {
     const rad = (a.a - 90) * Math.PI / 180;
-    const x1 = Math.cos(rad) * (rInner - 6);
-    const y1 = Math.sin(rad) * (rInner - 6);
-    const x2 = Math.cos(rad) * (rOuter + 6);
-    const y2 = Math.sin(rad) * (rOuter + 6);
+    const hrInner = hexRadius(a.a, rInner - 6);
+    const hrOuter = hexRadius(a.a, rOuter + 6);
+    const x1 = Math.cos(rad) * hrInner;
+    const y1 = Math.sin(rad) * hrInner;
+    const x2 = Math.cos(rad) * hrOuter;
+    const y2 = Math.sin(rad) * hrOuter;
     wctx.strokeStyle = `rgb(${a.rgb[0]},${a.rgb[1]},${a.rgb[2]})`;
     wctx.lineWidth = 3;
     wctx.beginPath(); wctx.moveTo(x1, y1); wctx.lineTo(x2, y2); wctx.stroke();
@@ -5701,7 +5881,7 @@ function drawWheel() {
     // Category-coded pill label just outside the outer tick.
     // Lights (Y/M/C) — pale cream pill (the bright/neon category).
     // Earths (R/G/B) — deep brown pill (the grounded/material category).
-    const lblR = rOuter + 22;
+    const lblR = hexRadius(a.a, rOuter + 22);
     const lx = Math.cos(rad) * lblR;
     const ly = Math.sin(rad) * lblR;
     const isLight = a.category === 'Light';
@@ -5745,7 +5925,8 @@ function placeMarkers() {
   const r = rect.width / 2 * midRatio;
   function pos(deg) {
     const rad = (deg - 90) * Math.PI / 180;
-    return [cx + Math.cos(rad) * r, cy + Math.sin(rad) * r];
+    const rr = hexRadius(deg, r);
+    return [cx + Math.cos(rad) * rr, cy + Math.sin(rad) * rr];
   }
   const [ax, ay] = pos(state.hue);
   const [bx, by] = pos(additiveComplementHue(state.hue));
