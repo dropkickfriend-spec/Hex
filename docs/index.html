@@ -1445,6 +1445,19 @@
   }
   body.mh-neon .mh-ls-grid-wrap.mh-ls-sel { box-shadow:0 0 0 2px var(--mh-a,#ffff00),0 0 22px var(--mh-a,#ffff00) !important; animation:mhNeonFlicker 2.4s infinite; }
   body.mh-neon .mh-bc-glyph { text-shadow:0 0 8px #fff,0 0 16px var(--mh-a,#ffff00); }
+  /* Neon now also drives the main renders: the HUE CUBE view, every billiard
+     sim grid, the pixel-font/type screens, and the background cubes. */
+  body.mh-neon .cube-hex-view, body.mh-neon .cube-hex-grid,
+  body.mh-neon .mh-ls-grid, body.mh-neon #mhPxFontCanvas, body.mh-neon #mhTypeAlphaGrid {
+    animation:mhNeonHue 7s linear infinite;
+    filter:saturate(1.8) brightness(1.15) drop-shadow(0 0 8px var(--mh-a,#ffff00));
+  }
+  body.mh-neon #mhPageHexBg .mh-pxhex { filter:saturate(1.5) brightness(1.12); }
+  /* Every mode toggle gives a felt one-shot flash so the click registers. */
+  body.mh-mode-flash main, body.mh-mode-flash #mhRenderAdapter, body.mh-mode-flash #mhPageHexBg {
+    animation:mhModeFlash .5s ease-out;
+  }
+  @keyframes mhModeFlash { 0%{filter:brightness(1.7) saturate(1.6);} 100%{filter:none;} }
   /* ── Logo sim cube grid: iso-face cells replacing flat canvas pixels ── */
   #mhLogoSimGrid { display:none; grid-template-columns:repeat(4,1fr); gap:4px; margin:6px 0; }
   .mh-ls-grid-wrap {
@@ -5238,12 +5251,14 @@
     if (backBtn) backBtn.addEventListener('click', backToSplash);
 
     // ── Mode toggle buttons ────────────────────────────────────────────────
+    const _modeFlash = () => { document.body.classList.remove('mh-mode-flash'); void document.body.offsetWidth; document.body.classList.add('mh-mode-flash'); setTimeout(() => document.body.classList.remove('mh-mode-flash'), 520); };
     [['mhGridBtn','mh-grid-over'],['mhGraphBtn','mh-graph-paper'],['mhShadowBtn','mh-shadows'],['mhNeonBtn','mh-neon'],['mhOrigamiBtn','mh-origami']].forEach(([id, cls]) => {
       const btn = document.getElementById(id);
       if (!btn) return;
       btn.addEventListener('click', () => {
         document.body.classList.toggle(cls);
         btn.classList.toggle('active', document.body.classList.contains(cls));
+        _modeFlash();
       });
     });
     // Cube-BG: clean HUE-CUBE-style field. Default ON; rebuild the field on toggle.
