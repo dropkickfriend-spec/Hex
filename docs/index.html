@@ -2481,7 +2481,8 @@
     var hexWrap = $('mhLogoHexMark');
     var _markType = ($('mhLogoMarkLogo') || {}).value || 'hex';
     if (hexWrap) {
-      if (_markType === 'cube') _buildBrandCube(hexWrap, p, ($('mhLogoTextLogo') || {}).value || 'HEXFIELD', _logoSeed);
+      if (_markType === 'none') hexWrap.innerHTML = '';            // Text only → no mark
+      else if (_markType === 'cube') _buildBrandCube(hexWrap, p, ($('mhLogoTextLogo') || {}).value || 'HEXFIELD', _logoSeed);
       else _buildIsoCubeMark(_logoSeed, p, hexWrap);
     }
 
@@ -2497,7 +2498,7 @@
       var cols3d=[p.aHex,p.bHex,p.cHex,p.bHex,p.aHex,p.cHex];
       var markSvg3d='', markSvg2d='';
       var mIdx=0;
-      for(var mr=0;mr<2;mr++){
+      for(var mr=0;mr<2 && _markType!=='none';mr++){
         var ox3=(mr%2===1)?CW*0.5:0;
         for(var mc=0;mc<3;mc++){
           var mx=mc*CW+ox3, my=mr*RS;
@@ -2523,7 +2524,7 @@
       var markOffX=6, markOffY=(H-markH)/2|0;
       var marks3d='<g transform="translate('+markOffX+','+markOffY+')">'+markSvg3d+'</g>';
       var marks2d='<g transform="translate('+markOffX+','+markOffY+')">'+markSvg2d+'</g>';
-      var tX=markW+markOffX+10, tY=H/2+10|0, tagYv=H/2+24|0;
+      var tX=(_markType==='none')?markOffX:markW+markOffX+10, tY=H/2+10|0, tagYv=H/2+24|0;
 
       preview.innerHTML = _logoSvg(marks3d,'3D ISO',W,H,tX,tY,tagYv,'start')
                         + _logoSvg(marks2d,'2D FLAT',W,H,tX,tY,tagYv,'start');
