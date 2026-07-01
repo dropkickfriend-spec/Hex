@@ -848,6 +848,8 @@
   @keyframes mhPxPulse{from{opacity:.55}to{opacity:.88}}
   @keyframes mhPxPulseB{from{opacity:.42}to{opacity:.72}}
   .mh-pxf{position:absolute;inset:0;background:var(--pxc,#444)}
+  /* Face shading identical to every other iso cube on the site (splash
+     clusters, tabs, logo sim cells): top 1.55 / right 0.88 / left 0.48. */
   .mh-pxf-t{clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%);filter:brightness(1.55);animation:mhBgFaceTop var(--mh-face-speed,9s) linear infinite alternate}
   .mh-pxf-r{clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%);filter:brightness(0.88);animation:mhBgFaceRight var(--mh-face-speed,9s) linear infinite alternate}
   .mh-pxf-l{clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%);filter:brightness(0.48);animation:mhBgFaceLeft var(--mh-face-speed,9s) linear infinite alternate}
@@ -1393,6 +1395,12 @@
   body.mh-cube-bg #mhPageHexBg { background:#000; }
   body.mh-cube-bg .mh-pxf-t, body.mh-cube-bg .mh-pxf-r, body.mh-cube-bg .mh-pxf-l { animation:none !important; }
   body.mh-cube-bg .mh-pxhex, body.mh-cube-bg .mh-pxhex-b { animation:none !important; opacity:1 !important; }
+  /* The background IS the interface: every field tile is a live hue/tone
+     picker (same as clicking a HUE CUBE cell). Panels above still win —
+     tiles only catch clicks that reach the background. */
+  body.mh-cube-bg #mhPageHexBg .mh-pxhex { pointer-events:auto; cursor:crosshair; }
+  body.mh-cube-bg #mhPageHexBg .mh-pxhex:hover { filter:brightness(1.25); }
+  body.mh-grid-over #mhPageHexBg .mh-pxhex { pointer-events:none; }
   /* ── View mode toggles ── */
   body.mh-grid-over #mhPageHexBg { z-index:30; mix-blend-mode:screen; opacity:0.18; pointer-events:none; }
   /* ── Graph-paper panels: lay a blueprint grid behind the tool panels ── */
@@ -2079,7 +2087,6 @@
 <section class="mh-render-adapter" id="mhRenderAdapter">
   <button class="mh-back-btn" id="mhBackBtn">&#8592; Tools</button>
   <span class="mh-mode-btns">
-    <button class="mh-mode-btn" id="mhCubeBgBtn" title="Render background like the HUE CUBE (clean cubes on black)">Cube BG</button>
     <button class="mh-mode-btn" id="mhGridBtn" title="Hex grid overlay">Grid+</button>
     <button class="mh-mode-btn" id="mhGraphBtn" title="Graph-paper panels">Graph</button>
     <button class="mh-mode-btn" id="mhShadowBtn" title="Drop shadows">Shadow</button>
@@ -5355,61 +5362,28 @@
     window._mhField = { pal, colStep, rowStep, cols, palLen: pal.length };
     if (typeof _scheduleAutoContrast === 'function') _scheduleAutoContrast();
     const maxDelay = 2.4;
-    function _faceStripe(angleDeg, hex1, hex2) {
-      const u = typeof currentUnifiedMunker === 'function' ? currentUnifiedMunker() : {};
-      // NOTE: currentUnifiedMunker() returns `thickness` (was read as `thick`,
-      // which was always undefined — that's why the thickness slider did nothing
-      // to the background).
-      const t = Math.max(2, u.thickness || u.thick || 4);
-      const sp = Math.max(t + 2, (u.spacing || 10) + t);
-      const op = Math.min(1, (u.opacity || 80) / 100);
-      // Line colours follow the Munker panel selection so picking a line colour
-      // actually recolours the background stripes. Palette faces are the default.
-      if (typeof munker !== 'undefined') {
-        switch (munker.pattern) {
-          case 'white':  hex1 = hex2 = '#ffffff'; break;
-          case 'black':  hex1 = hex2 = '#000000'; break;
-          case 'bw':     hex1 = '#ffffff'; hex2 = '#000000'; break;
-          case 'custom': hex1 = munker.lineA || '#ffffff'; hex2 = munker.lineB || hex1; break;
-          // 'A' / 'B' / 'AB' / 'comp' / default → keep the palette face colours
-        }
-      }
-      const toRgba = (hex, a) => {
-        const n = parseInt(String(hex).replace('#',''), 16);
-        return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
-      };
-      const c1 = toRgba(hex1, op), c2 = toRgba(hex2, op);
-      if (hex1 === hex2) return `repeating-linear-gradient(${angleDeg}deg,${c1} 0 ${t}px,transparent ${t}px ${sp}px)`;
-      const period = sp * 2;
-      return `repeating-linear-gradient(${angleDeg}deg,${c1} 0 ${t}px,transparent ${t}px ${sp}px,${c2} ${sp}px ${sp+t}px,transparent ${sp+t}px ${period}px)`;
-    }
-    const sT = _faceStripe(60,  p.aHex, p.bHex);
-    const sR = _faceStripe(120, p.bHex, p.cHex);
-    const sL = _faceStripe(90,  p.cHex, p.aHex);
-    // ── Cube-BG mode: render the field like the clean HUE CUBE ──────────────
-    // Uniform hue×tone-mapped cubes (via cubeColorFor) with neat per-face
-    // Munker bands on black, instead of the rainbow palette-cycle + diagonal
-    // stripes. Defaults on (body.mh-cube-bg).
-    const cubeBg = document.body.classList.contains('mh-cube-bg');
-    const _chroma = (typeof cal !== 'undefined' && cal.chroma != null) ? cal.chroma : 80;
+    // ── The background IS the hue cube ───────────────────────────────────────
+    // No parallel implementation: tiles are coloured by the HUE CUBE's own
+    // pipeline (cubeColorWithAmbient → ambient/lighting/monet/greyscale all
+    // apply) mapped across the page — hue sweeps left→right, tone runs
+    // bottom→top exactly like the cube's hex view — and faces get the same
+    // buildMunkerPattern stripe material at the cube's per-face angles.
     const _toHex = rgb => '#' + rgb.map(v => Math.max(0, Math.min(255, v|0)).toString(16).padStart(2,'0')).join('');
-    // Coherent single-hue-ish field like the HUE CUBE: the wheel hue drifts
-    // gently across the page (local coherence, soft gradient) with tonal
-    // variation by row — NOT a full 0–360 rainbow per column.
-    function _cubeHex(r, c) {
+    const colorAt = (r, c) => {
+      // rgbAt IS the hue cube's material: cubeColorFor(xi,yi,front) reduces to
+      // rgbAt(hue,tone,chroma) at the front layer. Continuous coordinates give
+      // a smooth full-spectrum sweep (hue left→right, tone bottom→top) instead
+      // of the atmosphere-mode pastel arc or an N-step quantisation.
       if (typeof rgbAt !== 'function') return p.aHex;
-      const hue  = (p.hue + (r + c) * 3) % 360;                 // gentle drift
-      const tone = 40 + ((r * 5 + c * 3) % 22);                 // 40..62 soft banding
-      return _toHex(rgbAt(hue, tone, _chroma));
-    }
-    // Neat single-colour bands (complement of the wheel hue) on each face.
-    const _bandRgb = (typeof rgbAt === 'function') ? rgbAt((p.hue + 180) % 360, 55, _chroma) : [0, 0, 60];
-    const _bandCss = `rgba(${_bandRgb[0]|0},${_bandRgb[1]|0},${_bandRgb[2]|0},.55)`;
-    function _cubeBand(angle) {
-      return `repeating-linear-gradient(${angle}deg, ${_bandCss} 0 4px, transparent 4px 13px)`;
-    }
-    const bT = cubeBg ? _cubeBand(60) : sT, bR = cubeBg ? _cubeBand(120) : sR, bL = cubeBg ? _cubeBand(90) : sL;
-    const colorAt = (r, c) => cubeBg ? _cubeHex(r, c) : pal[(r*cols+c) % pal.length];
+      const hue = c / Math.max(1, cols - 1) * 360;
+      const tone = 35 + (1 - r / Math.max(1, rows - 1)) * 30; // vivid 35..65 band
+      const chr = (typeof cal !== 'undefined' && cal.chroma != null) ? cal.chroma : 80;
+      return _toHex(rgbAt(hue, tone, chr));
+    };
+    // Clean faces — no stripe overlay. The vivid solid-shaded cube (like the
+    // logo sim cells and splash clusters) IS the hue-cube look; the thick
+    // white Munker artefact lines were what made the field read as noise.
+    const bT = '', bR = '', bL = '';
     const existing = bg.children;
     if (existing.length === cols * rows) {
       let i = 0;
@@ -5686,42 +5660,24 @@
   function tickSim() {
     if (!_sim || !_simTiles) return;
     _sim.step();
-    // Cube-BG mode used to keep static HUE-CUBE colours frozen after the
-    // initial build (the reaction-diffusion evolved underneath but nothing
-    // repainted) — that's what made it look dead next to the live default
-    // background. Now it repaints too, just with a "clean" mapping: the sim
-    // value nudges tone/lightness banding rather than driving a full hue
-    // cycle, so it stays visually calm but is demonstrably alive at the same
-    // 120ms cadence as every other mode.
-    if (document.body.classList.contains('mh-cube-bg')) {
-      if (typeof rgbAt !== 'function') return;
-      const pal = getWheelPalette();
-      const chroma = (typeof cal !== 'undefined' && cal.chroma != null) ? cal.chroma : 80;
-      const toHex = rgb => '#' + rgb.map(v => Math.max(0, Math.min(255, v|0)).toString(16).padStart(2,'0')).join('');
-      _simTiles.forEach((el, i) => {
-        // A3: suite-tab cells keep their persistent --tab-a accent (set at
-        // build time) — they still animate (pulse/face stripes) via the same
-        // .mh-pxhex CSS, they just don't get repainted by the ambient
-        // sim-driven color mapping, so the active suite stays legible.
-        if (el.hasAttribute('data-suite-tab')) return;
-        const vv = _sim.v[i % _sim.N];
-        const r = (i / (_simTiles.length || 1)) | 0;
-        const c = i - r * (_sim.W || 1);
-        const hue  = (pal.hue + (r + c) * 3) % 360;         // same gentle drift as buildPageHexBg
-        const tone = 40 + ((r * 5 + c * 3) % 22) + vv * 14;  // live sim nudges the tonal band
-        el.style.setProperty('--pxc', toHex(rgbAt(hue, tone, chroma)));
-      });
-      return;
-    }
-    const pal = getWheelPalette();
-    const aH = pal.hue, bH = (aH+120)%360, cH = (aH+240)%360;
+    // One renderer: the HUE CUBE's own material (rgbAt = cubeColorFor at the
+    // front layer). Hue sweeps left→right, tone runs bottom→top; the live
+    // reaction-diffusion value nudges tone so the field breathes.
+    if (typeof rgbAt !== 'function') return;
+    const fld = window._mhField || {};
+    const cols = fld.cols || Math.ceil(Math.sqrt(_simTiles.length)) || 1;
+    const rows = Math.max(1, Math.ceil(_simTiles.length / cols));
+    const chr = (typeof cal !== 'undefined' && cal.chroma != null) ? cal.chroma : 80;
+    const toHex = rgb => '#' + rgb.map(v => Math.max(0, Math.min(255, v|0)).toString(16).padStart(2,'0')).join('');
     _simTiles.forEach((el, i) => {
+      // Suite-tab cells keep their persistent --tab-a accent so the active
+      // suite stays legible; they still animate via the shared .mh-pxhex CSS.
       if (el.hasAttribute('data-suite-tab')) return;
       const vv = _sim.v[i % _sim.N];
-      const hue = vv < 0.33 ? aH : vv < 0.66 ? bH : cH;
-      const sat = 55 + vv * 40;
-      const lit = 28 + vv * 38;
-      el.style.setProperty('--pxc', `hsl(${hue},${sat}%,${lit}%)`);
+      const r = (i / cols) | 0, c = i - r * cols;
+      const hue = c / Math.max(1, cols - 1) * 360;
+      const tone = 35 + (1 - r / Math.max(1, rows - 1)) * 30 + (vv - 0.5) * 12;
+      el.style.setProperty('--pxc', toHex(rgbAt(hue, Math.max(20, Math.min(78, tone)), chr)));
     });
   }
 
@@ -6016,12 +5972,31 @@
   // the click handler once via delegation on the field container instead of
   // per-element (per-element listeners would be lost on rebuild/resize).
   (function(){
-    const bg = document.getElementById('mhPageHexBg');
-    if (!bg) return;
-    bg.addEventListener('click', e => {
+    // Delegate from document: #mhPageHexBg is created lazily by
+    // buildPageHexBg(), so a listener bound directly to it at parse time
+    // never attaches (getElementById → null → silent return — this was
+    // dead code; tabs only worked via the a11y proxy buttons).
+    document.addEventListener('click', e => {
+      const bg = document.getElementById('mhPageHexBg');
+      if (!bg || !bg.contains(e.target)) return;
       const cell = e.target.closest('[data-suite-tab]');
-      if (!cell) return;
-      switchSuiteTab(cell.dataset.suiteTab || 'web');
+      if (cell) { switchSuiteTab(cell.dataset.suiteTab || 'web'); return; }
+      // The background IS the hue cube: clicking any field tile selects that
+      // tile's hue/tone on the wheel, exactly like clicking a HUE CUBE cell.
+      const tile = e.target.closest('.mh-pxhex');
+      if (!tile || typeof setHue !== 'function') return;
+      const fld = window._mhField || {};
+      if (!fld.colStep || !fld.rowStep) return;
+      const r = Math.round(parseFloat(tile.style.top || '0') / fld.rowStep);
+      const c = Math.round(parseFloat(tile.style.left || '0') / fld.colStep);
+      const cols = fld.cols || 1;
+      const rows = Math.max(1, Math.ceil((window.innerHeight + 200) / fld.rowStep) + 2);
+      const hue = (c / Math.max(1, cols - 1)) * 360;
+      // Same tone mapping the tiles are painted with, so you get exactly the
+      // tone you clicked.
+      const tone = 35 + (1 - r / Math.max(1, rows - 1)) * 30;
+      if (typeof pulseCell === 'function') pulseCell(tile);
+      setHue(hue % 360, tone);
     });
   })();
   document.querySelectorAll('.mh-chess-mode-btn').forEach(btn => btn.addEventListener('click', () => {
@@ -6212,24 +6187,13 @@
         _modeFlash();
       });
     });
-    // Cube-BG: clean HUE-CUBE-style field. Default ON; rebuild the field on toggle.
+    // The background always renders as the HUE CUBE — there is no other mode.
     (function(){
-      const btn = document.getElementById('mhCubeBgBtn');
-      const rebuild = () => {
-        const bg = document.getElementById('mhPageHexBg');
-        if (bg) bg.dataset.built = '';                      // force a full rebuild
-        if (typeof buildPageHexBg === 'function') buildPageHexBg();
-        if (typeof buildSplashClusters === 'function') buildSplashClusters();
-      };
-      document.body.classList.add('mh-cube-bg');            // default on per user preference
-      rebuild();                                            // re-render the initial field in cube-BG style
-      if (btn) {
-        btn.classList.add('active');
-        btn.addEventListener('click', () => {
-          btn.classList.toggle('active', document.body.classList.toggle('mh-cube-bg'));
-          rebuild();
-        });
-      }
+      document.body.classList.add('mh-cube-bg');
+      const bg = document.getElementById('mhPageHexBg');
+      if (bg) bg.dataset.built = '';                        // force a full rebuild
+      if (typeof buildPageHexBg === 'function') buildPageHexBg();
+      if (typeof buildSplashClusters === 'function') buildSplashClusters();
     })();
     // ── NFT / unique art export from logo sim ────────────────────────────────
     document.addEventListener('click', function(e) {
