@@ -2942,6 +2942,47 @@
   // session so two visitors never get the same nodes. Degrades to a no-op
   // (still locally seeded/reproducible) when Supabase creds are absent.
   const _seenLogoSeeds = new Set();
+  // Evolutionary memory: the most-current generations read back from Supabase.
+  // _genHistory holds recent rows (seed + params + desirability), _currentGeneration
+  // is the next generation number, and _recentLoadPromise caches the one-time read.
+  let _genHistory = [];
+  let _currentGeneration = 1;
+  let _recentLoadPromise = null;
+  // Read the most-current generation so the generator "remembers": every seed
+  // ever recorded goes into the global no-repeat set, and the best-scoring rows
+  // seed the evolutionary bias. Bounded/optional — no-op when Supabase is absent.
+  async function _loadRecentSeeds(){
+    const sb=sbClient(); if(!sb) return;
+    try{
+      const { data } = await sb.from('logo_seeds')
+        .select('seed,generation,coverage,rule,font,hue')
+        .order('generation',{ascending:false}).order('ts',{ascending:false}).limit(800);
+      if(data && data.length){
+        let maxGen=0;
+        for(const r of data){ if(r.seed!=null) _seenLogoSeeds.add(r.seed|0); if((r.generation|0)>maxGen) maxGen=r.generation|0; }
+        _genHistory = data;
+        _currentGeneration = maxGen + 1;
+      }
+    }catch(_){}
+  }
+  function _ensureRecentSeeds(){ if(!_recentLoadPromise) _recentLoadPromise=_loadRecentSeeds(); return _recentLoadPromise; }
+  // Evolve the 16 panel rules: exploit the top-quartile performers from history,
+  // keep ~40% fully random for exploration (classic explore/exploit). Falls back
+  // to the fixed _lsRules when there's no history yet.
+  function _evolvedRules(baseHue){
+    if(!_genHistory.length) return _lsRules;
+    const scored=_genHistory.filter(r=>r.coverage!=null && r.coverage>0).sort((a,b)=>b.coverage-a.coverage);
+    const top=scored.slice(0, Math.max(1, scored.length>>2));
+    if(!top.length) return _lsRules;
+    return _lsRules.map((v)=>{
+      if(Math.random()<0.4) return v;                       // explore
+      const t=top[(Math.random()*top.length)|0];            // exploit a good one
+      const fi=_lsFonts.indexOf(t.font);
+      return { rule:t.rule||v.rule, N:v.N, spd:v.spd,
+               hOff:(t.hue!=null)?(((t.hue-baseHue)%360)+360)%360:v.hOff,
+               font:(fi>=0?fi:v.font) };
+    });
+  }
   async function _recordLogoSeed(seed, meta){
     if(_seenLogoSeeds.has(seed)) { _bumpLogoSeed(); return; }
     _seenLogoSeeds.add(seed);
@@ -2949,8 +2990,22 @@
     try{
       const { data } = await sb.from('logo_seeds').select('seed').eq('seed', seed).maybeSingle();
       if(data){ _bumpLogoSeed(); }
-      else { await sb.from('logo_seeds').insert({ seed, font:meta.font, rule:meta.rule, hue:meta.hue, letters:meta.text, ts:new Date().toISOString() }); }
+      else { await sb.from('logo_seeds').insert({ seed, generation:_currentGeneration,
+        font:meta.font, rule:meta.rule, hue:meta.hue, letters:meta.text,
+        coverage:0, expanded:false, score:0, ts:new Date().toISOString() }); }
     }catch(_){}
+  }
+  // Once a sim has matured (filled its letter), write its desirability back so
+  // future generations can be biased toward it. Fires at most once per sim.
+  async function _maybeScoreSim(sim){
+    if(!sim || sim._scored || sim._seed==null) return;
+    if(!sim.expanded && sim.tick < 200) return;             // let it develop first
+    sim._scored = true;
+    const sb=sbClient(); if(!sb) return;
+    const coverage = sim.outerVisited ? sim.outerVisited.size : 0;
+    const score = Math.min(1, coverage / Math.max(1, sim.outsideTotal||1));
+    try{ await sb.from('logo_seeds').update({ coverage, expanded:!!sim.expanded, score })
+      .eq('seed', sim._seed); }catch(_){}
   }
   // Nudge the session seed and rebuild so the next render lands on fresh nodes.
   let _logoSeedBumpT=null;
@@ -2993,10 +3048,14 @@
       </div>`).join('');
     }catch(_){lib.innerHTML='';}
   }
-  function _startLogoSim(){
+  async function _startLogoSim(){
     _stopLogoSims();
     const grid=$('mhLogoSimGrid'); if(!grid) return;
     grid.style.display='grid'; grid.innerHTML='';
+    // Remember: pull the most-current global generation before building. Bounded
+    // wait so a slow/absent Supabase never blocks the UI (resolves instantly
+    // when creds are missing).
+    await Promise.race([_ensureRecentSeeds(), new Promise(r=>setTimeout(r,600))]);
     const text=($('mhLogoTextLogo')||{}).value||'H';
     const fontOverride=($('mhLogoSimFont')||{}).value||null;
     // Cube grid dims — 2:1 aspect to match the iso-face diamond letter space.
@@ -3016,7 +3075,9 @@
     // 30 fps cap: only tick every ~33 ms
     let _lastTick=0;
 
-    _lsRules.forEach((v,vi)=>{
+    // Evolutionary rules: bias toward the best remembered generations.
+    const _rules = _evolvedRules(baseHue);
+    _rules.forEach((v,vi)=>{
       // ── Per-panel color scheme derived from the color wheel ─────────────────
       const schemeHue=(baseHue+v.hOff)%360;
       const compHue=(schemeHue+174+(vi%3)*12)%360; // near-complement with slight variety per panel
@@ -3036,10 +3097,17 @@
 
       const font=fontOverride||_lsFonts[v.font||0];
       const mask=_buildLetterMask(text,W,H,font);
-      // Seeded per panel from the session seed + identity so the same seed
-      // reproduces the same nodes (and so we can dedup against Supabase).
-      const panelSeed=_seedFromString(sessionSeed+'|'+text+'|'+font+'|'+v.rule+'|'+vi+'|'+Math.round(baseHue));
+      // Seeded per panel from the session seed + identity + generation. Global
+      // no-repeat: if this seed was already seen (this session or read back from
+      // Supabase), salt-and-rehash. The monotonically increasing generation
+      // guarantees forward progress so the seed space can't deadlock.
+      let panelSeed, _att=0;
+      do {
+        panelSeed=_seedFromString(sessionSeed+'|'+text+'|'+font+'|'+v.rule+'|'+vi+'|'+Math.round(baseHue)+'|g'+_currentGeneration+'|a'+_att);
+        _att++;
+      } while(_seenLogoSeeds.has(panelSeed) && _att<12);
       const sim=new BilliardsLogoSim(W,H,mask,v.N,v.spd,(schemeHue+vi*15)%360,panelSeed);
+      sim._seed=panelSeed;
       sim._rule=v.rule; sim._v=v;
       sim._schemeHue=schemeHue; sim._compHue=compHue;
       // Resting letter-interior colour pulled from the wheel tonality (real
@@ -3178,6 +3246,9 @@
         }
       }
       if(_lsGrids[0]&&_lsGrids[0].tick%120===0) _logBilliards(_lsGrids[0]);
+      // Write desirability back to Supabase once each sim matures (self-guarded
+      // so it writes at most once per sim).
+      for(const s of _lsGrids) _maybeScoreSim(s);
     }
     _rafLoop();
     _loadLogoLibrary();
