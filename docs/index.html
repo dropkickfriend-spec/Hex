@@ -44,6 +44,7 @@
     --accent: #ffd24a;
   }
   * { box-sizing: border-box; }
+  [data-auto-contrast] { color: var(--auto-ink, var(--ink)); }
   html, body { margin: 0; background: var(--bg); color: var(--ink);
     font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, "Inter", sans-serif; }
   h1 { font-size: 14px; letter-spacing: .12em; text-transform: uppercase;
@@ -713,49 +714,37 @@
     font: 12px 'Space Mono', monospace;
   }
   .mh-render-toolbar button { min-height: 44px; }
-  .mh-suite-tabs {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
-    gap: 8px;
-    margin: 10px 0 16px;
+  /* A3: suite tabs are now real cells of #mhPageHexBg's own grid (see
+     renderSuiteTabRow()) instead of a separate floating button row. The
+     `.mh-suite-tabs-a11y` container only exists for keyboard/SR focus
+     targets kept positioned over the live cells; it paints nothing.
+     `.mh-ctab-f/-t/-r/-l` remain shared face primitives (still used by
+     buildSplashClusters() and the neon override below). */
+  .mh-suite-tabs-a11y { position:fixed; inset:0; z-index:3; pointer-events:none; }
+  .mh-suite-tabs-a11y button {
+    position:absolute; opacity:0; border:none; background:transparent; padding:0; margin:0;
+    pointer-events:auto; cursor:pointer;
   }
-  .mh-suite-tab {
-    position: relative;
-    display: block;
-    height: 76px;
-    border: none;
-    background: transparent;
-    padding: 0;
-    cursor: pointer;
-    filter: drop-shadow(0 7px 14px rgba(0,0,0,.55));
-    transition: filter .14s, transform .14s cubic-bezier(.2,.8,.35,1.3);
+  .mh-suite-tabs-a11y button:focus-visible { opacity:1; outline:2px solid var(--tab-a,#ffff00); outline-offset:2px; }
+  #mhPageHexBg .mh-pxhex[data-suite-tab] { cursor:pointer; pointer-events:auto; transition:filter .14s; }
+  #mhPageHexBg .mh-pxhex[data-suite-tab]:hover { filter:brightness(1.18) drop-shadow(0 4px 10px rgba(0,0,0,.6)); }
+  #mhPageHexBg .mh-pxhex[data-suite-tab].mh-tab-active {
+    filter: drop-shadow(0 0 16px var(--tab-a,var(--mh-a,#ffff00))) brightness(1.2);
+    outline: 2px solid var(--tab-a,var(--mh-a,#ffff00));
+    outline-offset: 2px;
   }
-  .mh-suite-tab:hover { transform: translateY(-5px); filter: drop-shadow(0 12px 22px rgba(0,0,0,.65)); }
-  .mh-suite-tab:active { transform: translateY(2px) scale(.95); filter: drop-shadow(0 3px 6px rgba(0,0,0,.5)); }
-  .mh-suite-tab.active { filter: drop-shadow(0 0 18px var(--tab-a,var(--mh-a,#ffff00))) drop-shadow(0 8px 18px rgba(0,0,0,.6)); }
-  .mh-ctab-cube { position:absolute; inset:0; transition:opacity .16s, filter .16s; }
-  /* Each tab carries its own selection hue via --tab-a; dimmed until active/hover. */
-  .mh-suite-tab .mh-ctab-cube { opacity:.62; filter:saturate(.62) brightness(.9); }
-  .mh-suite-tab:hover .mh-ctab-cube { opacity:.9; filter:saturate(1.05) brightness(1.05); }
-  .mh-suite-tab.active .mh-ctab-cube { opacity:1; filter:saturate(1.2) brightness(1.08); }
-  .mh-ctab-f { position:absolute; inset:0; background:var(--tab-a,rgba(255,255,255,.10)); }
-  .mh-ctab-t { clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%); filter:brightness(1.55); }
-  .mh-ctab-r { clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%); filter:brightness(0.88); }
-  .mh-ctab-l { clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%); filter:brightness(0.46); }
-  .mh-suite-tab.active .mh-ctab-f { background:var(--tab-a,var(--mh-a,#ffff00)); animation:mhPxPulse 3.5s ease-in-out infinite alternate; }
-  .mh-suite-tab.active .mh-ctab-t { filter:brightness(1.55); }
-  .mh-suite-tab.active .mh-ctab-r { filter:brightness(0.88); }
-  .mh-suite-tab.active .mh-ctab-l { filter:brightness(0.46); }
+  #mhPageHexBg .mh-pxhex[data-suite-tab].mh-tab-active .mh-ctab-lbl { opacity:1; }
   .mh-ctab-lbl {
     position:absolute; top:18%; left:50%; transform:translateX(-50%);
     color:var(--ink); font:bold 7px 'Space Mono',monospace;
     letter-spacing:.06em; text-transform:uppercase;
     text-shadow:0 1px 3px rgba(0,0,0,.9); white-space:nowrap; pointer-events:none;
+    opacity:.85; z-index:1;
   }
   .mh-render-adapter h2,
   .mh-unified-munker-title,
   .mh-builder-title,
-  .mh-suite-tab .mh-ctab-lbl,
+  .mh-ctab-lbl,
   .mh-export-status {
     text-shadow: 0 1px 4px rgba(0,0,0,.95), 0 0 10px rgba(0,0,0,.7);
   }
@@ -804,7 +793,7 @@
   .mh-extra-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin-top:10px; }
   .mh-extra-card { border-radius:10px; padding:12px; min-height:82px; background:rgba(255,255,255,.045); color:var(--ink-dim); font:11px/1.45 'Space Mono', monospace; }
   .mh-extra-card b { color:var(--mh-a, #ffff00); display:block; margin-bottom:5px; }
-  @media (max-width:760px){ .mh-suite-tabs { grid-template-columns:repeat(3, minmax(0,1fr)); } .mh-web-card-grid { grid-template-columns:1fr; } }
+  @media (max-width:760px){ .mh-web-card-grid { grid-template-columns:1fr; } }
   /* Full-page isometric 3D cube hex background */
   #mhPageHexBg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
   #mhPageHexBg.mh-bg-pulse .mh-pxhex{animation-duration:.35s!important;opacity:1!important}
@@ -1071,8 +1060,6 @@
     .mh-block { grid-template-columns: 1fr; }
     .mh-cards { grid-template-columns: repeat(2, 1fr); }
   }
-  /* ── Tab: clip to hex outline so corners don't show dark bg ── */
-  .mh-suite-tab { clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%); }
   /* ── Strip remaining border rings ── */
   .mh-web-preview { box-shadow: 0 20px 60px rgba(0,0,0,.5) !important; }
   .mh-web-nav { border: none !important; }
@@ -1088,12 +1075,41 @@
   #mhPageFold { perspective:1200px; }
   #mhPageFold.mh-pf-cover { display:block; animation:mhPfCover 340ms cubic-bezier(.4,0,.2,1) forwards; }
   #mhPageFold.mh-pf-reveal { display:block; animation:mhPfReveal 380ms cubic-bezier(.15,.7,.3,1.1) forwards; }
-  /* Origami fold-down: the grid panel swings in on a top hinge, then away. */
+  /* Origami fold-down: the grid panel swings in on a top hinge, then away.
+     Kept as the base cover/reveal envelope (background dims + grid paper),
+     but the actual "reveal" motion is now done cube-by-cube (see
+     .mh-pf-cube below) with per-cube stagger, instead of one flat panel
+     swinging as a single rigid sheet. */
   @keyframes mhPfCover {
     0%{transform:rotateX(-90deg) scaleY(.4);opacity:0}30%{opacity:1}100%{transform:rotateX(0deg) scaleY(1);opacity:1}
   }
   @keyframes mhPfReveal {
     0%{transform:rotateX(0deg) scaleY(1);opacity:1}70%{opacity:.55}100%{transform:rotateX(88deg) scaleY(.35);opacity:0}
+  }
+  /* A5: coarse grid of large isometric 3-face cubes overlaid on #mhPageFold.
+     Each cube uses the SAME 3-face clip-path primitive as the bg field/tabs
+     (.mh-ctab-f/-t/-r/-l), just scaled up, and flips away on its own
+     rotateY/rotateX timeline with a per-cube animation-delay set inline by
+     JS (proportional to distance from the click point), so the destination
+     tool is revealed cube-by-cube radiating out from where the user clicked
+     instead of one flat panel sliding away. */
+  .mh-pf-grid { position:absolute; inset:0; display:grid; }
+  .mh-pf-cube {
+    position:relative; transform-style:preserve-3d; transform-origin:center center;
+    background:rgba(6,6,12,.97);
+  }
+  .mh-pf-cube .mh-ctab-f { position:absolute; inset:0; }
+  .mh-pf-cube .mh-ctab-t { clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%); filter:brightness(1.55); }
+  .mh-pf-cube .mh-ctab-r { clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%); filter:brightness(0.88); }
+  .mh-pf-cube .mh-ctab-l { clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%); filter:brightness(0.46); }
+  #mhPageFold.mh-pf-cover .mh-pf-cube { animation:mhPfCubeIn 260ms cubic-bezier(.4,0,.2,1) both; animation-delay:var(--pf-delay,0s); }
+  #mhPageFold.mh-pf-reveal .mh-pf-cube { animation:mhPfCubeOut 320ms cubic-bezier(.3,.6,.3,1) both; animation-delay:var(--pf-delay,0s); }
+  @keyframes mhPfCubeIn {
+    0%{transform:rotateY(90deg) scale(.4);opacity:0}100%{transform:rotateY(0deg) scale(1);opacity:1}
+  }
+  @keyframes mhPfCubeOut {
+    0%{transform:rotateY(0deg) rotateX(0deg) scale(1);opacity:1}
+    100%{transform:rotateY(-100deg) rotateX(20deg) scale(.3);opacity:0}
   }
   /* ── Splash page ── */
   #mhSplash {
@@ -1215,7 +1231,6 @@
   @media(max-width:600px){
     .mh-splash-grid{grid-template-columns:1fr}
     .mh-splash-h{font-size:18px}
-    .mh-suite-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
   }
   /* ── 3D block typography ── */
   .mh-splash-h,
@@ -1354,7 +1369,7 @@
   body.mh-shadows .mh-render-adapter h2,
   body.mh-shadows .mh-unified-munker-title,
   body.mh-shadows .mh-builder-title,
-  body.mh-shadows .mh-suite-tab .mh-ctab-lbl,
+  body.mh-shadows .mh-ctab-lbl,
   body.mh-shadows .mh-render-toolbar label,
   body.mh-shadows .mh-export-status,
   body.mh-shadows .mh-splash-eye,
@@ -1400,19 +1415,15 @@
   select, textarea, .mh-web-preview *, .mh-spr * {
     -webkit-text-stroke:0 !important; paint-order:normal !important;
   }
-  /* ── Hex-face cube tabs: cube blocks with label printed on left isometric face ── */
-  .mh-ctab-cube { display:block !important; }
-  .mh-suite-tabs { gap:8px !important; align-items:flex-end !important; position:relative; z-index:2; }
-  .mh-suite-tab {
-    position:relative; display:block;
-    width:76px; height:76px !important; padding:0 !important;
-    border:none !important; background:transparent !important;
-    border-radius:0 !important; clip-path:none !important;
+  /* ── Hex-face cube tabs: now live #mhPageHexBg cells (see A3), not a
+     separate button row — .mh-ctab-f/-t/-r/-l stay as shared face primitives
+     for buildSplashClusters() and generic cube markup. ── */
+  #mhPageHexBg .mh-pxhex[data-suite-tab] {
     filter:drop-shadow(0 7px 14px rgba(0,0,0,.55)) !important;
     transition:filter .14s, transform .14s cubic-bezier(.2,.8,.35,1.3) !important;
   }
-  .mh-suite-tab:hover { transform:translateY(-4px) !important; filter:drop-shadow(0 10px 18px rgba(0,0,0,.7)) brightness(1.18) !important; }
-  .mh-suite-tab.active { transform:translateY(-6px) scale(1.04) !important; filter:drop-shadow(0 14px 24px var(--tab-a,rgba(0,0,0,.85))) brightness(1.22) !important; }
+  #mhPageHexBg .mh-pxhex[data-suite-tab]:hover { transform:translateY(-4px) !important; filter:drop-shadow(0 10px 18px rgba(0,0,0,.7)) brightness(1.18) !important; }
+  #mhPageHexBg .mh-pxhex[data-suite-tab].mh-tab-active { transform:translateY(-6px) scale(1.04) !important; filter:drop-shadow(0 14px 24px var(--tab-a,rgba(0,0,0,.85))) brightness(1.22) !important; }
   .mh-ctab-f { position:absolute; inset:0; background:var(--tab-a, var(--pxc, var(--mh-b,#0040ff))); }
   .mh-ctab-t { clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%); filter:brightness(1.55); }
   .mh-ctab-r { clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%); filter:brightness(0.88); }
@@ -1441,7 +1452,7 @@
   body.mh-neon .mh-splash-eye { animation:mhNeonFlicker 2.7s infinite reverse,mhArcadeGlow 4s ease-in-out infinite reverse !important; }
   body.mh-neon #mhPageHexBg { animation:mhNeonHue 10s linear infinite; }
   body.mh-neon .mh-builder-title { animation:mhBuilderPulse 1.5s ease-in-out infinite,mhNeonFlicker 2.2s infinite !important; }
-  body.mh-neon .mh-suite-tab.active { animation:mhPxPulse 0.8s ease-in-out infinite alternate !important; }
+  body.mh-neon #mhPageHexBg .mh-pxhex[data-suite-tab].mh-tab-active { animation:mhPxPulse 0.8s ease-in-out infinite alternate !important; }
   /* Neon also lights up the logo generator (sim grids, mark & brand cube). */
   body.mh-neon #mhLogoSimGrid, body.mh-neon #mhLogoHexMark, body.mh-neon .mh-brandcube {
     animation:mhNeonHue 8s linear infinite;
@@ -2008,17 +2019,15 @@
     <button class="mh-mode-btn" id="mhNeonBtn" title="Neon mode">Neon</button>
     <button class="mh-mode-btn" id="mhOrigamiBtn" title="Origami fold transitions (off = Rubik cube turn)">Origami</button>
   </span>
-  <div class="mh-suite-tabs" id="mhSuiteTabs">
-    <button class="mh-suite-tab active" data-suite-tab="web" style="--tab-a:hsl(45,92%,56%)"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Web</span></button>
-    <button class="mh-suite-tab" data-suite-tab="game" style="--tab-a:hsl(5,88%,58%)"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Game</span></button>
-    <button class="mh-suite-tab" data-suite-tab="character" style="--tab-a:hsl(278,80%,64%)"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Character</span></button>
-    <button class="mh-suite-tab" data-suite-tab="gif" style="--tab-a:hsl(195,90%,55%)"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">GIF</span></button>
-    <button class="mh-suite-tab" data-suite-tab="qr" style="--tab-a:hsl(135,72%,50%)"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">QR</span></button>
-    <button class="mh-suite-tab" data-suite-tab="logo" style="--tab-a:hsl(322,85%,60%)"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Logo</span></button>
-    <button class="mh-suite-tab" data-suite-tab="type" style="--tab-a:hsl(168,78%,48%)"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Type</span></button>
-    <button class="mh-suite-tab" data-suite-tab="chess" style="--tab-a:hsl(28,90%,56%)"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Chess</span></button>
-    <button class="mh-suite-tab" data-suite-tab="snake" style="--tab-a:hsl(92,80%,52%)"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Arcade</span></button>
-  </div>
+  <!-- A3: the suite tabs used to be a separate floating `.mh-suite-tab` cube
+       component layered on top of the background. They're now literally the
+       top row of #mhPageHexBg's own tile grid (see buildPageHexBg() /
+       renderSuiteTabRow()), tagged [data-suite-tab] and animated by the same
+       SimGrid tick loop as every other cell. This container just holds
+       accessible/keyboard-focusable button proxies kept in sync with the
+       live cell positions for screen readers + click hit area; it renders
+       no visuals of its own (see .mh-suite-tabs-a11y CSS). -->
+  <div class="mh-suite-tabs-a11y" id="mhSuiteTabs" aria-hidden="true"></div>
   <div class="mh-panels-wrap" id="mhPanelsWrap">
   <div id="mhFoldPaper"></div>
   <div class="mh-builder-panel active" id="mhBuilderWeb">
@@ -4283,7 +4292,8 @@
     const inPanel = $('mhBuilder' + tab.charAt(0).toUpperCase() + tab.slice(1));
     const outPanel = document.querySelector('.mh-builder-panel.active');
     if (!inPanel || inPanel === outPanel) return;
-    document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
+    document.querySelectorAll('#mhPageHexBg [data-suite-tab]').forEach(el => el.classList.toggle('mh-tab-active', el.dataset.suiteTab === tab));
+    window._mhActiveSuiteTab = tab;
     _stopLogoSims(); _stopTypeAlpha(); _stopSnake(); _stopPixelFont(); // stop sims on tab switch
     const bg = document.getElementById('mhPageHexBg');
     if (bg) {
@@ -4578,9 +4588,9 @@
     document.documentElement.style.setProperty('--ink-on-a', _luma(p.aHex) > 0.35 ? '#000' : '#fff');
     document.documentElement.style.setProperty('--ink-on-b', _luma(p.bHex) > 0.35 ? '#000' : '#fff');
     document.documentElement.style.setProperty('--ink-on-c', _luma(p.cHex) > 0.35 ? '#000' : '#fff');
-    const _tabPalette=[p.aHex,p.bHex,p.cHex,
-      _hslToHex((p.hue+30)%360,70,50),_hslToHex((p.hue+210)%360,70,50),_hslToHex((p.hue+150)%360,70,50)];
-    document.querySelectorAll('.mh-suite-tab').forEach((tab,i)=>{tab.style.setProperty('--pxc',_tabPalette[i%_tabPalette.length]);});
+    // A3: suite-tab cells now live inside #mhPageHexBg and get their --tab-a
+    // accent from renderSuiteTabRow() at generation time (own hue per suite,
+    // not palette-cycled) — keep it stable rather than re-palette-cycling here.
     document.querySelectorAll('.mh-dot').forEach((el, i) => { el.style.background = [p.aHex, p.cHex, p.bHex][i % 3]; });
     document.querySelectorAll('.mh-line').forEach((el, i) => {
       const color = [p.aHex, p.bHex, p.cHex][i % 3];
@@ -4788,16 +4798,29 @@
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           const t = existing[i++];
-          t.style.setProperty('--pxc', colorAt(r, c));
+          // Suite-tab cells keep their persistent --tab-a-derived color
+          // (set at build time) rather than being repainted by the ambient
+          // field/cube-bg color function, same as SimGrid's tickSim() skips
+          // them for the same reason.
+          if (!t.hasAttribute('data-suite-tab')) t.style.setProperty('--pxc', colorAt(r, c));
           if (t.children[0]) t.children[0].style.backgroundImage = bT;
           if (t.children[1]) t.children[1].style.backgroundImage = bR;
           if (t.children[2]) t.children[2].style.backgroundImage = bL;
         }
       }
+      syncSuiteTabsA11y();
       return;
     }
     const firstBuild = !bg.dataset.built;
     const occupied = firstBuild ? collectSplashOccupancy(sz, hexH, rowStep, colStep, cols, rows) : null;
+    // A3: reserve row 0's leading cells as the suite-tab row — they're real
+    // #mhPageHexBg tiles (same primitive/animation as every other cell),
+    // just tagged [data-suite-tab] + given a persistent --tab-a accent and a
+    // label overlay, instead of being a separate floating `.mh-suite-tab`
+    // button component layered on top of the field.
+    const activeTab = (document.querySelector('#mhPageHexBg [data-suite-tab].mh-tab-active') || {}).dataset
+      ? document.querySelector('#mhPageHexBg [data-suite-tab].mh-tab-active').dataset.suiteTab
+      : (window._mhActiveSuiteTab || 'web');
     let h = '';
     for (let r = 0; r < rows; r++) {
       const off = r % 2 ? (colStep * 0.5).toFixed(0) : 0;
@@ -4805,12 +4828,54 @@
         const delay = Math.min(maxDelay, ((r + c) * 0.04)).toFixed(2);
         const cls = (r+c)%2===1 ? 'mh-pxhex mh-pxhex-b' : 'mh-pxhex';
         const spawnCls = firstBuild ? ' mh-spawn-in' : '';
-        h += `<div class="${cls}${spawnCls}" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${colorAt(r,c)};--row:${r};animation-delay:-${delay}s;--spawn-delay:${delay}s"><div class="mh-pxf mh-pxf-t" style="background-image:${bT}"></div><div class="mh-pxf mh-pxf-r" style="background-image:${bR}"></div><div class="mh-pxf mh-pxf-l" style="background-image:${bL}"></div></div>`;
+        const tab = (r === 0 && c < SUITE_TABS.length) ? SUITE_TABS[c] : null;
+        const tabAttrs = tab ? ` data-suite-tab="${tab.id}" data-auto-contrast` : '';
+        const tabCls = tab && tab.id === activeTab ? ' mh-tab-active' : '';
+        const tabLbl = tab ? `<span class="mh-ctab-lbl">${tab.label}</span>` : '';
+        const pxc = tab ? tab.color : colorAt(r, c);
+        const tabVar = tab ? `--tab-a:${tab.color};` : '';
+        h += `<div class="${cls}${spawnCls}${tabCls}"${tabAttrs} style="${tabVar}left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pxc};--row:${r};animation-delay:-${delay}s;--spawn-delay:${delay}s">${tabLbl}<div class="mh-pxf mh-pxf-t" style="background-image:${bT}"></div><div class="mh-pxf mh-pxf-r" style="background-image:${bR}"></div><div class="mh-pxf mh-pxf-l" style="background-image:${bL}"></div></div>`;
       }
     }
     bg.innerHTML = h;
     bg.dataset.built = '1';
     if (firstBuild) stampObjects(bg, occupied, cols, rows, p);
+    syncSuiteTabsA11y();
+  }
+
+  // A3: suite list, each with its own accent hue (kept the same 9 suites and
+  // colors as the old `.mh-suite-tab` markup so nothing regresses visually).
+  const SUITE_TABS = [
+    { id:'web',       label:'Web',       color:'hsl(45,92%,56%)' },
+    { id:'game',      label:'Game',      color:'hsl(5,88%,58%)' },
+    { id:'character', label:'Character', color:'hsl(278,80%,64%)' },
+    { id:'gif',       label:'GIF',       color:'hsl(195,90%,55%)' },
+    { id:'qr',        label:'QR',        color:'hsl(135,72%,50%)' },
+    { id:'logo',      label:'Logo',      color:'hsl(322,85%,60%)' },
+    { id:'type',      label:'Type',      color:'hsl(168,78%,48%)' },
+    { id:'chess',     label:'Chess',     color:'hsl(28,90%,56%)' },
+    { id:'snake',     label:'Arcade',    color:'hsl(92,80%,52%)' }
+  ];
+
+  // Keeps a hidden, keyboard-focusable button per suite tab positioned over
+  // its live cell, for accessibility (the cells themselves are plain divs).
+  function syncSuiteTabsA11y() {
+    const host = document.getElementById('mhSuiteTabs');
+    const bg = document.getElementById('mhPageHexBg');
+    if (!host || !bg) return;
+    host.innerHTML = '';
+    bg.querySelectorAll('[data-suite-tab]').forEach(cell => {
+      const rect = cell.getBoundingClientRect();
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.suiteTab = cell.dataset.suiteTab;
+      btn.textContent = cell.querySelector('.mh-ctab-lbl') ? cell.querySelector('.mh-ctab-lbl').textContent : cell.dataset.suiteTab;
+      btn.style.setProperty('--tab-a', cell.style.getPropertyValue('--tab-a'));
+      btn.style.left = rect.left + 'px'; btn.style.top = rect.top + 'px';
+      btn.style.width = rect.width + 'px'; btn.style.height = rect.height + 'px';
+      btn.addEventListener('click', () => switchSuiteTab(btn.dataset.suiteTab));
+      host.appendChild(btn);
+    });
   }
 
   // Marks background grid cells that fall under a splash tab card as
@@ -5015,6 +5080,11 @@
       const chroma = (typeof cal !== 'undefined' && cal.chroma != null) ? cal.chroma : 80;
       const toHex = rgb => '#' + rgb.map(v => Math.max(0, Math.min(255, v|0)).toString(16).padStart(2,'0')).join('');
       _simTiles.forEach((el, i) => {
+        // A3: suite-tab cells keep their persistent --tab-a accent (set at
+        // build time) — they still animate (pulse/face stripes) via the same
+        // .mh-pxhex CSS, they just don't get repainted by the ambient
+        // sim-driven color mapping, so the active suite stays legible.
+        if (el.hasAttribute('data-suite-tab')) return;
         const vv = _sim.v[i % _sim.N];
         const r = (i / (_simTiles.length || 1)) | 0;
         const c = i - r * (_sim.W || 1);
@@ -5027,6 +5097,7 @@
     const pal = getWheelPalette();
     const aH = pal.hue, bH = (aH+120)%360, cH = (aH+240)%360;
     _simTiles.forEach((el, i) => {
+      if (el.hasAttribute('data-suite-tab')) return;
       const vv = _sim.v[i % _sim.N];
       const hue = vv < 0.33 ? aH : vv < 0.66 ? bH : cH;
       const sat = 55 + vv * 40;
@@ -5275,35 +5346,65 @@
   // Sample which fixed-field tile sits behind each tagged text element and
   // flip the text to white/near-black for max legibility, updating on scroll.
   function _mhLuma(hex){ const n=parseInt(String(hex).replace('#',''),16); return (0.2126*((n>>16)&255)+0.7152*((n>>8)&255)+0.0722*(n&255))/255; }
+  function _mhHexToHue(hex){
+    const n=parseInt(String(hex).replace('#',''),16);
+    const r=((n>>16)&255)/255, g=((n>>8)&255)/255, b=(n&255)/255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+    if (d===0) return 0;
+    let h;
+    if (max===r) h=((g-b)/d)%6; else if (max===g) h=(b-r)/d+2; else h=(r-g)/d+4;
+    h*=60; if (h<0) h+=360;
+    return h;
+  }
   window.mhFieldSample = function(x,y){
     const f=window._mhField; if(!f) return null;
     const r=Math.round(y/f.rowStep); const off=(r%2)?f.colStep*0.5:0;
     const c=Math.round((x-off)/f.colStep);
     return f.pal[(((r*f.cols+c)%f.palLen)+f.palLen)%f.palLen];
   };
-  let _acRaf=0;
+  let _acRaf=0, _acTimer=0;
   function _updateAutoContrast(){
     _acRaf=0;
-    document.querySelectorAll('.mh-autocontrast').forEach(el => {
+    document.querySelectorAll('.mh-autocontrast, [data-auto-contrast]').forEach(el => {
       const rect=el.getBoundingClientRect();
       if(rect.width===0 || rect.bottom<0 || rect.top>window.innerHeight) return;
       const hex=window.mhFieldSample(rect.left+rect.width/2, rect.top+Math.min(rect.height/2,20));
       if(!hex) return;
       const dark=_mhLuma(hex)<0.52;
-      el.style.color = dark ? '#ffffff' : '#0a0a12';
+      // Additive-complement ink: push the sampled field hue 180° around the
+      // wheel (reusing the same math the palette/color-wheel code uses) at
+      // whichever lightness end maximizes distance from the sampled tone,
+      // rather than a flat black/white flip.
+      const hue = typeof additiveComplementHue === 'function' ? additiveComplementHue(_mhHexToHue(hex)) : (_mhHexToHue(hex)+180)%360;
+      const ink = dark ? `hsl(${hue.toFixed(1)},70%,92%)` : `hsl(${hue.toFixed(1)},60%,14%)`;
+      el.style.setProperty('--auto-ink', ink);
+      el.style.color = 'var(--auto-ink)';
       el.style.textShadow = dark ? '0 1px 3px rgba(0,0,0,.92)' : '0 1px 2px rgba(255,255,255,.7)';
     });
   }
   function _scheduleAutoContrast(){ if(!_acRaf) _acRaf=requestAnimationFrame(_updateAutoContrast); }
   window.addEventListener('scroll', _scheduleAutoContrast, {passive:true, capture:true});
   window.addEventListener('resize', _scheduleAutoContrast, {passive:true});
+  clearInterval(_acTimer);
+  _acTimer = setInterval(_scheduleAutoContrast, 250); // throttled continuous sampler (sim colors drift even without scroll/resize)
   // Tag the readable text that sits over the animated field.
   setTimeout(() => {
-    document.querySelectorAll('.mh-splash-h, .mh-splash-sub, .mh-splash-eye, .mh-sc-title, .mh-sc-desc, .mh-builder-title, .mh-export-title, .mh-render-adapter h2')
-      .forEach(el => el.classList.add('mh-autocontrast'));
+    document.querySelectorAll('.mh-splash-h, .mh-splash-sub, .mh-splash-eye, .mh-sc-title, .mh-sc-desc, .mh-builder-title, .mh-export-title, .mh-render-adapter h2, .mh-unified-munker-title, header')
+      .forEach(el => el.setAttribute('data-auto-contrast', ''));
     _updateAutoContrast();
   }, 400);
-  document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.addEventListener('click', () => switchSuiteTab(btn.dataset.suiteTab || 'web')));
+  // A3: suite-tab cells are (re)built on every buildPageHexBg() call, so bind
+  // the click handler once via delegation on the field container instead of
+  // per-element (per-element listeners would be lost on rebuild/resize).
+  (function(){
+    const bg = document.getElementById('mhPageHexBg');
+    if (!bg) return;
+    bg.addEventListener('click', e => {
+      const cell = e.target.closest('[data-suite-tab]');
+      if (!cell) return;
+      switchSuiteTab(cell.dataset.suiteTab || 'web');
+    });
+  })();
   document.querySelectorAll('.mh-chess-mode-btn').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('.mh-chess-mode-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -5383,17 +5484,62 @@
       $('mhQrSize')?.addEventListener('change', generateQr);
     }
     // ── Splash navigation ──
+    // A5: #mhPageFold used to be a single flat panel doing an origami
+    // fold-down (rotateX+scaleY hinge swing) — that's a real 3D fold, but a
+    // single rigid sheet, not a grid of independently-timed cubes. This
+    // builds a coarse grid of large isometric 3-face cubes (same primitive
+    // as the bg field/suite tabs) inside #mhPageFold and staggers each
+    // cube's flip-away animation-delay by its Euclidean distance from the
+    // click point, so the destination tool is revealed radiating outward
+    // from wherever the user clicked instead of a uniform wipe.
+    const PF_COLS = 5, PF_ROWS = 4;
+    function _buildPfGrid(originX, originY, staggered) {
+      const fold = document.getElementById('mhPageFold');
+      if (!fold) return;
+      fold.innerHTML = '';
+      const grid = document.createElement('div');
+      grid.className = 'mh-pf-grid';
+      grid.style.gridTemplateColumns = `repeat(${PF_COLS}, 1fr)`;
+      grid.style.gridTemplateRows = `repeat(${PF_ROWS}, 1fr)`;
+      const W = window.innerWidth, H = window.innerHeight;
+      const cellW = W / PF_COLS, cellH = H / PF_ROWS;
+      const ox = originX != null ? originX : W / 2;
+      const oy = originY != null ? originY : H / 2;
+      const maxDist = Math.hypot(Math.max(ox, W - ox), Math.max(oy, H - oy)) || 1;
+      for (let r = 0; r < PF_ROWS; r++) {
+        for (let c = 0; c < PF_COLS; c++) {
+          const cube = document.createElement('div');
+          cube.className = 'mh-pf-cube';
+          if (staggered) {
+            const cx = (c + 0.5) * cellW, cy = (r + 0.5) * cellH;
+            const dist = Math.hypot(cx - ox, cy - oy);
+            const delay = (dist / maxDist) * 0.22; // seconds, distance-from-click stagger
+            cube.style.setProperty('--pf-delay', delay.toFixed(3) + 's');
+          } else {
+            // backToSplash(): simpler, non-staggered (reverse order by row for a light cascade)
+            cube.style.setProperty('--pf-delay', (r * 0.03).toFixed(3) + 's');
+          }
+          cube.innerHTML = '<div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div>';
+          grid.appendChild(cube);
+        }
+      }
+      fold.appendChild(grid);
+    }
     function goToTool(dest, originCard) {
       const fold = document.getElementById('mhPageFold');
       if (!fold) return;
       const bg = document.getElementById('mhPageHexBg');
+      let ox = null, oy = null;
       if (originCard) {
         originCard.querySelectorAll('.mh-spc-cube .mh-ctab-t').forEach(t => { t.style.filter = 'brightness(2.4)'; });
+        const r = originCard.getBoundingClientRect();
+        ox = r.left + r.width / 2; oy = r.top + r.height / 2;
       }
       if (bg) {
         bg.classList.add('mh-domino', 'mh-bg-pulse');
         setTimeout(() => bg.classList.remove('mh-domino', 'mh-bg-pulse'), 1600);
       }
+      _buildPfGrid(ox, oy, true);
       setTimeout(() => {
         fold.className = 'mh-pf-cover';
         setTimeout(() => {
@@ -5409,13 +5555,16 @@
             if (typeof switchSuiteTab === 'function') switchSuiteTab(dest);
           }
           fold.className = 'mh-pf-reveal';
-          setTimeout(() => { fold.className = ''; }, 360);
+          setTimeout(() => { fold.className = ''; fold.innerHTML = ''; }, 360);
         }, 280);
       }, 170);
     }
     function backToSplash() {
       const fold = document.getElementById('mhPageFold');
       if (!fold) return;
+      // Simpler, non-staggered (reverse-cascade) treatment per the plan —
+      // consistent envelope, less choreography than the click-origin version.
+      _buildPfGrid(null, null, false);
       fold.className = 'mh-pf-cover';
       setTimeout(() => {
         const splash = document.getElementById('mhSplash');
@@ -5424,7 +5573,7 @@
         if (adapter) adapter.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'instant' });
         fold.className = 'mh-pf-reveal';
-        setTimeout(() => { fold.className = ''; }, 360);
+        setTimeout(() => { fold.className = ''; fold.innerHTML = ''; }, 360);
       }, 280);
     }
     document.querySelectorAll('.mh-splash-card').forEach(card => {
@@ -7487,37 +7636,110 @@ let cubeJustDragged = false;
 const wheel = document.getElementById('wheel');
 const wctx = wheel.getContext('2d');
 
+// A4: the wheel used to already modulate radius-per-angle via hexRadius()
+// (a continuous radius-modulated disc with a hex-rounded silhouette) — that
+// was a prior pass, not what this plan asked for. This is now a true
+// discrete concentric-hex-ring tessellation: RING_COUNT rings out from
+// center, each ring subdivided into hue steps around it (ring 0 = a single
+// center cell). Implementation note: true axial/cube hex coordinates would
+// give perfectly uniform hexagon tiles, but that requires reworking the
+// canvas draw loop's iteration order substantially. Instead each "cell" here
+// is a polar wedge-and-band (angle range × radius band) sized so the
+// tessellation *reads* as concentric hex rings (ring k has 6k cells,
+// honeycomb-style density growth) while staying trivially reducible to the
+// same angle+radius math the rest of the wheel (hueAtAngle/rgbAt/hexRadius)
+// already uses — so hit-testing and color math didn't need reimplementing,
+// only quantizing. Ring index -> tone band, angular cell position -> hue.
+const RING_COUNT = 7; // rings 1..7 outward from a single center cell (ring 0)
+function wheelRingLayout(rOuter, rInner) {
+  const cells = [];
+  const bandW = (rOuter - rInner) / RING_COUNT;
+  for (let k = 1; k <= RING_COUNT; k++) {
+    const r0 = rInner + (k - 1) * bandW, r1 = rInner + k * bandW;
+    const n = 6 * k; // hex ring k has 6k cells — same growth as a honeycomb
+    for (let j = 0; j < n; j++) {
+      const a0 = (j / n) * 360, a1 = ((j + 1) / n) * 360;
+      cells.push({ ring: k, cell: j, ringCount: n, a0, a1, r0, r1, aMid: (a0 + a1) / 2 });
+    }
+  }
+  return cells;
+}
+// Maps a hit (angle, radius) to the nearest ring+cell in the tessellation —
+// still ultimately just quantized angle+radius, so drag-to-set-hue reuses
+// the existing polar math (see angleFromEvent) unchanged; only the final
+// cell lookup is new.
+function wheelHitCell(ang, r, rOuter, rInner) {
+  const bandW = (rOuter - rInner) / RING_COUNT;
+  let k = Math.ceil((r - rInner) / bandW);
+  k = clamp(k, 1, RING_COUNT);
+  const n = 6 * k;
+  ang = mod(ang, 360);
+  const j = clamp(Math.floor((ang / 360) * n), 0, n - 1);
+  return { ring: k, cell: j, ringCount: n, aMid: ((j + 0.5) / n) * 360 };
+}
+
 function drawWheel() {
   const W = wheel.width, H = wheel.height;
   const cx = W / 2, cy = H / 2;
-  // Reserve outer margin for category labels (pills) drawn outside the donut.
+  // Reserve outer margin for category labels (pills) drawn outside the ring stack.
   const labelMargin = 36;
   const rOuter = W / 2 - labelMargin;
-  const rInner = rOuter * 0.55;
-  const img = wctx.createImageData(W, H);
-  const data = img.data;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const dx = x - cx, dy = y - cy;
-      const r = Math.hypot(dx, dy);
-      const i = (y * W + x) * 4;
-      // Angle: 0 at top, increasing CW
-      let ang = Math.atan2(dx, -dy) * 180 / Math.PI;
-      ang = mod(ang, 360);
-      if (r > hexRadius(ang, rOuter) || r < hexRadius(ang, rInner)) {
-        data[i+3] = 0; continue;
-      }
-      const rgb = rgbAt(ang, 50, cal.chroma);
-      data[i] = rgb[0]; data[i+1] = rgb[1]; data[i+2] = rgb[2]; data[i+3] = 255;
-    }
-  }
+  const rInner = rOuter * 0.16; // small center cell (ring 0), rest are rings 1..RING_COUNT
   wctx.clearRect(0, 0, W, H);
-  wctx.putImageData(img, 0, 0);
+  wctx.save();
+  wctx.translate(cx, cy);
+  const cells = wheelRingLayout(rOuter, rInner);
+  for (const cell of cells) {
+    // Hex-boundary radius per angle (existing hexRadius()) keeps each ring's
+    // outer edge reading as a hexagon, not a circle, same as before.
+    const rr0 = hexRadius(cell.aMid, cell.r0), rr1 = hexRadius(cell.aMid, cell.r1);
+    const tone = 30 + (cell.ring / RING_COUNT) * 45; // ring index -> tone band
+    const rgb = rgbAt(cell.aMid, tone, cal.chroma);
+    wctx.beginPath();
+    const steps = 3; // a few sub-steps per cell so the wedge edge follows hexRadius smoothly
+    for (let s = 0; s <= steps; s++) {
+      const a = cell.a0 + (cell.a1 - cell.a0) * (s / steps);
+      const rad = (a - 90) * Math.PI / 180;
+      const rr = hexRadius(a, cell.r1);
+      const px = Math.cos(rad) * rr, py = Math.sin(rad) * rr;
+      if (s === 0) wctx.moveTo(px, py); else wctx.lineTo(px, py);
+    }
+    for (let s = steps; s >= 0; s--) {
+      const a = cell.a0 + (cell.a1 - cell.a0) * (s / steps);
+      const rad = (a - 90) * Math.PI / 180;
+      const rr = hexRadius(a, cell.r0);
+      const px = Math.cos(rad) * rr, py = Math.sin(rad) * rr;
+      wctx.lineTo(px, py);
+    }
+    wctx.closePath();
+    wctx.fillStyle = `rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
+    wctx.fill();
+    wctx.strokeStyle = 'rgba(0,0,0,.25)'; wctx.lineWidth = 0.6; wctx.stroke();
+  }
+  // Center cell (ring 0)
+  wctx.beginPath();
+  for (let s = 0; s <= 6; s++) {
+    const a = s * 60, rad = (a - 90) * Math.PI / 180, rr = hexRadius(a, rInner);
+    const px = Math.cos(rad) * rr, py = Math.sin(rad) * rr;
+    if (s === 0) wctx.moveTo(px, py); else wctx.lineTo(px, py);
+  }
+  wctx.closePath();
+  const centerRgb = rgbAt(0, 15, cal.chroma);
+  wctx.fillStyle = `rgb(${centerRgb[0]|0},${centerRgb[1]|0},${centerRgb[2]|0})`;
+  wctx.fill();
 
   // Tick marks + category labels for anchors
   const anchors = calibratedAnchors();
-  wctx.save();
-  wctx.translate(cx, cy);
+  // The 6 true hex vertices of the outer boundary are at 0/60/120/180/240/300°
+  // (hexRadius() is maximal there). Calibrated anchor angles (Y/M/C/R/G/B)
+  // are user-chosen and generally do NOT land on those vertices. Decision:
+  // keep calibratedAnchors() meaningful for the underlying hue math (ticks
+  // still drawn at the true anchor angle), but snap each anchor's LABEL PILL
+  // to whichever of the 6 true vertices is angularly nearest, so the pills
+  // read as sitting at the hexagon's corners as the plan asks, without
+  // changing what "Y=90°" etc. actually mean to the color math.
+  const HEX_VERTICES = [0, 60, 120, 180, 240, 300];
+  const usedVertices = new Set();
   for (const a of anchors) {
     const rad = (a.a - 90) * Math.PI / 180;
     const hrInner = hexRadius(a.a, rInner - 6);
@@ -7530,12 +7752,18 @@ function drawWheel() {
     wctx.lineWidth = 3;
     wctx.beginPath(); wctx.moveTo(x1, y1); wctx.lineTo(x2, y2); wctx.stroke();
 
-    // Category-coded pill label just outside the outer tick.
-    // Lights (Y/M/C) — pale cream pill (the bright/neon category).
-    // Earths (R/G/B) — deep brown pill (the grounded/material category).
-    const lblR = hexRadius(a.a, rOuter + 22);
-    const lx = Math.cos(rad) * lblR;
-    const ly = Math.sin(rad) * lblR;
+    // Snap the label to the nearest not-yet-claimed true hex vertex.
+    let bestV = HEX_VERTICES[0], bestD = Infinity;
+    for (const v of HEX_VERTICES) {
+      if (usedVertices.has(v)) continue;
+      const d = Math.min(Math.abs(mod(a.a - v, 360)), 360 - Math.abs(mod(a.a - v, 360)));
+      if (d < bestD) { bestD = d; bestV = v; }
+    }
+    usedVertices.add(bestV);
+    const vRad = (bestV - 90) * Math.PI / 180;
+    const lblR = hexRadius(bestV, rOuter + 22);
+    const lx = Math.cos(vRad) * lblR;
+    const ly = Math.sin(vRad) * lblR;
     const isLight = a.category === 'Light';
     const pillBg   = isLight ? 'rgba(245,232,180,0.95)' : 'rgba(60,38,28,0.95)';
     const pillEdge = isLight ? 'rgba(180,150,80,0.9)'   : 'rgba(120,80,50,0.9)';
@@ -7570,10 +7798,13 @@ function placeMarkers() {
   const wrap = document.getElementById('wheelWrap');
   const rect = wrap.getBoundingClientRect();
   const cx = rect.width / 2, cy = rect.height / 2;
-  // Wheel geometry now leaves an outer label margin (drawWheel uses labelMargin=36 over canvas-width 800).
-  // outerRatio = (400 - 36) / 400 = 0.91, innerRatio = outerRatio * 0.55 ≈ 0.5005.
-  // Mid-band ratio for marker placement: (0.91 + 0.5005) / 2 ≈ 0.705.
-  const midRatio = (0.91 + 0.5005) / 2;
+  // Wheel geometry: rOuter/rInner match drawWheel()'s hex-ring stack
+  // (labelMargin=36 over canvas-width 800; rInner = rOuter*0.16, ring 0 is
+  // the small center cell). Mid-band ratio picks a radius roughly in the
+  // outer third of the ring stack for marker placement.
+  const outerRatio = (400 - 36) / 400;
+  const innerRatio = outerRatio * 0.16;
+  const midRatio = innerRatio + (outerRatio - innerRatio) * 0.72;
   const r = rect.width / 2 * midRatio;
   function pos(deg) {
     const rad = (deg - 90) * Math.PI / 180;
@@ -7593,6 +7824,11 @@ function placeMarkers() {
 //=========================================================================
 // Wheel interaction
 //=========================================================================
+// Drag-to-set-hue stays continuous polar math (angle drives hue directly —
+// snapping the *drag* to ring cells would make dragging feel sticky/laggy).
+// The discrete ring/cell picking (wheelHitCell) is used for cosmetic
+// hit-highlighting only, not for the hue value itself, so the interaction
+// still feels identical to before this pass.
 function angleFromEvent(e) {
   const wrap = document.getElementById('wheelWrap');
   const rect = wrap.getBoundingClientRect();
