@@ -36,6 +36,33 @@
       return _client;
     };
   })();
+  // NFT token registry lives on its own project: nft_tokens has a UNIQUE(seed)
+  // constraint + insert-only RLS, so a claimed artwork can never be re-issued
+  // or altered. Anon key is public + RLS-protected, safe to ship.
+  window.MH_NFT_SUPABASE_URL = window.MH_NFT_SUPABASE_URL || 'https://ujqngoliwxquosickvza.supabase.co';
+  window.MH_NFT_SUPABASE_ANON_KEY = window.MH_NFT_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqcW5nb2xpd3hxdW9zaWNrdnphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjQ1NTYsImV4cCI6MjA5MzY0MDU1Nn0.AbK1tLbghKQwXCg779zoyaE7qZ3yXItfktQWVy5YigA';
+  window.sbNft = (function () {
+    var _client = null, _tried = false;
+    return function sbNft() {
+      if (_tried) return _client;
+      _tried = true;
+      try {
+        if (window.supabase && window.supabase.createClient) {
+          _client = window.supabase.createClient(window.MH_NFT_SUPABASE_URL, window.MH_NFT_SUPABASE_ANON_KEY);
+        }
+      } catch (e) { _client = null; }
+      return _client;
+    };
+  })();
+  // Anonymous collector identity — generated once per browser; included in
+  // every claim so the certificate proves which collector owns the token.
+  window.mhCollectorId = (function () {
+    try {
+      var id = localStorage.getItem('mh_collector_id');
+      if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2)); localStorage.setItem('mh_collector_id', id); }
+      return id;
+    } catch (e) { return 'anon'; }
+  })();
 </script>
 <style>
   :root {
@@ -2153,13 +2180,13 @@
         <div class="mh-vend-price">$ 1.00</div>
         <div class="mh-vend-coin" title="coin slot">◎</div>
         <button class="mh-vend-btn" id="mhVendPayBtn">INSERT $1</button>
-        <button class="mh-vend-btn mh-vend-dispense" id="mhVendGifBtn">DISPENSE GIF</button>
+        <button class="mh-vend-btn mh-vend-dispense" id="mhVendGifBtn">DISPENSE NFT</button>
         <div class="mh-vend-stripe-icons">
           <span class="mh-vend-cc">VISA</span>
           <span class="mh-vend-cc">MC</span>
           <span class="mh-vend-cc">AMEX</span>
         </div>
-        <div class="mh-vend-status" id="mhVendStatus">Pay to unlock colour download</div>
+        <div class="mh-vend-status" id="mhVendStatus">Pay $1 · claim a one-of-a-kind logo NFT — once claimed, nobody else can ever dispense it</div>
       </div>
       <!-- Capsule dispensing chute + cutscene -->
       <div class="mh-vend-chute" id="mhVendChute">
@@ -2170,8 +2197,9 @@
         </div>
       </div>
     </div>
-    <div class="mh-render-toolbar" id="mhVendGifResult" style="margin-top:6px;display:none">
+    <div class="mh-render-toolbar" id="mhVendGifResult" style="margin-top:6px;display:none;flex-wrap:wrap">
       <a id="mhVendGifDownload" class="mh-download-link" download="hexfield-logo.gif">⬇ Download GIF</a>
+      <a id="mhVendCertDownload" class="mh-download-link" download="hexfield-nft.json" style="display:none">⬇ NFT certificate</a>
       <span id="mhVendGifStatus" class="mh-export-status"></span>
     </div>
     <div id="mhLogoSimGrid"></div>
@@ -3178,9 +3206,33 @@
       // 2D flat mark SVG
       var flat2dSvg='<svg xmlns="http://www.w3.org/2000/svg" width="'+flat2dW+'" height="'+flat2dH+'">'+flat2d+'</svg>';
 
+      // ── Classic-brand style lockups (user's text + wheel palette) ──
+      // Stripes = 8-bar scanline wordmark (IBM spirit); Script = flowing
+      // italic on a colour disc with a wave (cola spirit); Arches = double
+      // golden arch over dark (McD spirit). All palette-calibrated, no
+      // trademark colours or marks — the style grammar applied to YOUR brand.
+      var escName = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      var stripesSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="210" height="72">'
+        +'<defs><pattern id="mhStripePat" patternUnits="userSpaceOnUse" width="4" height="9">'
+        +'<rect width="4" height="6" fill="'+p.aHex+'"/></pattern></defs>'
+        +'<text x="105" y="50" text-anchor="middle" font-family="\'Space Mono\',monospace" font-weight="700" font-size="'+(escName.length>8?26:36)+'" fill="url(#mhStripePat)">'+escName+'</text>'
+        +'</svg>';
+      var scriptSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="210" height="72">'
+        +'<rect x="4" y="6" width="202" height="60" rx="30" fill="'+p.bHex+'"/>'
+        +'<text x="105" y="42" text-anchor="middle" font-family="\'Brush Script MT\',\'Segoe Script\',cursive" font-style="italic" font-size="'+(escName.length>8?24:30)+'" fill="#fff">'+escName+'</text>'
+        +'<path d="M40,52 Q80,60 105,52 Q140,44 172,54" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
+        +'</svg>';
+      var archesSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="210" height="72">'
+        +'<path d="M62,62 Q80,6 98,62 M98,62 Q116,6 134,62" stroke="'+p.aHex+'" stroke-width="13" fill="none" stroke-linecap="round"/>'
+        +'<text x="105" y="70" text-anchor="middle" font-family="\'Space Mono\',monospace" font-weight="700" font-size="10" letter-spacing="3" fill="'+p.cHex+'">'+escName+'</text>'
+        +'</svg>';
+
       preview.innerHTML = variants.map(function(v){
         return _variantCard(v.label, _brandCubeSvg(CW, p.aHex, p.cHex, p.bHex, v.top, v.right, v.left));
-      }).join('') + _variantCard('2D flat', flat2dSvg);
+      }).join('') + _variantCard('2D flat', flat2dSvg)
+        + _variantCard('Stripes · 8-bar', stripesSvg)
+        + _variantCard('Script · wave', scriptSvg)
+        + _variantCard('Arches · golden', archesSvg);
     }
     var regen = $('mhLogoRegenBtn');
     if (regen && !regen._mhWired) {
@@ -3410,8 +3462,22 @@
       return this.mask[yi*this.W+xi]===1;
     }
     _oob(x,y){ return x<3||x>=this.W-3||y<3||y>=this.H-3; }
-    _applyRule(rule){
-      const balls=this.balls;
+    // Spawn a second, independent sim inside the letter: extra balls born
+    // within the glyph, trapped there, running their own rule.
+    spawnInnerSim(n,hue){
+      const rng=this._rng||Math.random;
+      for(let i=0;i<n;i++){
+        let x,y,att=0;
+        do{ x=3+rng()*(this.W-6); y=3+rng()*(this.H-6); att++; }
+        while(!this._inLetter(x,y) && att<300);
+        if(att>=300) continue;
+        const ang=rng()*Math.PI*2, sp=4+rng()*2.5;
+        this.balls.push({x,y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,
+                         sx:x,sy:y,life:0,hue:(hue+i*17)%360,inside:true});
+      }
+    }
+    _applyRule(rule,subset){
+      const balls=subset||this.balls;
       if(rule==='avoid'||rule==='seek'){
         const str=rule==='avoid'?-0.08:0.05;
         for(let i=0;i<balls.length;i++) for(let j=i+1;j<balls.length;j++){
@@ -3838,7 +3904,15 @@
           if(sim.innerVisited.size/Math.max(1,letterPx)>0.55){
             sim._developed=true;
             for(let i=0;i<cl.length;i++) flr[i]=cl[i]?64:14;
+            // Second sim awakens inside the letter: its own balls, its own rule
+            const _inner=['spiral','chaos','avoid','flock','seek'];
+            sim._innerRule=_inner[(sim.seed||0)%_inner.length];
+            sim.spawnInnerSim(4, sim._compHue);
           }
+        }
+        // Run the inner sim's rule on the letter-trapped balls only
+        if(sim._developed && sim._innerRule){
+          sim._applyRule(sim._innerRule, sim.balls.filter(b=>b.inside));
         }
         // Fade cells toward their visited floor — painted cells never go dark,
         // so trails accumulate and the panel fills edge-to-edge.
@@ -3917,6 +3991,75 @@
   // backend/server.py, e.g. 'https://your-app.onrender.com'.
   // Leave empty to test UI without backend (payment redirect will fail gracefully).
   const MH_BACKEND_URL = window.MH_BACKEND_URL || '';
+  // ── NFT claim: one seed, one owner, forever ────────────────────────────────
+  // The nft_tokens table enforces UNIQUE(seed) with insert-only RLS: the first
+  // collector to claim a seed owns it; a second claim of the same artwork is
+  // rejected by the database, so no two users can ever hold the same piece.
+  async function _claimNftToken(sim, gifBlob, statusEl){
+    const sb = (typeof sbNft==='function') ? sbNft() : null;
+    if (!sb || !sim || sim._seed==null) {
+      if (statusEl) statusEl.textContent = 'Colour GIF ready! (registry offline — not claimed)';
+      return;
+    }
+    if (statusEl) statusEl.textContent = 'Claiming your token…';
+    const brand = ($('mhLogoTextLogo')||{}).value || 'HEXFIELD';
+    // GIF → data URI so the certificate is fully self-contained
+    const dataUri = await new Promise(res => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result);
+      fr.onerror = () => res(null);
+      fr.readAsDataURL(gifBlob);
+    });
+    const attributes = [
+      { trait_type:'rule', value:sim._rule||'pass' },
+      { trait_type:'font', value:sim._fontName||'unknown' },
+      { trait_type:'scheme hue', value:Math.round(sim._schemeHue||0) },
+      { trait_type:'complement hue', value:Math.round(sim._compHue||0) },
+      { trait_type:'seed', value:String(sim._seed) },
+      { trait_type:'generation', value:(typeof _currentGeneration!=='undefined')?_currentGeneration:0 },
+    ];
+    const metadata = {
+      name: `HEXFIELD · ${brand} · #${String(sim._seed).slice(-6)}`,
+      description: `Unique generative logo from hexfield.win. Billiards sim (${sim._rule}) rendered the letter "${brand.charAt(0).toUpperCase()}" in a one-of-a-kind generated typeface. Seed ${sim._seed} is registered to a single collector and can never be re-issued.`,
+      external_url: 'https://hexfield.win',
+      image: dataUri,
+      attributes,
+    };
+    try {
+      const { data, error } = await sb.from('nft_tokens').insert({
+        seed: sim._seed, kind:'logo-gif', name: metadata.name,
+        rule: sim._rule||null, font: sim._fontName||null,
+        hue: Math.round(sim._schemeHue||0), letters: brand,
+        collector_id: window.mhCollectorId,
+        metadata: { ...metadata, image:'(embedded in certificate download)' },
+      }).select('token_id, claimed_at').single();
+      if (error) throw error;
+      // Certificate = ERC-721 metadata + provenance. Mint-ready as-is.
+      const cert = {
+        ...metadata,
+        hexfield_provenance: {
+          token_id: data.token_id,
+          seed: String(sim._seed),
+          collector_id: window.mhCollectorId,
+          claimed_at: data.claimed_at,
+          registry: window.MH_NFT_SUPABASE_URL + ' · nft_tokens (UNIQUE seed, insert-only)',
+          standard: 'ERC-721 metadata — ready to mint on any chain/marketplace',
+        },
+      };
+      const certUrl = URL.createObjectURL(new Blob([JSON.stringify(cert,null,2)], {type:'application/json'}));
+      const certDl = $('mhVendCertDownload');
+      if (certDl) { certDl.href = certUrl; certDl.download = `hexfield-nft-${data.token_id.slice(0,8)}.json`; certDl.style.display = 'inline-flex'; }
+      if (statusEl) statusEl.textContent = `Token #${data.token_id.slice(0,8)} claimed — this artwork is yours alone.`;
+    } catch (e) {
+      const msg = String((e&&e.message)||e);
+      if (msg.includes('duplicate') || msg.includes('unique') || (e&&e.code==='23505')) {
+        if (statusEl) statusEl.textContent = 'Already claimed by another collector — hit Shuffle for a fresh variation.';
+      } else {
+        if (statusEl) statusEl.textContent = 'Colour GIF ready! (claim failed: ' + msg.slice(0,60) + ')';
+      }
+    }
+  }
+
   function _initVendingMachine() {
     const vending = $('mhVending');
     if (!vending) return;
@@ -4019,7 +4162,11 @@
           const url = URL.createObjectURL(blob);
           const dl = $('mhVendGifDownload');
           if (dl) { dl.href = url; dl.download = `hexfield-logo-${paid?'colour':'bw'}-${Date.now()}.gif`; dl.style.display = 'inline-flex'; }
-          if (gifStatus) gifStatus.textContent = paid ? 'Colour GIF ready!' : 'B&W GIF ready — pay $1 for colour.';
+          if (paid) {
+            _claimNftToken(sim, blob, gifStatus);
+          } else {
+            if (gifStatus) gifStatus.textContent = 'B&W GIF ready — pay $1 to claim it as your unique NFT.';
+          }
           _dispensing = false;
         });
         gif.render();
