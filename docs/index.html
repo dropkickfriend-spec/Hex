@@ -748,7 +748,19 @@
   .mh-export-status {
     text-shadow: 0 1px 4px rgba(0,0,0,.95), 0 0 10px rgba(0,0,0,.7);
   }
-  .mh-panels-wrap { position:relative; overflow:hidden; border-radius:14px; z-index:1; }
+  .mh-panels-wrap {
+    position:relative; overflow:hidden; border-radius:14px; z-index:1;
+    /* B3: isometric grid-paper backdrop — two axes at 30deg/-30deg from
+       horizontal (matching the .mh-pxf-t/-r/-l cube face angles used
+       throughout the bg lattice) instead of plain orthogonal graph paper.
+       Sits behind sims + text panels at very low opacity, just enough to
+       reinforce "everything sits on the same isometric plane". */
+    background-color:#06060b;
+    background-image:
+      repeating-linear-gradient(30deg, rgba(255,255,255,.07) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(-30deg, rgba(255,255,255,.07) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 22px);
+  }
   .mh-builder-panel {
     display:none; margin-top:14px; border-radius:14px; padding:14px;
   }
@@ -1741,6 +1753,21 @@
     font:bold 13px 'Space Mono',monospace; color:#fff; letter-spacing:.06em; background:rgba(5,5,12,.55);
     text-shadow:0 2px 8px rgba(0,0,0,.9); padding:16px; pointer-events:none; transition:opacity .2s; }
   .mh-snake-overlay.mh-hidden { opacity:0; }
+  /* ── B4: Gen debug panel — shape-grammar generator viewer ── */
+  .mh-gen-arch-btn { min-width:auto; padding:6px 12px; font:10px 'Space Mono',monospace; letter-spacing:.1em; }
+  .mh-gen-arch-btn.active { background:rgba(255,255,255,.14); color:var(--mh-a,#ffff00); box-shadow:0 0 8px var(--mh-a,#ffff00); }
+  .mh-gen-info { font:10px 'Space Mono',monospace; color:var(--ink-dim,#9090a8); }
+  .mh-gen-stage {
+    position:relative; min-height:340px; margin-top:10px; border-radius:14px; overflow:auto;
+    background:#05050c; box-shadow:0 0 0 1px rgba(255,255,255,.06);
+    display:flex; align-items:center; justify-content:center; padding:30px;
+  }
+  .mh-gen-grid { position:relative; }
+  /* Reuses the same .mh-ls-cube 3-face cube primitive/geometry as the brand
+     mark grid (see _buildIsoCubeMark) so generated shapes automatically look
+     like the same living material as everything else and pick up --pxc from
+     the same reaction-diffusion coloring pass. */
+  .mh-gen-grid .mh-ls-cube { position:absolute; }
   .mh-snake-text { max-width:660px; margin:12px auto 0; display:flex; flex-direction:column; gap:6px; }
   .mh-snake-line { font:13px/1.5 'Space Mono',monospace; color:rgba(150,150,175,.32); padding:5px 10px; border-radius:6px;
     border-left:3px solid transparent; transition:color .3s, background .3s, border-color .3s; }
@@ -2217,6 +2244,28 @@
       <div class="mh-snake-overlay" id="mhSnakeOverlay">Press Start (or any arrow key) to play</div>
     </div>
     <div class="mh-snake-text" id="mhSnakeText"></div>
+  </div>
+  <div class="mh-builder-panel" id="mhBuilderGen">
+    <div class="mh-builder-title">Gen · shape-grammar R&D — isometric cube-cluster generator (exploratory, not full-fidelity)</div>
+    <div class="mh-render-toolbar" style="margin-bottom:8px;gap:8px;flex-wrap:wrap;align-items:center">
+      <span class="mh-gen-archetypes" id="mhGenArchetypes">
+        <button class="mh-gen-arch-btn active" data-archetype="car">Car</button>
+        <button class="mh-gen-arch-btn" data-archetype="person">Person</button>
+        <button class="mh-gen-arch-btn" data-archetype="tv">TV</button>
+      </span>
+      <input id="mhGenSeed" placeholder="seed" style="width:100px;font:10px 'Space Mono',monospace" value="1"/>
+      <button id="mhGenRandomSeedBtn">🎲 Randomize</button>
+      <button id="mhGenBtn">Generate</button>
+      <span class="mh-gen-info" id="mhGenInfo"></span>
+    </div>
+    <div class="mh-gen-stage" id="mhGenStage"></div>
+    <div class="mh-painter-tip" style="margin-top:10px">
+      First-pass rule engine: a small fixed "Lego" alphabet (stem / branch3 / cap / slab) with per-face attachment
+      rules, generated from a seeded PRNG so a seed number reproduces the same cluster. Cells reuse the same
+      3-face isometric cube primitive as the rest of the site, so they pick up the live reaction-diffusion
+      coloring for free. Not aiming for recognizable car/person/TV silhouettes yet — this is the engine + a
+      window into what it produces.
+    </div>
   </div>
   </div>
   <input id="mhUrl" value="https://example.com" style="display:none">
@@ -2766,6 +2815,234 @@
         grid.appendChild(cell);
       }
     }
+  }
+
+  // ── B1/B2: generative shape-grammar R&D (isometric cube-cluster "Lego" kit) ──
+  // Exploratory first pass at a rule engine for procedurally building retro-
+  // cartoon blob shapes (car/person/tv) out of the same 3-face isometric cube
+  // unit used everywhere else (.mh-ls-cube / .mh-ls-t/-r/-l). Not aiming for
+  // pixel-perfect recognizable shapes yet — this ships the primitive catalog +
+  // recursive builder + a debug panel to look at output (see B4 below).
+  //
+  // Grid convention: (x,y,z) are isometric lattice coords. x/y move along the
+  // two ground axes, z is vertical (up = -z visually, matching the top face).
+  // Attachment faces mirror the existing 3-visible-face cube geometry:
+  //   top   -> +z (stack upward)
+  //   right -> +x (step along the "right" ground axis)
+  //   left  -> +y (step along the "left" ground axis)
+  // Only one primitive may claim a given (x,y,z) cell — the builder tracks an
+  // occupied-cell set so nothing floats or overlaps: every new cell is placed
+  // by walking from a parent's cell to an adjacent lattice coordinate along an
+  // allowed attachment face, so it always shares a real face with its parent.
+  const MH_GEN_FACES = ['top','right','left'];
+  const MH_GEN_FACE_DELTA = { top:{x:0,y:0,z:-1}, right:{x:1,y:0,z:0}, left:{x:0,y:1,z:0} };
+
+  // B1: the fixed "Lego" primitive alphabet. Each primitive is a named group
+  // of cube offsets relative to an anchor cell, plus which faces of *other*
+  // primitives it's allowed to attach to (the compatibility/adjacency rule —
+  // mirrors the homeomorphic-architecture reference's "regular vs forbidden"
+  // connection examples: only branch points and terminators are structurally
+  // meaningful, straight runs are just repeated stems).
+  const MH_GEN_PRIMITIVES = {
+    // 1×1 vertical run of N cells — the default "regular" connector.
+    stem: {
+      minRepeat: 1, maxRepeat: 4,
+      faces: ['top','right','left'],
+      // stems can grow out of any other primitive's open face
+      attachesTo: { stem:['top','right','left'], branch3:['top','right','left'], cap:[], slab:['top','right','left'] }
+    },
+    // One cell splitting into up to 3 open faces at once (a branch point).
+    branch3: {
+      minRepeat: 1, maxRepeat: 1,
+      faces: ['top','right','left'],
+      attachesTo: { stem:['top','right','left'], branch3:['top'], cap:[], slab:['top'] }
+    },
+    // Terminator block — flat top, closes a branch (TV screen / head / roof).
+    cap: {
+      minRepeat: 1, maxRepeat: 1,
+      faces: [], // terminal: nothing may attach past a cap
+      attachesTo: { stem:['top'], branch3:['top','right','left'], slab:['top','right','left'] }
+    },
+    // Flat horizontal run — car body / table top / TV base.
+    slab: {
+      minRepeat: 1, maxRepeat: 5,
+      faces: ['right','left','top'],
+      attachesTo: { stem:['top'], branch3:['top','right','left'], slab:['right','left'] }
+    }
+  };
+
+  // Per-archetype weighting of which primitive to reach for at each open face.
+  // Purely a bias on the weighted roll below, not a hard constraint — the
+  // compatibility table in MH_GEN_PRIMITIVES is what actually stays valid.
+  const MH_GEN_ARCHETYPES = {
+    car:    { slab:5, cap:3, stem:1, branch3:1 },
+    person: { stem:4, branch3:3, cap:2, slab:1 },
+    tv:     { slab:3, cap:4, stem:1, branch3:1 }
+  };
+
+  // Reuses the same seeded LCG pattern as the cube-mark/symbol generators
+  // above (sn = sn*1664525 + 1013904223 mod 2^32) so a shape is fully
+  // reproducible — and shareable — from a plain integer/string seed.
+  function _mhGenPrng(seed){
+    var sn = String(seed).split('').reduce(function(a,c){ return (a^c.charCodeAt(0)*197)&0xffffffff; }, 11);
+    if (sn === 0) sn = 1;
+    return function(){ sn=(sn*1664525+1013904223)&0xffffffff; return (sn>>>0)/0x100000000; };
+  }
+
+  function _mhGenWeightedPick(prng, weights){
+    const keys = Object.keys(weights);
+    const total = keys.reduce((s,k)=>s+weights[k], 0);
+    let r = prng()*total;
+    for (const k of keys){ r -= weights[k]; if (r <= 0) return k; }
+    return keys[keys.length-1];
+  }
+
+  const _mhGenKey = (x,y,z) => x+','+y+','+z;
+
+  // B2: recursive builder. Walks open attachment faces breadth-first (via an
+  // explicit queue rather than real recursion, so max-depth/max-cell budgets
+  // are cheap to enforce), rolling a weighted primitive choice at each open
+  // face, checking the primitive-pair compatibility rule, and only committing
+  // cells that land on unoccupied lattice coords adjacent to their parent.
+  function mhGenerateShape(archetype, seed, opts){
+    opts = opts || {};
+    const maxCells = opts.maxCells || 22;
+    const maxDepth = opts.maxDepth || 5;
+    const weights = MH_GEN_ARCHETYPES[archetype] || MH_GEN_ARCHETYPES.person;
+    const prng = _mhGenPrng(archetype + ':' + seed);
+    const occupied = new Set();
+    const cells = []; // {x,y,z,primitiveType}
+    function place(x,y,z,type){
+      const k = _mhGenKey(x,y,z);
+      if (occupied.has(k)) return false;
+      occupied.add(k);
+      cells.push({x:x,y:y,z:z,primitiveType:type});
+      return true;
+    }
+    // Seed anchor at the origin — always a stem cell (every shape starts as a
+    // trunk before branching), per the homeomorphic-architecture framing of
+    // reducing shapes to their branch topology.
+    place(0,0,0,'stem');
+    // Queue entries are open attachment points: the parent's cell + which of
+    // its faces is still free + how deep we are (for the max-depth cutoff).
+    let queue = [{x:0,y:0,z:0,parentType:'stem',depth:0}];
+    let guard = 0;
+    while (queue.length && cells.length < maxCells && guard++ < maxCells*8){
+      const node = queue.shift();
+      if (node.depth >= maxDepth) continue;
+      const parentDef = MH_GEN_PRIMITIVES[node.parentType];
+      if (!parentDef) continue;
+      for (const face of parentDef.faces){
+        if (cells.length >= maxCells) break;
+        // Weighted pick among primitives compatible with (parentType, face).
+        const candidates = {};
+        for (const type of Object.keys(MH_GEN_PRIMITIVES)){
+          const allowedFaces = MH_GEN_PRIMITIVES[type].attachesTo[node.parentType];
+          if (allowedFaces && allowedFaces.indexOf(face) !== -1) candidates[type] = weights[type] || 1;
+        }
+        if (!Object.keys(candidates).length) continue; // no compatible fit — stop this face
+        // A face only gets used ~65% of the time so clusters stay sparse/
+        // legible rather than filling every open face every step.
+        if (prng() > 0.65) continue;
+        const type = _mhGenWeightedPick(prng, candidates);
+        const def = MH_GEN_PRIMITIVES[type];
+        const repeat = def.minRepeat + Math.floor(prng()*(def.maxRepeat-def.minRepeat+1));
+        const delta = MH_GEN_FACE_DELTA[face];
+        let px=node.x, py=node.y, pz=node.z, lastType=node.parentType, placedAny=false;
+        for (let i=0;i<repeat && cells.length<maxCells;i++){
+          const nx=px+delta.x, ny=py+delta.y, nz=pz+delta.z;
+          if (!place(nx,ny,nz,type)) break; // occupied — real collision, stop the run
+          px=nx; py=ny; pz=nz; lastType=type; placedAny=true;
+        }
+        if (placedAny && def.faces.length){
+          queue.push({x:px,y:py,z:pz,parentType:lastType,depth:node.depth+1});
+        }
+      }
+    }
+    return cells;
+  }
+
+  // B4: render a generated cell list into the debug panel stage, reusing the
+  // exact same .mh-ls-cube / .mh-ls-t/-r/-l DOM primitive + construction
+  // pattern as _buildIsoCubeMark above (same clip-path face divs, same
+  // --pxc custom property hook), so generated clusters look like the same
+  // living material as every other cube grid on the page and pick up the
+  // ambient reaction-diffusion coloring for free — no new cube CSS needed.
+  function mhRenderGenShape(container, cells, seed){
+    const SZ = 26;
+    const CH = SZ/0.866, RS = CH*0.75, CS = SZ; // same iso projection constants as _buildIsoCubeMark
+    container.innerHTML = '';
+    if (!cells.length) return;
+    // Project (x,y,z) -> screen px using the same 2-axis iso stagger as the
+    // hex/cube grids elsewhere: x steps along columns, y offsets alternate
+    // rows, z stacks vertically upward.
+    const px = c => c.x*CS + (Math.abs(c.y%2)===1 ? CS*0.5 : 0) + c.y*CS*0.25;
+    const py = c => c.y*RS + c.z*CH*0.9;
+    let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+    const pts = cells.map(c => { const x=px(c), y=py(c); minX=Math.min(minX,x); minY=Math.min(minY,y); maxX=Math.max(maxX,x+CS); maxY=Math.max(maxY,y+CH); return {c,x,y}; });
+    const grid = document.createElement('div');
+    grid.className = 'mh-gen-grid';
+    grid.style.width = Math.ceil(maxX-minX)+'px';
+    grid.style.height = Math.ceil(maxY-minY)+'px';
+    grid.style.setProperty('--mh-ls-sz', SZ+'px');
+    const prng = _mhGenPrng('gen-color:'+seed);
+    const typeHueBias = { stem:0, branch3:40, cap:200, slab:120 };
+    pts.forEach(({c,x,y}) => {
+      const cell = document.createElement('div');
+      cell.className = 'mh-ls-cube mh-gen-cell';
+      cell.dataset.primitive = c.primitiveType;
+      cell.style.left = (x-minX).toFixed(1)+'px';
+      cell.style.top = (y-minY).toFixed(1)+'px';
+      cell.title = c.primitiveType+' @ '+c.x+','+c.y+','+c.z;
+      // Give each primitive type a starting hue bias so the primitive kit is
+      // visually distinguishable before the live sim takes over coloring —
+      // the ambient tick loop (see buildPageHexBg/tickSim conventions) is
+      // free to repaint --pxc afterward exactly like any other bg cell.
+      const hue = (typeHueBias[c.primitiveType]||0) + prng()*30;
+      cell.style.setProperty('--pxc', `hsl(${hue|0},70%,${45+((prng()*15)|0)}%)`);
+      const fT=document.createElement('div'); fT.className='mh-ls-f mh-ls-t';
+      const fR=document.createElement('div'); fR.className='mh-ls-f mh-ls-r';
+      const fL=document.createElement('div'); fL.className='mh-ls-f mh-ls-l';
+      cell.appendChild(fT); cell.appendChild(fR); cell.appendChild(fL);
+      cell.addEventListener('mouseenter', () => {
+        cell.classList.remove('pulsing'); void cell.offsetWidth;
+        cell.classList.add('pulsing');
+        setTimeout(() => cell.classList.remove('pulsing'), 720);
+      });
+      grid.appendChild(cell);
+    });
+    container.appendChild(grid);
+  }
+
+  function renderGenPanel(){
+    const stage = $('mhGenStage'); if (!stage) return;
+    const seedInput = $('mhGenSeed');
+    const archBtn = document.querySelector('.mh-gen-arch-btn.active');
+    const archetype = archBtn ? archBtn.dataset.archetype : 'car';
+    const seed = (seedInput && seedInput.value.trim()) || '1';
+    const cells = mhGenerateShape(archetype, seed, { maxCells: 22, maxDepth: 5 });
+    mhRenderGenShape(stage, cells, archetype+':'+seed);
+    const info = $('mhGenInfo');
+    if (info) info.textContent = cells.length + ' cells · seed ' + seed;
+  }
+  function _initGenPanel(){
+    if (window._mhGenInit) { renderGenPanel(); return; }
+    window._mhGenInit = true;
+    document.querySelectorAll('.mh-gen-arch-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mh-gen-arch-btn').forEach(b => b.classList.toggle('active', b===btn));
+        renderGenPanel();
+      });
+    });
+    const genBtn = $('mhGenBtn');
+    if (genBtn) genBtn.addEventListener('click', renderGenPanel);
+    const randBtn = $('mhGenRandomSeedBtn');
+    if (randBtn) randBtn.addEventListener('click', () => {
+      const seedInput = $('mhGenSeed');
+      if (seedInput) seedInput.value = String((Math.random()*1e6)|0);
+      renderGenPanel();
+    });
+    renderGenPanel();
   }
 
   function _hsl2hex(h,s,l){
@@ -4316,6 +4593,7 @@
       if (tab === 'logo') { renderLogoDesigner(); setTimeout(() => { _startLogoSim(); _initVendingMachine(); }, 250); }
       if (tab === 'chess') setTimeout(renderChessBoard, 60);
       if (tab === 'snake') setTimeout(_initSnake, 60);
+      if (tab === 'gen') setTimeout(_initGenPanel, 60);
     }
     if (paper) {
       paper.classList.remove('mh-paper-cover','mh-paper-reveal');
@@ -4854,7 +5132,8 @@
     { id:'logo',      label:'Logo',      color:'hsl(322,85%,60%)' },
     { id:'type',      label:'Type',      color:'hsl(168,78%,48%)' },
     { id:'chess',     label:'Chess',     color:'hsl(28,90%,56%)' },
-    { id:'snake',     label:'Arcade',    color:'hsl(92,80%,52%)' }
+    { id:'snake',     label:'Arcade',    color:'hsl(92,80%,52%)' },
+    { id:'gen',       label:'Gen',       color:'hsl(258,80%,62%)' }
   ];
 
   // Keeps a hidden, keyboard-focusable button per suite tab positioned over
