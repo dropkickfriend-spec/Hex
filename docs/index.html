@@ -1120,9 +1120,14 @@
     filter:drop-shadow(0 8px 22px rgba(0,0,0,.6));
     transition:filter .15s, transform .15s cubic-bezier(.2,.8,.35,1.3);
   }
+  /* Dark glass card surface; the cube cluster is dimmed to a subtle texture
+     over it (not dominant "lego" blocks), and the icon/label float on top. */
+  .mh-splash-card { border-radius:14px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);
+    background:linear-gradient(155deg, rgba(9,11,22,.86), rgba(9,11,22,.94)); }
   .mh-splash-card:hover { transform:translateY(-4px); filter:drop-shadow(0 14px 34px rgba(0,0,0,.75)); }
   .mh-splash-card:active { transform:translateY(1px) scale(.98); }
-  .mh-splash-cluster { position:absolute; inset:0; z-index:0; pointer-events:none; }
+  .mh-splash-cluster { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.34; }
+  .mh-splash-card:hover .mh-splash-cluster { opacity:.52; }
   .mh-spc-cube { position:absolute; }
   .mh-spc-cube .mh-ctab-f { background:var(--pxc, var(--mh-b,#0000ff)); }
   .mh-spc-cube .mh-ctab-t { animation:mhPxPulse 4s ease-in-out infinite alternate; animation-delay:var(--spc-delay,0s); }
@@ -4031,6 +4036,10 @@
     const cols = Math.ceil(window.innerWidth / colStep) + 2;
     const rows = Math.ceil((window.innerHeight + 200) / rowStep) + 2;
     const pal = [p.aHex, p.bHex, p.cHex, ...p.colors];
+    // Stash the lattice so the live-contrast pass can sample which field tile
+    // sits behind any point (the field is position:fixed = viewport coords).
+    window._mhField = { pal, colStep, rowStep, cols, palLen: pal.length };
+    if (typeof _scheduleAutoContrast === 'function') _scheduleAutoContrast();
     const maxDelay = 2.4;
     function _faceStripe(angleDeg, hex1, hex2) {
       const u = typeof currentUnifiedMunker === 'function' ? currentUnifiedMunker() : {};
@@ -4530,6 +4539,38 @@
   $('mhGenerateCodeBtn').addEventListener('click', updateBuilderCode);
   $('mhCopyCodeBtn').addEventListener('click', copyBuilderCode);
   $('mhExportGifBtn').addEventListener('click', exportGif);
+  // ── Live scroll-aware text contrast ──────────────────────────────────────
+  // Sample which fixed-field tile sits behind each tagged text element and
+  // flip the text to white/near-black for max legibility, updating on scroll.
+  function _mhLuma(hex){ const n=parseInt(String(hex).replace('#',''),16); return (0.2126*((n>>16)&255)+0.7152*((n>>8)&255)+0.0722*(n&255))/255; }
+  window.mhFieldSample = function(x,y){
+    const f=window._mhField; if(!f) return null;
+    const r=Math.round(y/f.rowStep); const off=(r%2)?f.colStep*0.5:0;
+    const c=Math.round((x-off)/f.colStep);
+    return f.pal[(((r*f.cols+c)%f.palLen)+f.palLen)%f.palLen];
+  };
+  let _acRaf=0;
+  function _updateAutoContrast(){
+    _acRaf=0;
+    document.querySelectorAll('.mh-autocontrast').forEach(el => {
+      const rect=el.getBoundingClientRect();
+      if(rect.width===0 || rect.bottom<0 || rect.top>window.innerHeight) return;
+      const hex=window.mhFieldSample(rect.left+rect.width/2, rect.top+Math.min(rect.height/2,20));
+      if(!hex) return;
+      const dark=_mhLuma(hex)<0.52;
+      el.style.color = dark ? '#ffffff' : '#0a0a12';
+      el.style.textShadow = dark ? '0 1px 3px rgba(0,0,0,.92)' : '0 1px 2px rgba(255,255,255,.7)';
+    });
+  }
+  function _scheduleAutoContrast(){ if(!_acRaf) _acRaf=requestAnimationFrame(_updateAutoContrast); }
+  window.addEventListener('scroll', _scheduleAutoContrast, {passive:true, capture:true});
+  window.addEventListener('resize', _scheduleAutoContrast, {passive:true});
+  // Tag the readable text that sits over the animated field.
+  setTimeout(() => {
+    document.querySelectorAll('.mh-splash-h, .mh-splash-sub, .mh-splash-eye, .mh-sc-title, .mh-sc-desc, .mh-builder-title, .mh-export-title, .mh-render-adapter h2')
+      .forEach(el => el.classList.add('mh-autocontrast'));
+    _updateAutoContrast();
+  }, 400);
   document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.addEventListener('click', () => switchSuiteTab(btn.dataset.suiteTab || 'web')));
   document.querySelectorAll('.mh-chess-mode-btn').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('.mh-chess-mode-btn').forEach(b => b.classList.remove('active'));
