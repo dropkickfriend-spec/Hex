@@ -5002,9 +5002,28 @@
   function tickSim() {
     if (!_sim || !_simTiles) return;
     _sim.step();
-    // Cube-BG mode keeps the clean, static HUE-CUBE colours — the reaction-
-    // diffusion still evolves (for global uniqueness) but doesn't repaint tiles.
-    if (document.body.classList.contains('mh-cube-bg')) return;
+    // Cube-BG mode used to keep static HUE-CUBE colours frozen after the
+    // initial build (the reaction-diffusion evolved underneath but nothing
+    // repainted) — that's what made it look dead next to the live default
+    // background. Now it repaints too, just with a "clean" mapping: the sim
+    // value nudges tone/lightness banding rather than driving a full hue
+    // cycle, so it stays visually calm but is demonstrably alive at the same
+    // 120ms cadence as every other mode.
+    if (document.body.classList.contains('mh-cube-bg')) {
+      if (typeof rgbAt !== 'function') return;
+      const pal = getWheelPalette();
+      const chroma = (typeof cal !== 'undefined' && cal.chroma != null) ? cal.chroma : 80;
+      const toHex = rgb => '#' + rgb.map(v => Math.max(0, Math.min(255, v|0)).toString(16).padStart(2,'0')).join('');
+      _simTiles.forEach((el, i) => {
+        const vv = _sim.v[i % _sim.N];
+        const r = (i / (_simTiles.length || 1)) | 0;
+        const c = i - r * (_sim.W || 1);
+        const hue  = (pal.hue + (r + c) * 3) % 360;         // same gentle drift as buildPageHexBg
+        const tone = 40 + ((r * 5 + c * 3) % 22) + vv * 14;  // live sim nudges the tonal band
+        el.style.setProperty('--pxc', toHex(rgbAt(hue, tone, chroma)));
+      });
+      return;
+    }
     const pal = getWheelPalette();
     const aH = pal.hue, bH = (aH+120)%360, cH = (aH+240)%360;
     _simTiles.forEach((el, i) => {
