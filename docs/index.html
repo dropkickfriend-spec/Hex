@@ -1284,6 +1284,39 @@
     60%  { opacity:1; }
     100% { transform:perspective(1100px) rotateX(0deg); opacity:1; }
   }
+  /* ── $1-for-colour paywall: whole site is B&W until unlocked ── */
+  body.mh-bw #mhPageHexBg, body.mh-bw #mhSplash, body.mh-bw main,
+  body.mh-bw #mhRenderAdapter, body.mh-bw header {
+    filter: grayscale(100%) contrast(.96) brightness(.98);
+    transition: filter .8s ease;
+  }
+  body.mh-colour-live #mhPageHexBg, body.mh-colour-live #mhSplash, body.mh-colour-live main,
+  body.mh-colour-live #mhRenderAdapter, body.mh-colour-live header {
+    animation: mhColourBurst 1s ease-out;
+  }
+  @keyframes mhColourBurst { 0%{filter:grayscale(100%);} 40%{filter:grayscale(0%) saturate(2.2) brightness(1.25);} 100%{filter:none;} }
+  .mh-colour-badge {
+    position:fixed; right:16px; bottom:16px; z-index:250; display:inline-flex; align-items:center; gap:8px;
+    padding:11px 16px; border:none; border-radius:999px; cursor:pointer;
+    font:800 13px 'Space Mono',monospace; letter-spacing:.08em; color:#05050a;
+    background:linear-gradient(180deg,#ffe14a,#ff9500);
+    box-shadow:0 4px 0 #b46b00, 0 6px 22px rgba(255,160,0,.5), 0 0 0 2px rgba(255,255,255,.25) inset;
+    animation:mhBadgePulse 1.6s ease-in-out infinite;
+  }
+  .mh-colour-badge:hover { transform:translateY(-2px); }
+  .mh-colour-badge:active { transform:translateY(3px); box-shadow:0 1px 0 #b46b00, 0 2px 10px rgba(255,160,0,.5); }
+  .mh-cb-coin { font-size:16px; animation:mhVendCoinBlink 1.2s ease-in-out infinite; }
+  @keyframes mhBadgePulse { 0%,100%{box-shadow:0 4px 0 #b46b00,0 6px 22px rgba(255,160,0,.5),0 0 0 2px rgba(255,255,255,.25) inset;} 50%{box-shadow:0 4px 0 #b46b00,0 6px 30px rgba(255,200,0,.85),0 0 0 2px rgba(255,255,255,.4) inset;} }
+  body.mh-colour-live .mh-colour-badge { display:none; }
+  .mh-colour-timer {
+    position:fixed; right:16px; bottom:16px; z-index:250; display:none; align-items:center; gap:8px;
+    padding:10px 16px; border-radius:999px; font:800 14px 'Space Mono',monospace; letter-spacing:.1em;
+    color:#05050a; background:linear-gradient(180deg,#44ff88,#00cc55);
+    box-shadow:0 4px 0 #008a3a, 0 6px 22px rgba(60,255,140,.5);
+  }
+  body.mh-colour-live .mh-colour-timer { display:inline-flex; }
+  .mh-colour-timer #mhColourClock { font-variant-numeric:tabular-nums; }
+  .mh-colour-timer.mh-ct-ending { animation:mhBadgePulse .5s ease-in-out infinite; background:linear-gradient(180deg,#ff6b6b,#cc0033); color:#fff; }
   /* ── View mode toggles ── */
   body.mh-grid-over #mhPageHexBg { z-index:30; mix-blend-mode:screen; opacity:0.18; pointer-events:none; }
   /* ── Graph-paper panels: lay a blueprint grid behind the tool panels ── */
@@ -1667,6 +1700,11 @@
   .mh-pxfont-screen canvas { display:block; width:100%; image-rendering:pixelated; border-radius:6px; }
 </style>
 <div id="mhPageFold"></div>
+<!-- $1-for-colour: the whole site renders B&W until you pay; then 60s of colour -->
+<button id="mhColourBadge" class="mh-colour-badge" title="Unlock 60 seconds of full colour">
+  <span class="mh-cb-coin">◎</span><span class="mh-cb-txt">$1 FOR COLOUR</span>
+</button>
+<div id="mhColourTimer" class="mh-colour-timer">COLOUR <span id="mhColourClock">1:00</span></div>
 <div id="mhSplash">
   <div class="mh-splash-eye">Hexfield · Palette Engine</div>
   <h1 class="mh-splash-h">What are we building today?</h1>
@@ -2605,7 +2643,8 @@
     var hexWrap = $('mhLogoHexMark');
     var _markType = ($('mhLogoMarkLogo') || {}).value || 'hex';
     if (hexWrap) {
-      if (_markType === 'cube') _buildBrandCube(hexWrap, p, ($('mhLogoTextLogo') || {}).value || 'HEXFIELD', _logoSeed);
+      if (_markType === 'none') hexWrap.innerHTML = '';            // Text only → no mark
+      else if (_markType === 'cube') _buildBrandCube(hexWrap, p, ($('mhLogoTextLogo') || {}).value || 'HEXFIELD', _logoSeed);
       else _buildIsoCubeMark(_logoSeed, p, hexWrap);
     }
 
@@ -3161,7 +3200,9 @@
     const payBtn = $('mhVendPayBtn');
     const status = $('mhVendStatus');
     const previewCanvas = $('mhVendPreview');
-    const _checkPaid = () => localStorage.getItem('mh_logo_paid') === '1';
+    // Colour is unlocked by a permanent logo purchase OR during an active
+    // $1-for-colour window (the "NFT renders in colour for a minute" link).
+    const _checkPaid = () => localStorage.getItem('mh_logo_paid') === '1' || document.body.classList.contains('mh-colour-live');
     const _setPaid = () => {
       localStorage.setItem('mh_logo_paid', '1');
       vending.classList.add('mh-vend-paid');
@@ -8563,6 +8604,82 @@ renderPinned();
     setTimeout(restore, 700);
     document.addEventListener('input', save, { passive: true });
     document.addEventListener('change', save, { passive: true });
+  });
+})();
+</script>
+<script>
+// ── $1-for-colour paywall ──────────────────────────────────────────────────
+// The whole site renders black & white until you pay $1, then it bursts into
+// full colour for 60 seconds with an on-screen countdown, then fades back.
+// Uses real Stripe when window.MH_BACKEND_URL is set; otherwise a local demo
+// unlock so it's playable without a backend.
+(function(){
+  var COLOUR_SECONDS = 60;
+  var KEY = 'mh_colour_until';
+  var body = document.body;
+  var badge = document.getElementById('mhColourBadge');
+  var timer = document.getElementById('mhColourTimer');
+  var clock = document.getElementById('mhColourClock');
+  var BACKEND = window.MH_BACKEND_URL || '';
+  var _tick = null;
+
+  function fmt(s){ s=Math.max(0,Math.ceil(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+  function stopColour(){
+    if(_tick){ clearInterval(_tick); _tick=null; }
+    localStorage.removeItem(KEY);
+    body.classList.remove('mh-colour-live');
+    body.classList.add('mh-bw');
+    if(timer) timer.classList.remove('mh-ct-ending');
+  }
+  function runCountdown(until){
+    if(_tick) clearInterval(_tick);
+    body.classList.remove('mh-bw');
+    body.classList.add('mh-colour-live');
+    var upd = function(){
+      var left = (until - Date.now())/1000;
+      if(left <= 0){ stopColour(); return; }
+      if(clock) clock.textContent = fmt(left);
+      if(timer) timer.classList.toggle('mh-ct-ending', left <= 10);
+    };
+    upd();
+    _tick = setInterval(upd, 250);
+  }
+  function grantColour(sec){
+    var until = Date.now() + sec*1000;
+    localStorage.setItem(KEY, String(until));
+    // brief colour-burst flash, then the steady colour window
+    body.classList.remove('mh-bw');
+    void body.offsetWidth;
+    runCountdown(until);
+  }
+  function startCheckout(){
+    if(!BACKEND){ grantColour(COLOUR_SECONDS); return; }  // demo unlock without a backend
+    var base = window.location.href.split('?')[0];
+    fetch(BACKEND + '/api/create-checkout-session', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ success_url: base+'?colour_session={CHECKOUT_SESSION_ID}', cancel_url: base+'?colour_cancel=1' })
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d.checkout_url) window.location.href = d.checkout_url;
+      else grantColour(COLOUR_SECONDS);
+    }).catch(function(){ grantColour(COLOUR_SECONDS); });
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    // Resume an in-progress colour window (e.g. after a Stripe redirect).
+    var until = parseInt(localStorage.getItem(KEY)||'0', 10);
+    if(until && until > Date.now()) runCountdown(until);
+    else body.classList.add('mh-bw');
+
+    // Verify a returning Stripe payment, else honour the demo cancel.
+    var params = new URLSearchParams(window.location.search);
+    var sess = params.get('colour_session');
+    if(sess){
+      if(BACKEND){
+        fetch(BACKEND+'/api/verify-payment?session_id='+encodeURIComponent(sess))
+          .then(function(r){return r.json();}).then(function(d){ if(d.paid) grantColour(COLOUR_SECONDS); });
+      } else { grantColour(COLOUR_SECONDS); }
+    }
+    if(badge) badge.addEventListener('click', startCheckout);
   });
 })();
 </script>
