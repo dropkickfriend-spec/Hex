@@ -2413,15 +2413,19 @@
   // Build a single isometric brand cube: top = generated symbol, left/right = initials.
   function _buildBrandCube(container, p, text, seed){
     const S = 84;
-    const inits = _brandInitials(text);
+    // Escape initials before injecting into innerHTML — a brand starting with
+    // <, > or & would otherwise malform the markup and break the faces.
+    const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const rawInits = _brandInitials(text);
+    const inits = [esc(rawInits[0] || 'H'), esc(rawInits[1] || rawInits[0] || 'X')];
     container.innerHTML =
       `<div class="mh-brandcube-scene"><div class="mh-brandcube" style="width:${S}px;height:${S}px">`
       + `<div class="mh-bc-face mh-bc-top"   style="width:${S}px;height:${S}px;transform:rotateX(90deg) translateZ(${S/2}px);--bc-top:${p.aHex}">`
         + `<div class="mh-bc-stripes"></div>${_symbolSvg(p, seed, S)}</div>`
       + `<div class="mh-bc-face mh-bc-left"  style="width:${S}px;height:${S}px;transform:translateZ(${S/2}px);--bc-left:${p.bHex}">`
-        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${(inits[0]||'H')}</span></div>`
+        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${inits[0]}</span></div>`
       + `<div class="mh-bc-face mh-bc-right" style="width:${S}px;height:${S}px;transform:rotateY(90deg) translateZ(${S/2}px);--bc-right:${p.cHex}">`
-        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${(inits[1]||inits[0]||'X')}</span></div>`
+        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${inits[1]}</span></div>`
       + `</div></div>`;
     // Paint the shared field stripes onto each face so the cube matches the site.
     if (typeof munker !== 'undefined') {
@@ -3087,6 +3091,10 @@
         // Pop the capsule open to reveal the art mid-encode.
         if (capsule) capsule.classList.add('mh-cap-open');
         gif.on('progress', pr => { if (gifStatus) gifStatus.textContent = `Encoding… ${Math.round(pr*100)}%`; });
+        // Always release the guard, even if encoding aborts/errors after render()
+        // starts (otherwise the button stays permanently ignored).
+        gif.on('abort', () => { if (gifStatus) gifStatus.textContent = 'GIF encoding aborted.'; _dispensing = false; });
+        gif.on('error', (err) => { if (gifStatus) gifStatus.textContent = 'GIF encoding failed.'; _dispensing = false; });
         gif.on('finished', blob => {
           const url = URL.createObjectURL(blob);
           const dl = $('mhVendGifDownload');
