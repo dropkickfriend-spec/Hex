@@ -1120,9 +1120,14 @@
     filter:drop-shadow(0 8px 22px rgba(0,0,0,.6));
     transition:filter .15s, transform .15s cubic-bezier(.2,.8,.35,1.3);
   }
+  /* Dark glass card surface; the cube cluster is dimmed to a subtle texture
+     over it (not dominant "lego" blocks), and the icon/label float on top. */
+  .mh-splash-card { border-radius:14px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);
+    background:linear-gradient(155deg, rgba(9,11,22,.86), rgba(9,11,22,.94)); }
   .mh-splash-card:hover { transform:translateY(-4px); filter:drop-shadow(0 14px 34px rgba(0,0,0,.75)); }
   .mh-splash-card:active { transform:translateY(1px) scale(.98); }
-  .mh-splash-cluster { position:absolute; inset:0; z-index:0; pointer-events:none; }
+  .mh-splash-cluster { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.34; }
+  .mh-splash-card:hover .mh-splash-cluster { opacity:.52; }
   .mh-spc-cube { position:absolute; }
   .mh-spc-cube .mh-ctab-f { background:var(--pxc, var(--mh-b,#0000ff)); }
   .mh-spc-cube .mh-ctab-t { animation:mhPxPulse 4s ease-in-out infinite alternate; animation-delay:var(--spc-delay,0s); }
@@ -1374,6 +1379,13 @@
   body.mh-neon #mhPageHexBg { animation:mhNeonHue 10s linear infinite; }
   body.mh-neon .mh-builder-title { animation:mhBuilderPulse 1.5s ease-in-out infinite,mhNeonFlicker 2.2s infinite !important; }
   body.mh-neon .mh-suite-tab.active { animation:mhPxPulse 0.8s ease-in-out infinite alternate !important; }
+  /* Neon also lights up the logo generator (sim grids, mark & brand cube). */
+  body.mh-neon #mhLogoSimGrid, body.mh-neon #mhLogoHexMark, body.mh-neon .mh-brandcube {
+    animation:mhNeonHue 8s linear infinite;
+    filter:saturate(1.7) brightness(1.12) drop-shadow(0 0 10px var(--mh-a,#ffff00));
+  }
+  body.mh-neon .mh-ls-grid-wrap.mh-ls-sel { box-shadow:0 0 0 2px var(--mh-a,#ffff00),0 0 22px var(--mh-a,#ffff00) !important; animation:mhNeonFlicker 2.4s infinite; }
+  body.mh-neon .mh-bc-glyph { text-shadow:0 0 8px #fff,0 0 16px var(--mh-a,#ffff00); }
   /* ── Logo sim cube grid: iso-face cells replacing flat canvas pixels ── */
   #mhLogoSimGrid { display:none; grid-template-columns:repeat(4,1fr); gap:4px; margin:6px 0; }
   .mh-ls-grid-wrap {
@@ -1516,6 +1528,20 @@
   /* ── Logo mark DOM cube grid ── */
   #mhLogoHexMark { position:relative; display:flex; justify-content:center; padding:10px 0 6px; }
   .mh-logo-cube-grid { position:relative; }
+  /* ── Brand cube: single iso cube, top=symbol, left/right=initials ── */
+  .mh-brandcube-scene { perspective: 620px; display:flex; justify-content:center; align-items:center; padding:18px 0; }
+  .mh-brandcube { position:relative; transform-style:preserve-3d; transform:rotateX(-24deg) rotateY(-45deg); animation:mhBrandCubeSpin 14s linear infinite; }
+  @keyframes mhBrandCubeSpin { from{transform:rotateX(-24deg) rotateY(-45deg);} to{transform:rotateX(-24deg) rotateY(315deg);} }
+  .mh-brandcube:hover { animation-play-state:paused; }
+  .mh-bc-face { position:absolute; left:0; top:0; display:flex; align-items:center; justify-content:center;
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.35); overflow:hidden; }
+  .mh-bc-face .mh-bc-glyph { font:900 var(--bc-fs,58px) 'Space Mono',monospace; line-height:1; color:#05050c;
+    text-shadow:0 1px 0 rgba(255,255,255,.4); user-select:none; }
+  .mh-bc-top   { background:var(--bc-top,#ffd24a); }
+  .mh-bc-left  { background:var(--bc-left,#0000ff); }
+  .mh-bc-right { background:var(--bc-right,#00ffff); }
+  .mh-bc-top .mh-bc-stripes, .mh-bc-left .mh-bc-stripes, .mh-bc-right .mh-bc-stripes {
+    position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:overlay; }
   /* ── Logo preview: 3D iso + 2D flat side by side ── */
   #mhLogoPreviewLogo { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
   .mh-logo-variant { flex:1; min-width:180px; border-radius:10px; overflow:hidden;
@@ -2450,6 +2476,54 @@
     const f=n=>{ const c=l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1))); return Math.round(255*c).toString(16).padStart(2,'0'); };
     return '#'+f(0)+f(8)+f(4);
   }
+  // Derive up to two initials from the brand text (word initials, else first 2 chars).
+  function _brandInitials(text){
+    const words = (text||'').trim().split(/\s+/).filter(Boolean);
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    const w = words[0] || 'H';
+    return (w.slice(0,2) || 'HX').toUpperCase();
+  }
+  // Seeded "gem" sigil for the cube's top face: a hexagon of 6 triangles, each
+  // filled from the palette by a seeded PRNG so every brand gets a unique symbol.
+  function _symbolSvg(p, seed, size){
+    let sn = String(seed).split('').reduce((a,c)=>(a^c.charCodeAt(0)*131)&0xffffffff, 9);
+    const prng = ()=>{ sn=(sn*1664525+1013904223)&0xffffffff; return (sn>>>0)/0x100000000; };
+    const pal=[p.aHex,p.bHex,p.cHex];
+    const cx=size/2, cy=size/2, R=size*0.42;
+    const pt=(i)=>{ const a=(Math.PI/3)*i - Math.PI/2; return [cx+R*Math.cos(a), cy+R*Math.sin(a)]; };
+    let s=`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">`;
+    for(let i=0;i<6;i++){
+      const [x1,y1]=pt(i), [x2,y2]=pt((i+1)%6);
+      const col=pal[(prng()*pal.length)|0];
+      s+=`<polygon points="${cx.toFixed(1)},${cy.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}" fill="${col}" stroke="#05050c" stroke-width="1.5"/>`;
+    }
+    const dotN = 1 + (prng()*3|0);
+    for(let i=0;i<dotN;i++){ s+=`<circle cx="${(cx+(prng()-.5)*R).toFixed(1)}" cy="${(cy+(prng()-.5)*R).toFixed(1)}" r="${(size*0.05).toFixed(1)}" fill="#05050c" opacity="0.7"/>`; }
+    s+='</svg>';
+    return s;
+  }
+  // Build a single isometric brand cube: top = generated symbol, left/right = initials.
+  function _buildBrandCube(container, p, text, seed){
+    const S = 84;
+    const inits = _brandInitials(text);
+    container.innerHTML =
+      `<div class="mh-brandcube-scene"><div class="mh-brandcube" style="width:${S}px;height:${S}px">`
+      + `<div class="mh-bc-face mh-bc-top"   style="width:${S}px;height:${S}px;transform:rotateX(90deg) translateZ(${S/2}px);--bc-top:${p.aHex}">`
+        + `<div class="mh-bc-stripes"></div>${_symbolSvg(p, seed, S)}</div>`
+      + `<div class="mh-bc-face mh-bc-left"  style="width:${S}px;height:${S}px;transform:translateZ(${S/2}px);--bc-left:${p.bHex}">`
+        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${(inits[0]||'H')}</span></div>`
+      + `<div class="mh-bc-face mh-bc-right" style="width:${S}px;height:${S}px;transform:rotateY(90deg) translateZ(${S/2}px);--bc-right:${p.cHex}">`
+        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${(inits[1]||inits[0]||'X')}</span></div>`
+      + `</div></div>`;
+    // Paint the shared field stripes onto each face so the cube matches the site.
+    if (typeof munker !== 'undefined') {
+      const stripes = container.querySelectorAll('.mh-bc-stripes');
+      const mk = (a,b)=>`repeating-linear-gradient(${a}deg, rgba(0,0,0,.28) 0 3px, transparent 3px 9px)`;
+      if (stripes[0]) stripes[0].style.background = mk(60);
+      if (stripes[1]) stripes[1].style.background = mk(90);
+      if (stripes[2]) stripes[2].style.background = mk(120);
+    }
+  }
   function renderLogoDesigner() {
     var p = typeof getWheelPalette === 'function' ? getWheelPalette() : {aHex:'#ffff00',bHex:'#ff00ff',cHex:'#00ffff',hue:60};
     // If a billiard swatch was clicked, recolour the main mark/preview from it.
@@ -2464,7 +2538,11 @@
     }
     // ── 3D isometric cube mark (DOM, animatable) ──
     var hexWrap = $('mhLogoHexMark');
-    if (hexWrap) _buildIsoCubeMark(_logoSeed, p, hexWrap);
+    var _markType = ($('mhLogoMarkLogo') || {}).value || 'hex';
+    if (hexWrap) {
+      if (_markType === 'cube') _buildBrandCube(hexWrap, p, ($('mhLogoTextLogo') || {}).value || 'HEXFIELD', _logoSeed);
+      else _buildIsoCubeMark(_logoSeed, p, hexWrap);
+    }
 
     var preview = $('mhLogoPreviewLogo');
     if (preview) {
@@ -2697,7 +2775,7 @@
     }
     step(){
       this.tick++;
-      if(!this.expanded && this.outerVisited.size/Math.max(1,this.outsideTotal)>0.60)
+      if(!this.expanded && this.outerVisited.size/Math.max(1,this.outsideTotal)>0.42)
         this.expanded=true;
       for(const b of this.balls){
         b.life++;
@@ -2810,8 +2888,10 @@
     grid.style.display='grid'; grid.innerHTML='';
     const text=($('mhLogoTextLogo')||{}).value||'H';
     const fontOverride=($('mhLogoSimFont')||{}).value||null;
-    // Cube grid dims — 2:1 aspect to match the iso-face diamond letter space
-    const COLS=20, ROWS=10, SZ=8; // SZ = px per cube cell
+    // Cube grid dims — 2:1 aspect to match the iso-face diamond letter space.
+    // 16×8 (was 20×10) — ~36% fewer DOM cells across the 16 panels so the
+    // generator builds + animates noticeably faster.
+    const COLS=16, ROWS=8, SZ=9; // SZ = px per cube cell
     const W=60, H=30; // sim coordinate space
     const _wp=(typeof getWheelPalette==='function'?getWheelPalette():{hue:220,tone:50});
     const baseHue=_wp.hue;
@@ -3836,8 +3916,9 @@
   }
   function pushUnifiedToOriginal(){
     const u = currentUnifiedMunker();
+    const pinned = (typeof munker !== 'undefined' && munker._userSet); // keep panel's line colour/pattern
     setVal('munkerMode', u.mode);
-    setVal('munkerPattern', u.pattern);
+    if (!pinned) setVal('munkerPattern', u.pattern);
     setVal('munkerSpacing', u.spacing);
     setVal('munkerThick', Math.min(20, u.thickness));
     setVal('munkerOpacity', u.opacity);
@@ -3848,7 +3929,7 @@
     setText('munkerOpacityv', u.opacity);
     setText('munkerSpeedv', u.speed);
     if (typeof munker !== 'undefined') {
-      munker.mode = u.mode; munker.pattern = u.pattern; munker.spacing = u.spacing;
+      munker.mode = u.mode; if (!pinned) munker.pattern = u.pattern; munker.spacing = u.spacing;
       munker.thick = Math.min(20, u.thickness); munker.opacity = u.opacity;
       munker.animate = u.animate === 'on' ? (u.mode === 'v' ? 'v' : u.mode === 'h' ? 'h' : 'diag') : 'off';
       munker.speed = u.speed;
@@ -4050,14 +4131,32 @@
     const cols = Math.ceil(window.innerWidth / colStep) + 2;
     const rows = Math.ceil((window.innerHeight + 200) / rowStep) + 2;
     const pal = [p.aHex, p.bHex, p.cHex, ...p.colors];
+    // Stash the lattice so the live-contrast pass can sample which field tile
+    // sits behind any point (the field is position:fixed = viewport coords).
+    window._mhField = { pal, colStep, rowStep, cols, palLen: pal.length };
+    if (typeof _scheduleAutoContrast === 'function') _scheduleAutoContrast();
     const maxDelay = 2.4;
     function _faceStripe(angleDeg, hex1, hex2) {
       const u = typeof currentUnifiedMunker === 'function' ? currentUnifiedMunker() : {};
-      const t = Math.max(2, u.thick || 4);
+      // NOTE: currentUnifiedMunker() returns `thickness` (was read as `thick`,
+      // which was always undefined — that's why the thickness slider did nothing
+      // to the background).
+      const t = Math.max(2, u.thickness || u.thick || 4);
       const sp = Math.max(t + 2, (u.spacing || 10) + t);
       const op = Math.min(1, (u.opacity || 80) / 100);
+      // Line colours follow the Munker panel selection so picking a line colour
+      // actually recolours the background stripes. Palette faces are the default.
+      if (typeof munker !== 'undefined') {
+        switch (munker.pattern) {
+          case 'white':  hex1 = hex2 = '#ffffff'; break;
+          case 'black':  hex1 = hex2 = '#000000'; break;
+          case 'bw':     hex1 = '#ffffff'; hex2 = '#000000'; break;
+          case 'custom': hex1 = munker.lineA || '#ffffff'; hex2 = munker.lineB || hex1; break;
+          // 'A' / 'B' / 'AB' / 'comp' / default → keep the palette face colours
+        }
+      }
       const toRgba = (hex, a) => {
-        const n = parseInt(hex.replace('#',''), 16);
+        const n = parseInt(String(hex).replace('#',''), 16);
         return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
       };
       const c1 = toRgba(hex1, op), c2 = toRgba(hex2, op);
@@ -4419,7 +4518,8 @@
       munker.thick   = thick;
       munker.spacing = spacing;
       munker.opacity = opacity;
-      munker.pattern = u.pattern;
+      // Don't clobber a line colour/pattern the user picked in the Munker panel.
+      if (!munker._userSet) munker.pattern = u.pattern;
       munker.speed   = speed;
     }
     if (typeof applyMunker === 'function') applyMunker();
@@ -4519,10 +4619,10 @@
   });
   document.querySelectorAll('#centreModes button').forEach(btn => btn.addEventListener('click', () => setTimeout(applyRenderPalette, 0)));
   ['mhUnifiedMode','mhUnifiedPattern','mhAutoAnimate'].forEach(id => {
-    const el = $(id); if (el) el.addEventListener('change', () => { syncMunker(); render(); });
+    const el = $(id); if (el) el.addEventListener('change', () => { syncMunker(); render(); scheduleRenderPalette(); });
   });
   ['mhUnifiedSpacing','mhLineThickness','mhUnifiedOpacity','mhUnifiedSpeed'].forEach(id => {
-    const el = $(id); if (el) el.addEventListener('input', () => { syncUnifiedLabels(); syncMunker(); if ($('mhGame').value !== 'website') drawGame($('mhGame').value); else styleWholeWebsiteFrame(); });
+    const el = $(id); if (el) el.addEventListener('input', () => { syncUnifiedLabels(); syncMunker(); if ($('mhGame').value !== 'website') drawGame($('mhGame').value); else styleWholeWebsiteFrame(); scheduleRenderPalette(); });
   });
   $('mhMunkerPreset').addEventListener('change', e => applyMunkerPreset(e.target.value));
   $('mhRenderBtn').addEventListener('click', render);
@@ -4534,6 +4634,38 @@
   $('mhGenerateCodeBtn').addEventListener('click', updateBuilderCode);
   $('mhCopyCodeBtn').addEventListener('click', copyBuilderCode);
   $('mhExportGifBtn').addEventListener('click', exportGif);
+  // ── Live scroll-aware text contrast ──────────────────────────────────────
+  // Sample which fixed-field tile sits behind each tagged text element and
+  // flip the text to white/near-black for max legibility, updating on scroll.
+  function _mhLuma(hex){ const n=parseInt(String(hex).replace('#',''),16); return (0.2126*((n>>16)&255)+0.7152*((n>>8)&255)+0.0722*(n&255))/255; }
+  window.mhFieldSample = function(x,y){
+    const f=window._mhField; if(!f) return null;
+    const r=Math.round(y/f.rowStep); const off=(r%2)?f.colStep*0.5:0;
+    const c=Math.round((x-off)/f.colStep);
+    return f.pal[(((r*f.cols+c)%f.palLen)+f.palLen)%f.palLen];
+  };
+  let _acRaf=0;
+  function _updateAutoContrast(){
+    _acRaf=0;
+    document.querySelectorAll('.mh-autocontrast').forEach(el => {
+      const rect=el.getBoundingClientRect();
+      if(rect.width===0 || rect.bottom<0 || rect.top>window.innerHeight) return;
+      const hex=window.mhFieldSample(rect.left+rect.width/2, rect.top+Math.min(rect.height/2,20));
+      if(!hex) return;
+      const dark=_mhLuma(hex)<0.52;
+      el.style.color = dark ? '#ffffff' : '#0a0a12';
+      el.style.textShadow = dark ? '0 1px 3px rgba(0,0,0,.92)' : '0 1px 2px rgba(255,255,255,.7)';
+    });
+  }
+  function _scheduleAutoContrast(){ if(!_acRaf) _acRaf=requestAnimationFrame(_updateAutoContrast); }
+  window.addEventListener('scroll', _scheduleAutoContrast, {passive:true, capture:true});
+  window.addEventListener('resize', _scheduleAutoContrast, {passive:true});
+  // Tag the readable text that sits over the animated field.
+  setTimeout(() => {
+    document.querySelectorAll('.mh-splash-h, .mh-splash-sub, .mh-splash-eye, .mh-sc-title, .mh-sc-desc, .mh-builder-title, .mh-export-title, .mh-render-adapter h2')
+      .forEach(el => el.classList.add('mh-autocontrast'));
+    _updateAutoContrast();
+  }, 400);
   document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.addEventListener('click', () => switchSuiteTab(btn.dataset.suiteTab || 'web')));
   document.querySelectorAll('.mh-chess-mode-btn').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('.mh-chess-mode-btn').forEach(b => b.classList.remove('active'));
@@ -4593,6 +4725,10 @@
       renderAll.__mhPatched = true;
     }
     syncLineThickness($('mhLineThickness') ? $('mhLineThickness').value : 5, false);
+    // Expose so the Munker panel (separate script scope) can rebuild the field
+    // when line colour / pattern / thickness change.
+    window.buildPageHexBg = buildPageHexBg;
+    window.buildSplashClusters = buildSplashClusters;
     buildPageHexBg();
     buildSplashClusters();
     buildTplGrid();
@@ -5622,6 +5758,12 @@ function _refreshChessIfActive() {
     window.renderChessBoard();
   }
 }
+// The background field stripes follow the Munker line colour/pattern, so rebuild
+// the field whenever the Munker panel changes.
+function _refreshFieldStripes() {
+  if (window.buildPageHexBg) window.buildPageHexBg();
+  if (window.buildSplashClusters) window.buildSplashClusters();
+}
 function applyMunker() {
   const body = document.body;
   if (munker.mode === 'off') {
@@ -5632,6 +5774,7 @@ function applyMunker() {
     // Refresh hex view to clear per-face patterns
     if (cubeState.viewMode === 'hex') updateCubeColors();
     _refreshChessIfActive();
+    _refreshFieldStripes();
     return;
   }
   body.classList.add('munker-on');
@@ -5658,6 +5801,7 @@ function applyMunker() {
   // Refresh iso hex faces with new per-face patterns.
   if (cubeState.viewMode === 'hex') updateCubeColors();
   _refreshChessIfActive();
+  _refreshFieldStripes();
 }
 
 //=========================================================================
@@ -7257,14 +7401,15 @@ document.getElementById('munkerMode').addEventListener('change', e => {
   munker.mode = e.target.value; applyMunker();
 });
 document.getElementById('munkerPattern').addEventListener('change', e => {
-  munker.pattern = e.target.value; applyMunker();
+  munker.pattern = e.target.value; munker._userSet = true; applyMunker();
 });
 ['munkerLineA','munkerLineB'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('input', e => {
     munker[id === 'munkerLineA' ? 'lineA' : 'lineB'] = e.target.value;
-    // Picking a custom colour implies custom pattern mode.
+    // Picking a custom colour implies custom pattern mode (and pins it).
+    munker._userSet = true;
     if (munker.pattern !== 'custom') {
       munker.pattern = 'custom';
       const sel = document.getElementById('munkerPattern');
@@ -7331,6 +7476,7 @@ document.getElementById('munkerIllusionPreset').addEventListener('click', () => 
 });
 
 document.getElementById('munkerReset').addEventListener('click', () => {
+  munker._userSet = false;
   munker.mode='off'; document.getElementById('munkerMode').value='off';
   munker.pattern='white'; document.getElementById('munkerPattern').value='white';
   munker.spacing=10; document.getElementById('munkerSpacing').value=10;
