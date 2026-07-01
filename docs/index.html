@@ -2328,11 +2328,11 @@
     </div>
     <div class="mh-render-toolbar">
       <select id="mhMunkerPreset">
+        <option value="thin-web-render" selected>Auto pattern · thin website render</option>
         <option value="white-ruliad">Auto pattern · white ruliad artefacts</option>
         <option value="cool-dark-vibration">Auto pattern · cool dark vibration</option>
         <option value="hex-scanline">Auto pattern · hex cube scanline</option>
         <option value="palette-crosshatch">Auto pattern · palette crosshatch</option>
-        <option value="thin-web-render">Auto pattern · thin website render</option>
       </select>
       <select id="mhUnifiedMode">
         <option value="diag" selected>Diagonal</option>
@@ -6048,7 +6048,7 @@
     bindLateRenderSyncControls();
     const cubeBtn = document.querySelector('[data-tab="cube"]');
     if(cubeBtn) cubeBtn.click();
-    applyMunkerPreset('white-ruliad');
+    applyMunkerPreset('thin-web-render'); // thin lines — colour stays visible
     const mode = $('munkerMode'); if(mode) mode.value = 'diag';
     const animate = $('munkerAnimate'); if(animate) animate.value = 'diag';
     if (typeof renderAll === 'function' && !renderAll.__mhPatched) {
@@ -6513,9 +6513,9 @@
         <div class="config-grid">
           <label class="field">Depth mode
             <select id="cubeMode" style="flex:1">
-              <option value="atmosphere" selected>Atmosphere (landscape · time of day)</option>
+              <option value="chroma" selected>Chroma fade (front = full chroma)</option>
+              <option value="atmosphere">Atmosphere (landscape · time of day)</option>
               <option value="warmth">Warmth ladder (front = red-pulled · yellow = light)</option>
-              <option value="chroma">Chroma fade (front = full chroma)</option>
             </select>
           </label>
           <label class="field">View
@@ -7225,7 +7225,7 @@ const cubeState = {
   size: 34, gap: 3,
   yaw: 30, pitch: -22,
   alpha: 100,
-  mode: 'atmosphere',
+  mode: 'chroma',   // full chroma at the front layer — matches the background field
   warmthDepth: 60,
   yellowBoost: 50,
   backFade: 100,
@@ -9739,6 +9739,19 @@ renderPinned();
     var saved;
     try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(_){}
     if (!saved) return;
+    // One-time migration: the old default preset (white-ruliad, 13px white
+    // lines) washed every cube face white and was auto-saved into everyone's
+    // localStorage just by touching any input. Drop stored Munker settings
+    // once so the new thin-line defaults apply; choices made after this
+    // persist as normal.
+    try {
+      if (!localStorage.getItem('mhDesignV2')) {
+        ['mhUnifiedMode','mhUnifiedPattern','mhUnifiedSpacing','mhLineThickness',
+         'mhUnifiedOpacity','mhUnifiedSpeed','mhMunkerPreset'].forEach(function(id){ delete saved[id]; });
+        localStorage.setItem(KEY, JSON.stringify(saved));
+        localStorage.setItem('mhDesignV2', '1');
+      }
+    } catch(_){}
     Object.keys(saved).forEach(function(id){
       var el = document.getElementById(id);
       if (!el) return;
