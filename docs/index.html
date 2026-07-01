@@ -3,7 +3,36 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Tonality — CMY palette &amp; additive complement studio</title>
+<title>HEXFIELD — isometric palette, pattern &amp; type engine</title>
+<!-- Supabase client (global uniqueness sync for background sim + logo seeds).
+     The PUBLIC anon key is safe to ship in a static site (it is protected by
+     row-level security). Paste your project URL + anon key below to enable
+     cross-visitor uniqueness. Leave blank to run fully local (sbClient()→null).
+     These match SUPABASE_URL / SUPABASE_ANON_KEY in backend/.env.example. -->
+<script>
+  window.MH_SUPABASE_URL = window.MH_SUPABASE_URL || ''; // e.g. 'https://xxxx.supabase.co'
+  window.MH_SUPABASE_ANON_KEY = window.MH_SUPABASE_ANON_KEY || ''; // public anon key
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+<script>
+  // Lazily create + cache one Supabase client. Bare `sbClient()` calls inside
+  // the page's IIFEs resolve to this global. Returns null (never throws) when
+  // credentials or the CDN library are unavailable.
+  window.sbClient = (function () {
+    var _client = null, _tried = false;
+    return function sbClient() {
+      if (_tried) return _client;
+      _tried = true;
+      try {
+        var url = window.MH_SUPABASE_URL, key = window.MH_SUPABASE_ANON_KEY;
+        if (url && key && window.supabase && typeof window.supabase.createClient === 'function') {
+          _client = window.supabase.createClient(url, key);
+        }
+      } catch (e) { _client = null; }
+      return _client;
+    };
+  })();
+</script>
 <style>
   :root {
     --bg: #0b0b10;
@@ -25,6 +54,12 @@
     display: flex; align-items: baseline; justify-content: center; gap: 14px;
     position: relative; z-index: 1; }
   header .sub { color: var(--ink-dim); font-size: 12px; }
+  .mh-brand-header { align-items: center !important; gap: 10px !important; }
+  .mh-brand-mark { display: inline-flex; align-self: center; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+  .mh-brand-word { font-size: 20px !important; font-weight: 800 !important; letter-spacing: .22em !important;
+    background: linear-gradient(90deg, var(--mh-a,#ffd24a), var(--mh-c,#00ffff), var(--mh-b,#0000ff));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    text-shadow: 0 2px 10px rgba(0,0,0,.5); }
   main { display: grid; grid-template-columns: minmax(380px, 460px) 1fr 320px;
     gap: 1px; background: var(--line); min-height: calc(100vh - 50px);
     position: relative; z-index: 1; }
@@ -1208,6 +1243,19 @@
   }
   .mh-splash-eye { animation:mhArcadeGlow 4s ease-in-out infinite reverse; }
   .mh-builder-title { animation:mhBuilderPulse 3s ease-in-out infinite; }
+  /* ── Legibility drift: a slow breathing complement-coloured halo so body
+     copy and labels separate from the moving cube field without flashing. ── */
+  @keyframes mhTextLegible {
+    0%,100% { text-shadow:0 1px 6px rgba(0,0,0,.95),0 0 6px var(--mh-comp-glow,transparent); }
+    50%     { text-shadow:0 1px 10px rgba(0,0,0,.98),0 0 16px var(--mh-comp-glow,transparent); }
+  }
+  .mh-sc-desc, .mh-export-status, .mh-painter-tip, .mh-splash-sub, .mh-wheel-chip {
+    animation: mhTextLegible 3.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mh-sc-desc, .mh-export-status, .mh-painter-tip, .mh-splash-sub, .mh-wheel-chip,
+    .mh-builder-title, .mh-splash-h, .mh-splash-eye { animation: none !important; }
+  }
   /* ── Splash cube clusters: cubes already carry the 3D illusion via their
      own clip-path faces, so the card itself stays flat — no extra tilt ── */
   /* ── Builder panel rise animation on tab switch ── */
@@ -1218,6 +1266,23 @@
   }
   /* ── View mode toggles ── */
   body.mh-grid-over #mhPageHexBg { z-index:30; mix-blend-mode:screen; opacity:0.18; pointer-events:none; }
+  /* ── Graph-paper panels: lay a blueprint grid behind the tool panels ── */
+  body.mh-graph-paper .mh-builder-panel,
+  body.mh-graph-paper .mh-unified-munker,
+  body.mh-graph-paper .mh-export-panel,
+  body.mh-graph-paper .mh-target-stage,
+  body.mh-graph-paper .mh-splash-card {
+    background-color: rgba(6,8,16,.72) !important;
+    background-image:
+      linear-gradient(var(--mh-comp-glow, rgba(120,160,255,.16)) 1px, transparent 1px),
+      linear-gradient(90deg, var(--mh-comp-glow, rgba(120,160,255,.16)) 1px, transparent 1px),
+      linear-gradient(rgba(120,160,255,.30) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(120,160,255,.30) 1px, transparent 1px) !important;
+    background-size: 11px 11px, 11px 11px, 55px 55px, 55px 55px !important;
+    background-blend-mode: normal !important;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px rgba(120,160,255,.22);
+  }
   body.mh-shadows .mh-render-adapter h2,
   body.mh-shadows .mh-unified-munker-title,
   body.mh-shadows .mh-builder-title,
@@ -1399,6 +1464,32 @@
   .mh-vend-status{font:9px 'Space Mono',monospace;color:var(--mh-a,#ffff00);min-height:14px;}
   #mhVending.mh-vend-paid .mh-vend-bw-label{display:none;}
   #mhVending.mh-vend-paid .mh-vend-preview{filter:none;}
+  .mh-vend-dispense{background:linear-gradient(180deg,#7fd0ff 0%,#2a8bd6 100%);box-shadow:0 3px 0 #1a5a8a,0 4px 12px rgba(60,160,255,.4);color:#02121f;margin-top:4px;}
+  .mh-vend-dispense:active{transform:translateY(2px);box-shadow:0 1px 0 #1a5a8a;}
+  /* ── Capsule dispensing chute + retro cutscene ── */
+  .mh-vend-chute{position:absolute;left:8px;bottom:6px;width:62px;height:40px;border-radius:6px;background:linear-gradient(180deg,#05050c 0%,#101020 100%);box-shadow:inset 0 2px 6px rgba(0,0,0,.8),inset 0 0 0 1px rgba(255,255,255,.05);overflow:hidden;pointer-events:none;}
+  .mh-vend-chute::after{content:'';position:absolute;left:6px;right:6px;bottom:5px;height:3px;border-radius:2px;background:rgba(255,255,255,.07);}
+  .mh-vend-capsule{position:absolute;left:50%;top:-46px;width:38px;height:38px;transform:translateX(-50%) scale(.6);opacity:0;}
+  .mh-vend-capsule.mh-cap-drop{animation:mhCapDrop 1.15s cubic-bezier(.5,.05,.3,1) forwards;}
+  .mh-vend-cap-top,.mh-vend-cap-bot{position:absolute;left:0;width:38px;height:19px;}
+  .mh-vend-cap-top{top:0;border-radius:19px 19px 0 0;background:linear-gradient(180deg,#ffd24a,#e0962a);box-shadow:inset 0 2px 3px rgba(255,255,255,.5);}
+  .mh-vend-cap-bot{top:19px;border-radius:0 0 19px 19px;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(190,210,230,.7));box-shadow:inset 0 -2px 4px rgba(0,0,0,.2);}
+  .mh-vend-cap-art{position:absolute;left:50%;top:50%;width:30px;height:15px;transform:translate(-50%,-50%) scale(0);border-radius:2px;image-rendering:pixelated;opacity:0;}
+  .mh-vend-capsule.mh-cap-open .mh-vend-cap-top{animation:mhCapTop .5s ease-out forwards;}
+  .mh-vend-capsule.mh-cap-open .mh-vend-cap-bot{animation:mhCapBot .5s ease-out forwards;}
+  .mh-vend-capsule.mh-cap-open .mh-vend-cap-art{animation:mhCapArt .6s .2s ease-out forwards;}
+  @keyframes mhCapDrop{
+    0%{top:-46px;opacity:0;transform:translateX(-50%) scale(.6) rotate(0deg);}
+    18%{opacity:1;}
+    55%{top:8px;transform:translateX(-50%) scale(1) rotate(180deg);}
+    70%{top:-2px;transform:translateX(-50%) scale(1) rotate(220deg);}
+    85%{top:6px;transform:translateX(-50%) scale(1) rotate(340deg);}
+    100%{top:2px;opacity:1;transform:translateX(-50%) scale(1) rotate(360deg);}
+  }
+  @keyframes mhCapTop{0%{transform:translateY(0) rotate(0);}100%{transform:translateY(-26px) rotate(-32deg);opacity:0;}}
+  @keyframes mhCapBot{0%{transform:translateY(0) rotate(0);}100%{transform:translateY(24px) rotate(20deg);opacity:0;}}
+  @keyframes mhCapArt{0%{transform:translate(-50%,-50%) scale(0);opacity:0;}60%{transform:translate(-50%,-50%) scale(2.6);opacity:1;}100%{transform:translate(-50%,-50%) scale(2.2);opacity:1;}}
+  #mhVending:not(.mh-vend-paid) .mh-vend-cap-art{filter:grayscale(100%) contrast(.85);}
   /* ── Logo + Type panels: transparent so cube bg bleeds through ── */
   #mhBuilderLogo, #mhBuilderType { background:transparent !important; }
   /* ── Live type alphabet grid ── */
@@ -1621,6 +1712,7 @@
   <button class="mh-back-btn" id="mhBackBtn">&#8592; Tools</button>
   <span class="mh-mode-btns">
     <button class="mh-mode-btn" id="mhGridBtn" title="Hex grid overlay">Grid+</button>
+    <button class="mh-mode-btn" id="mhGraphBtn" title="Graph-paper panels">Graph</button>
     <button class="mh-mode-btn" id="mhShadowBtn" title="Drop shadows">Shadow</button>
     <button class="mh-mode-btn" id="mhNeonBtn" title="Neon mode">Neon</button>
   </span>
@@ -1724,6 +1816,7 @@
         <div class="mh-vend-price">$ 1.00</div>
         <div class="mh-vend-coin" title="coin slot">◎</div>
         <button class="mh-vend-btn" id="mhVendPayBtn">INSERT $1</button>
+        <button class="mh-vend-btn mh-vend-dispense" id="mhVendGifBtn">DISPENSE GIF</button>
         <div class="mh-vend-stripe-icons">
           <span class="mh-vend-cc">VISA</span>
           <span class="mh-vend-cc">MC</span>
@@ -1731,6 +1824,18 @@
         </div>
         <div class="mh-vend-status" id="mhVendStatus">Pay to unlock colour download</div>
       </div>
+      <!-- Capsule dispensing chute + cutscene -->
+      <div class="mh-vend-chute" id="mhVendChute">
+        <div class="mh-vend-capsule" id="mhVendCapsule">
+          <div class="mh-vend-cap-top"></div>
+          <div class="mh-vend-cap-bot"></div>
+          <canvas class="mh-vend-cap-art" id="mhVendCapArt" width="120" height="60"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="mh-render-toolbar" id="mhVendGifResult" style="margin-top:6px;display:none">
+      <a id="mhVendGifDownload" class="mh-download-link" download="hexfield-logo.gif">⬇ Download GIF</a>
+      <span id="mhVendGifStatus" class="mh-export-status"></span>
     </div>
     <div class="mh-render-toolbar" style="margin-top:10px;flex-wrap:wrap">
       <input id="mhLogoTextLogo" maxlength="24" value="HEXFIELD" placeholder="Brand name" style="flex:2" />
@@ -2247,8 +2352,24 @@
     }
   }
 
+  function _hsl2hex(h,s,l){
+    s/=100; l/=100;
+    const k=n=>(n+h/30)%12, a=s*Math.min(l,1-l);
+    const f=n=>{ const c=l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1))); return Math.round(255*c).toString(16).padStart(2,'0'); };
+    return '#'+f(0)+f(8)+f(4);
+  }
   function renderLogoDesigner() {
     var p = typeof getWheelPalette === 'function' ? getWheelPalette() : {aHex:'#ffff00',bHex:'#ff00ff',cHex:'#00ffff',hue:60};
+    // If a billiard swatch was clicked, recolour the main mark/preview from it.
+    if (window._mhLogoSel) {
+      var s = window._mhLogoSel;
+      p = Object.assign({}, p, {
+        hue: s.schemeHue,
+        aHex: _hsl2hex(s.schemeHue, 100, 60),
+        bHex: _hsl2hex(s.compHue,   100, 60),
+        cHex: _hsl2hex((s.schemeHue + 40) % 360, 90, 58)
+      });
+    }
     // ── 3D isometric cube mark (DOM, animatable) ──
     var hexWrap = $('mhLogoHexMark');
     if (hexWrap) _buildIsoCubeMark(_logoSeed, p, hexWrap);
@@ -2376,19 +2497,38 @@
     for(let i=0;i<W*H;i++) mask[i]=d[i*4]<128?1:0;
     return mask;
   }
+  // Seeded PRNG (mulberry32) so a stored seed reproduces an exact render —
+  // this is what lets logo nodes be globally unique/deduped rather than a
+  // fresh random scatter every page load.
+  function _mulberry32(a){
+    return function(){
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function _seedFromString(str){
+    let h = 1779033703 ^ str.length;
+    for(let i=0;i<str.length;i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+    return (h >>> 0);
+  }
   class BilliardsLogoSim {
-    constructor(W,H,mask,N=4,spd=3.5,hueStart=0){
+    constructor(W,H,mask,N=4,spd=3.5,hueStart=0,seed=null){
       this.W=W; this.H=H; this.mask=mask;
       this.tick=0; this.trails=[];
       this.outerVisited=new Set(); this.innerVisited=new Set();
       this.outsideTotal=0;
+      this.seed = (seed==null) ? (Math.random()*1e9|0) : seed;
+      const rng = _mulberry32(this.seed);
+      this._rng = rng;
       for(let i=0;i<W*H;i++) if(!mask[i]) this.outsideTotal++;
       this.expanded=false;
       this.balls=Array.from({length:N},(_,i)=>{
         let x,y,att=0;
-        do{ x=3+Math.random()*(W-6); y=3+Math.random()*(H-6); att++; }
+        do{ x=3+rng()*(W-6); y=3+rng()*(H-6); att++; }
         while(mask[Math.round(y)*W+Math.round(x)] && att<200);
-        const ang=Math.random()*Math.PI*2, sp=spd*0.8+Math.random()*spd*0.4;
+        const ang=rng()*Math.PI*2, sp=spd*0.8+rng()*spd*0.4;
         return {x,y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,
                 sx:x,sy:y,life:0,hue:(hueStart+i/N*180)%360,inside:false};
       });
@@ -2437,13 +2577,13 @@
         }
       }
       if(rule==='chaos'){
-        for(const b of balls){b.vx+=(Math.random()-.5)*0.6;b.vy+=(Math.random()-.5)*0.6;}
+        for(const b of balls){b.vx+=(this._rng()-.5)*0.6;b.vy+=(this._rng()-.5)*0.6;}
       }
       if(rule==='excl'){
         const occ=new Set();
         for(const b of balls){
           const k=`${b.x|0},${b.y|0}`;
-          if(occ.has(k)){b.vx+=(Math.random()-.5)*2;b.vy+=(Math.random()-.5)*2;}
+          if(occ.has(k)){b.vx+=(this._rng()-.5)*2;b.vy+=(this._rng()-.5)*2;}
           else occ.add(k);
         }
       }
@@ -2451,7 +2591,7 @@
         for(const b of balls){
           const pi=Math.round(b.y)*this.W+Math.round(b.x);
           if(this.outerVisited.has(pi)||this.innerVisited.has(pi))
-            {b.vx+=(Math.random()-.5)*1.0;b.vy+=(Math.random()-.5)*1.0;}
+            {b.vx+=(this._rng()-.5)*1.0;b.vy+=(this._rng()-.5)*1.0;}
         }
       }
       for(const b of balls){
@@ -2473,7 +2613,7 @@
             const hX=!this._inLetter(nx,b.y), hY=!this._inLetter(b.x,ny);
             if(hX){b.vx*=-1; nx=b.x;} if(hY){b.vy*=-1; ny=b.y;}
             if(!hX&&!hY){b.vx*=-1;b.vy*=-1; nx=b.x; ny=b.y;}
-            const ang=Math.atan2(b.vy,b.vx)+(Math.random()-.5)*.5;
+            const ang=Math.atan2(b.vy,b.vx)+(this._rng()-.5)*.5;
             const spd=Math.hypot(b.vx,b.vy)||3;
             b.vx=Math.cos(ang)*spd; b.vy=Math.sin(ang)*spd; nx=b.x; ny=b.y;
           }
@@ -2490,14 +2630,14 @@
               const hX=this._inLetter(nx,b.y), hY=this._inLetter(b.x,ny);
               if(hX){b.vx*=-1; nx=b.x;} if(hY){b.vy*=-1; ny=b.y;}
               if(!hX&&!hY){b.vx*=-1;b.vy*=-1; nx=b.x; ny=b.y;}
-              const ang=Math.atan2(b.vy,b.vx)+(Math.random()-.5)*.5;
+              const ang=Math.atan2(b.vy,b.vx)+(this._rng()-.5)*.5;
               const spd=Math.hypot(b.vx,b.vy)||3;
               b.vx=Math.cos(ang)*spd; b.vy=Math.sin(ang)*spd; nx=b.x; ny=b.y;
             }
           }
           // Don't return to start
           if(b.life>40 && Math.hypot(nx-b.sx,ny-b.sy)<8){
-            const ang=Math.atan2(ny-b.sy,nx-b.sx)+Math.PI+(Math.random()-.5)*1.6;
+            const ang=Math.atan2(ny-b.sy,nx-b.sx)+Math.PI+(this._rng()-.5)*1.6;
             const spd=Math.hypot(b.vx,b.vy)||3;
             b.vx=Math.cos(ang)*spd; b.vy=Math.sin(ang)*spd; nx=b.x; ny=b.y;
           }
@@ -2512,6 +2652,30 @@
       if(this.trails.length>this.balls.length*600)
         this.trails.splice(0,this.balls.length*120);
     }
+  }
+  // Global uniqueness for logo seeds — mirrors the background's syncSimState:
+  // if this seed-hash was already seen by anyone, re-roll the seed for this
+  // session so two visitors never get the same nodes. Degrades to a no-op
+  // (still locally seeded/reproducible) when Supabase creds are absent.
+  const _seenLogoSeeds = new Set();
+  async function _recordLogoSeed(seed, meta){
+    if(_seenLogoSeeds.has(seed)) { _bumpLogoSeed(); return; }
+    _seenLogoSeeds.add(seed);
+    const sb=sbClient(); if(!sb) return;
+    try{
+      const { data } = await sb.from('logo_seeds').select('seed').eq('seed', seed).maybeSingle();
+      if(data){ _bumpLogoSeed(); }
+      else { await sb.from('logo_seeds').insert({ seed, font:meta.font, rule:meta.rule, hue:meta.hue, letters:meta.text, ts:new Date().toISOString() }); }
+    }catch(_){}
+  }
+  // Nudge the session seed and rebuild so the next render lands on fresh nodes.
+  let _logoSeedBumpT=null;
+  function _bumpLogoSeed(){
+    if(_logoSeedBumpT) return;
+    _logoSeedBumpT=setTimeout(()=>{ _logoSeedBumpT=null;
+      if(typeof _logoSeed!=='undefined'){ _logoSeed=String(Date.now())+'-'+(Math.random()*1e6|0); }
+      if(typeof _startLogoSim==='function') _startLogoSim();
+    }, 400);
   }
   async function _logBilliards(sim){
     const sb=sbClient(); if(!sb) return;
@@ -2554,7 +2718,11 @@
     // Cube grid dims — 2:1 aspect to match the iso-face diamond letter space
     const COLS=20, ROWS=10, SZ=8; // SZ = px per cube cell
     const W=60, H=30; // sim coordinate space
-    const baseHue=(typeof getWheelPalette==='function'?getWheelPalette().hue:220);
+    const _wp=(typeof getWheelPalette==='function'?getWheelPalette():{hue:220,tone:50});
+    const baseHue=_wp.hue;
+    const baseTone=(_wp.tone!=null?_wp.tone:50);
+    // Per-generation session seed so each render is reproducible + dedupable.
+    const sessionSeed = (typeof _logoSeed!=='undefined' && _logoSeed) ? _logoSeed : String(Date.now());
     const hexH=SZ/0.866, rowStep=hexH*0.75, colStep=SZ;
     const totalW=Math.ceil(colStep*COLS+SZ*0.5), totalH=Math.ceil(rowStep*(ROWS-1)+hexH);
     // Munker stripe angles keyed by rule
@@ -2582,12 +2750,21 @@
 
       const font=fontOverride||_lsFonts[v.font||0];
       const mask=_buildLetterMask(text,W,H,font);
-      const sim=new BilliardsLogoSim(W,H,mask,v.N,v.spd,(schemeHue+vi*15)%360);
+      // Seeded per panel from the session seed + identity so the same seed
+      // reproduces the same nodes (and so we can dedup against Supabase).
+      const panelSeed=_seedFromString(sessionSeed+'|'+text+'|'+font+'|'+v.rule+'|'+vi+'|'+Math.round(baseHue));
+      const sim=new BilliardsLogoSim(W,H,mask,v.N,v.spd,(schemeHue+vi*15)%360,panelSeed);
       sim._rule=v.rule; sim._v=v;
       sim._schemeHue=schemeHue; sim._compHue=compHue;
-      const letterTint=`hsl(${compHue},38%,14%)`;
+      // Resting letter-interior colour pulled from the wheel tonality (real
+      // palette tone at the complement hue), not a near-black neutral. Balls
+      // paint brighter trails over this base.
+      const letterL=Math.max(20,Math.min(46,baseTone*0.5+14));
+      const letterTint=`hsl(${compHue},52%,${letterL.toFixed(0)}%)`;
       sim._bgDark=bgDark; sim._bgGray=bgGray; sim._letterGray=letterTint; sim._mask=mask;
       _lsGrids.push(sim);
+      // Record/dedup this seed globally (mirrors background syncSimState).
+      _recordLogoSeed(panelSeed, {text, font, rule:v.rule, hue:Math.round(schemeHue)});
 
       // Build isometric cube cell grid
       const cells=[];
@@ -2647,6 +2824,9 @@
         document.querySelectorAll('.mh-ls-grid-wrap').forEach(w=>w.classList.remove('mh-ls-sel'));
         wrap.classList.add('mh-ls-sel');
         _saveLogoLibEntry(v,sim);
+        // Drive the main logo mark + SVG preview from the clicked swatch's scheme.
+        window._mhLogoSel = { schemeHue, compHue };
+        if(typeof renderLogoDesigner==='function') renderLogoDesigner();
       });
       if(vi===0) wrap.classList.add('mh-ls-sel');
       wrap.addEventListener('animationend', e => {
@@ -2775,6 +2955,72 @@
         ctx.fillRect(col*PW/C|0, row*PH/R|0, Math.ceil(PW/C)+1, Math.ceil(PH/R)+1);
       }
     }, 250);
+    // Draw a sim's current state into a 2D context (grayscale gate when unpaid).
+    function _drawSimFrame(sim, ctx, W, H, gray) {
+      const {_state:st,_COLS:C,_ROWS:R} = sim;
+      ctx.fillStyle = '#05050c'; ctx.fillRect(0, 0, W, H);
+      for (let row = 0; row < R; row++) for (let col = 0; col < C; col++) {
+        const si = (row * C + col) * 3;
+        if (st[si+2] > 2) {
+          const s = gray ? 0 : (st[si+1]|0);
+          ctx.fillStyle = `hsl(${gray?0:(st[si]|0)},${s}%,${st[si+2]|0}%)`;
+        } else {
+          ctx.fillStyle = gray ? 'hsl(0,0%,12%)' : sim._bgGray;
+        }
+        ctx.fillRect(col*W/C|0, row*H/R|0, Math.ceil(W/C)+1, Math.ceil(H/R)+1);
+      }
+    }
+    // Same-origin gif.js worker (shared helper — see _mhGifWorker).
+    const _gifWorkerBlobUrl = _mhGifWorker;
+    // Dispense: capsule cutscene + animated GIF of the selected logo sim.
+    const gifBtn = $('mhVendGifBtn');
+    let _dispensing = false;
+    async function _dispenseLogoGif() {
+      if (_dispensing) return;
+      const selWrap = document.querySelector('.mh-ls-grid-wrap.mh-ls-sel');
+      const simIdx = [...document.querySelectorAll('.mh-ls-grid-wrap')].indexOf(selWrap);
+      const sim = _lsGrids[simIdx];
+      const gifStatus = $('mhVendGifStatus'), gifResult = $('mhVendGifResult');
+      if (!sim) { if (gifStatus) gifStatus.textContent = 'Pick a logo swatch first.'; if (gifResult) gifResult.style.display = 'flex'; return; }
+      _dispensing = true;
+      const paid = _checkPaid();
+      const capsule = $('mhVendCapsule'), capArt = $('mhVendCapArt');
+      // Kick off the capsule drop cutscene.
+      if (capsule) { capsule.classList.remove('mh-cap-drop','mh-cap-open'); void capsule.offsetWidth; capsule.classList.add('mh-cap-drop'); }
+      if (gifResult) gifResult.style.display = 'flex';
+      if (gifStatus) gifStatus.textContent = 'Dispensing…';
+      try {
+        if (!window.GIF) await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js');
+        const workerUrl = await _gifWorkerBlobUrl();
+        const GW = 240, GH = 120, FRAMES = 20, DELAY = 70;
+        const off = document.createElement('canvas'); off.width = GW; off.height = GH;
+        const octx = off.getContext('2d');
+        const gif = new GIF({ workers: 2, quality: 8, width: GW, height: GH, workerScript: workerUrl });
+        for (let i = 0; i < FRAMES; i++) {
+          await new Promise(r => setTimeout(r, DELAY));   // sample the live sim
+          _drawSimFrame(sim, octx, GW, GH, !paid);
+          gif.addFrame(octx, { copy: true, delay: DELAY });
+          // mirror the latest frame into the capsule art
+          if (capArt) { const cctx = capArt.getContext('2d'); _drawSimFrame(sim, cctx, capArt.width, capArt.height, !paid); }
+          if (gifStatus) gifStatus.textContent = `Capturing ${i+1}/${FRAMES}…`;
+        }
+        // Pop the capsule open to reveal the art mid-encode.
+        if (capsule) capsule.classList.add('mh-cap-open');
+        gif.on('progress', pr => { if (gifStatus) gifStatus.textContent = `Encoding… ${Math.round(pr*100)}%`; });
+        gif.on('finished', blob => {
+          const url = URL.createObjectURL(blob);
+          const dl = $('mhVendGifDownload');
+          if (dl) { dl.href = url; dl.download = `hexfield-logo-${paid?'colour':'bw'}-${Date.now()}.gif`; dl.style.display = 'inline-flex'; }
+          if (gifStatus) gifStatus.textContent = paid ? 'Colour GIF ready!' : 'B&W GIF ready — pay $1 for colour.';
+          _dispensing = false;
+        });
+        gif.render();
+      } catch (e) {
+        if (gifStatus) gifStatus.textContent = 'GIF failed: ' + (e.message || e);
+        _dispensing = false;
+      }
+    }
+    if (gifBtn && !gifBtn._mhWired) { gifBtn._mhWired = true; gifBtn.addEventListener('click', _dispenseLogoGif); }
     if (payBtn) payBtn.addEventListener('click', () => {
       if (_checkPaid()) { $('mhLogoNftBtn')?.click(); return; }
       if (!MH_BACKEND_URL) { status.textContent = 'Backend not deployed yet.'; return; }
@@ -2820,14 +3066,37 @@
     if (mode === '3d') _renderChess3d(board);
     else _renderChess2d(board);
   }
+  // Expose so the Munker panel (separate script scope) can live-refresh the
+  // chess board when line colour / thickness / spacing change.
+  window.renderChessBoard = renderChessBoard;
+  // Diagonal striped cube material shared with the HUE CUBE: builds a
+  // repeating-linear-gradient from the active Munker line colours (or palette
+  // fallback) so the chess board reads with the same painted-on lines.
+  function _chessStripeCss(angleDeg) {
+    const sp = (typeof munker !== 'undefined' ? munker.spacing : 10);
+    const th = (typeof munker !== 'undefined' ? munker.thick   : 5);
+    const p  = getWheelPalette();
+    let c1, c2;
+    if (typeof munker !== 'undefined' && munker.pattern === 'custom') {
+      c1 = munker.lineA || '#ffffff'; c2 = munker.lineB || c1;
+    } else {
+      c1 = p.aHex; c2 = p.bHex;
+    }
+    const t = Math.max(1, th);
+    const s = Math.max(t + 1, sp + t);
+    const period = s * 2;
+    const rgba = (hex, al) => { const m = hex.replace('#',''); const n = parseInt(m,16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${al})`; };
+    return `repeating-linear-gradient(${angleDeg}deg, ${rgba(c1,.55)} 0 ${t}px, transparent ${t}px ${s}px, ${rgba(c2,.55)} ${s}px ${s+t}px, transparent ${s+t}px ${period}px)`;
+  }
   function _renderChess2d(board) {
     const wrap = $('mhChessView2d'), canvas = $('mhChessCanvas3d');
     if (!wrap) return;
     if (canvas) canvas.style.display = 'none';
     wrap.style.display = '';
     const p = getWheelPalette();
-    const lightColor = p.aHex + '28';
-    const darkColor  = p.bHex + '38';
+    const lightColor = p.aHex + '3a';
+    const darkColor  = p.bHex + '4a';
+    const stripe = _chessStripeCss(60);
     let html = `<div class="mh-chess-2d" style="--cl:${lightColor};--cd:${darkColor}">`;
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
@@ -2835,7 +3104,8 @@
         const piece = board[r] && board[r][c];
         const glyph = piece ? (CHESS_GLYPHS[piece] || '') : '';
         const isBlack = piece && piece === piece.toLowerCase();
-        html += `<div class="mh-chess-cell ${sq}" style="background:var(--${sq==='light'?'cl':'cd'})"><span class="mh-chess-piece${isBlack?' bp':''}">${glyph}</span></div>`;
+        const base = sq === 'light' ? 'var(--cl)' : 'var(--cd)';
+        html += `<div class="mh-chess-cell ${sq}" style="background-color:${base};background-image:${stripe}"><span class="mh-chess-piece${isBlack?' bp':''}">${glyph}</span></div>`;
       }
     }
     html += '</div>';
@@ -2870,34 +3140,65 @@
     function shade([r,g,b],f){ return [r*f,g*f,b*f]; }
     const lightRgb = hexToRgb(p.aHex);
     const darkRgb  = hexToRgb(p.bHex);
+    // Munker line colours (shared with the HUE CUBE): custom pickers or palette.
+    const useCustom = (typeof munker !== 'undefined' && munker.pattern === 'custom');
+    const lineHexA = useCustom ? (munker.lineA || '#ffffff') : p.aHex;
+    const lineHexB = useCustom ? (munker.lineB || lineHexA)  : p.cHex;
+    const lineSp = Math.max(4, ((typeof munker !== 'undefined' ? munker.spacing : 10) + 6)) * DPR;
+    const lineTh = Math.max(1, (typeof munker !== 'undefined' ? munker.thick : 4) * 0.5) * DPR;
+    // Clip to a face polygon and rule parallel diagonal lines across it.
+    function hatchFace(pts, angleDeg, hex) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.closePath();
+      ctx.clip();
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const [x, y] of pts) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
+      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+      const diag = Math.hypot(maxX - minX, maxY - minY);
+      const rad = angleDeg * Math.PI / 180;
+      const dx = Math.cos(rad), dy = Math.sin(rad);      // line direction
+      const nx = -dy, ny = dx;                           // normal (offset axis)
+      ctx.strokeStyle = hex; ctx.lineWidth = lineTh; ctx.globalAlpha = 0.5;
+      for (let o = -diag; o <= diag; o += lineSp) {
+        const ox = cx + nx * o, oy = cy + ny * o;
+        ctx.beginPath();
+        ctx.moveTo(ox - dx * diag, oy - dy * diag);
+        ctx.lineTo(ox + dx * diag, oy + dy * diag);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     function drawCube(sx, sy, rgb, isLight) {
       const top   = tint(rgb, 0.18);
       const right = shade(rgb, 0.72);
       const left  = shade(rgb, 0.46);
       // top face
+      const topPts = [[sx, sy],[sx + tileW*0.5, sy + tileH*0.5],[sx, sy + tileH],[sx - tileW*0.5, sy + tileH*0.5]];
       ctx.fillStyle = rgba(...top);
       ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(sx + tileW*0.5, sy + tileH*0.5);
-      ctx.lineTo(sx, sy + tileH);
-      ctx.lineTo(sx - tileW*0.5, sy + tileH*0.5);
+      ctx.moveTo(topPts[0][0], topPts[0][1]);
+      for (let i = 1; i < 4; i++) ctx.lineTo(topPts[i][0], topPts[i][1]);
       ctx.closePath(); ctx.fill();
+      hatchFace(topPts, 30, lineHexA);
       // right face
+      const rightPts = [[sx + tileW*0.5, sy + tileH*0.5],[sx + tileW*0.5, sy + tileH*0.5 + cubeH],[sx, sy + tileH + cubeH],[sx, sy + tileH]];
       ctx.fillStyle = rgba(...right);
       ctx.beginPath();
-      ctx.moveTo(sx + tileW*0.5, sy + tileH*0.5);
-      ctx.lineTo(sx + tileW*0.5, sy + tileH*0.5 + cubeH);
-      ctx.lineTo(sx, sy + tileH + cubeH);
-      ctx.lineTo(sx, sy + tileH);
+      ctx.moveTo(rightPts[0][0], rightPts[0][1]);
+      for (let i = 1; i < 4; i++) ctx.lineTo(rightPts[i][0], rightPts[i][1]);
       ctx.closePath(); ctx.fill();
+      hatchFace(rightPts, 120, lineHexB);
       // left face
+      const leftPts = [[sx - tileW*0.5, sy + tileH*0.5],[sx, sy + tileH],[sx, sy + tileH + cubeH],[sx - tileW*0.5, sy + tileH*0.5 + cubeH]];
       ctx.fillStyle = rgba(...left);
       ctx.beginPath();
-      ctx.moveTo(sx - tileW*0.5, sy + tileH*0.5);
-      ctx.lineTo(sx, sy + tileH);
-      ctx.lineTo(sx, sy + tileH + cubeH);
-      ctx.lineTo(sx - tileW*0.5, sy + tileH*0.5 + cubeH);
+      ctx.moveTo(leftPts[0][0], leftPts[0][1]);
+      for (let i = 1; i < 4; i++) ctx.lineTo(leftPts[i][0], leftPts[i][1]);
       ctx.closePath(); ctx.fill();
+      hatchFace(leftPts, 90, lineHexA);
       // edge line
       ctx.strokeStyle = isLight ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.22)';
       ctx.lineWidth = DPR * 0.4;
@@ -3263,19 +3564,40 @@
 
   // ── QR Code Generator ─────────────────────────────────────────────────────
   let _qrSvgCache = '';
+  function _loadQrLib(){
+    // Try two CDNs with a timeout so a blocked/slow CDN can't hang the UI.
+    const urls = [
+      'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
+      'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js',
+    ];
+    return new Promise((resolve, reject) => {
+      let i = 0;
+      const tryNext = () => {
+        if (window.QRCode) return resolve();
+        if (i >= urls.length) return reject(new Error('QR library failed to load'));
+        const s = document.createElement('script');
+        const to = setTimeout(() => { s.onerror(); }, 6000);
+        s.src = urls[i++];
+        s.onload = () => { clearTimeout(to); window.QRCode ? resolve() : tryNext(); };
+        s.onerror = () => { clearTimeout(to); s.remove(); tryNext(); };
+        document.head.appendChild(s);
+      };
+      tryNext();
+    });
+  }
   async function generateQr(){
     const status = $('mhQrStatus');
     const canvas = $('mhQrCanvas');
     const info = $('mhQrInfo');
     if (!canvas) return;
-    if (!window.QRCode) {
-      if (status) status.textContent = 'Loading QR library…';
-      await new Promise((res,rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
-        s.onload = res; s.onerror = rej;
-        document.head.appendChild(s);
-      });
+    try {
+      if (!window.QRCode) {
+        if (status) status.textContent = 'Loading QR library…';
+        await _loadQrLib();
+      }
+    } catch(e) {
+      if (status) status.textContent = 'QR library failed to load (offline?). Retry.';
+      return;
     }
     const text = ($('mhQrInput')?.value || 'https://munkerhex.com').trim() || 'https://munkerhex.com';
     const style = $('mhQrStyle')?.value || 'palette';
@@ -3351,12 +3673,24 @@
       document.head.appendChild(s);
     });
   }
+  // gif.js loads its worker from a cross-origin CDN, which browsers silently
+  // block as a Worker (the #1 reason "export GIF does nothing"). Fetch the
+  // worker source once and hand gif.js a same-origin blob URL instead.
+  let _mhGifWorkerUrl = null;
+  async function _mhGifWorker(){
+    if (_mhGifWorkerUrl) return _mhGifWorkerUrl;
+    const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
+    if (!res.ok) throw new Error('gif worker fetch ' + res.status);
+    _mhGifWorkerUrl = URL.createObjectURL(new Blob([await res.text()], { type: 'application/javascript' }));
+    return _mhGifWorkerUrl;
+  }
   async function exportGif(){
     const status = $('mhExportStatus');
     try {
       if (status) status.textContent = 'Loading export libraries…';
       if (!window.GIF) await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js');
       if (!window.html2canvas) await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+      const workerUrl = await _mhGifWorker();
       const stage = $('mhTargetStage');
       if (!stage) throw new Error('Stage element not found');
       const payload = exportPayload();
@@ -3368,8 +3702,9 @@
         quality: 8,
         width: stage.offsetWidth || 390,
         height: stage.offsetHeight || 430,
-        workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',
+        workerScript: workerUrl,
       });
+      gif.on('abort', () => { if (status) status.textContent = 'GIF encoding aborted.'; });
       for (let i = 0; i < frameCount; i++) {
         await new Promise(r => setTimeout(r, frameDelay));
         const canvas = await html2canvas(stage, {
@@ -3513,6 +3848,22 @@
       if (qrPanel && qrPanel.classList.contains('active') && typeof generateQr === 'function') generateQr();
     }, 300);
     return p;
+  }
+  // Coalesce the several config-input paths (inline listener, late-sync binder,
+  // and the patched renderAll) into ONE render per animation frame. Without
+  // this a single slider drag fired applyRenderPalette 2–3× per event, and each
+  // call re-runs buildPageHexBg — the repaint churn was the "renders for a
+  // split second then reverts" flash on the background.
+  let _arpPending = false;
+  function scheduleRenderPalette(){
+    if (_arpPending) return;
+    _arpPending = true;
+    requestAnimationFrame(() => {
+      _arpPending = false;
+      syncMunker();
+      applyRenderPalette();
+      if ($('mhGame') && $('mhGame').value !== 'website') drawGame($('mhGame').value);
+    });
   }
   function seededRand(seedText){
     let seed = 0;
@@ -3745,21 +4096,28 @@
   function buildSplashClusters() {
     const p = getWheelPalette();
     const pal = [p.aHex, p.bHex, p.cHex, ...p.colors];
-    const sz = 34, hexH = sz / 0.866, rowStep = hexH * 0.75, colStep = sz;
+    // Use the SAME lattice as buildPageHexBg() so tab cubes are a seamless
+    // cut-out of the field beneath (no scale jump / "Lego" look). Cards have
+    // overflow:hidden, so field cubes are clipped to the card box.
+    const sz = 80, hexH = sz / 0.866, rowStep = hexH * 0.75 + 2, colStep = sz + 2;
+    const gCols = Math.ceil(window.innerWidth / colStep) + 2; // match field colour indexing
     document.querySelectorAll('.mh-splash-cluster').forEach(cluster => {
       const card = cluster.closest('.mh-splash-card');
       if (!card) return;
-      const w = card.clientWidth || 320, h = card.clientHeight || 168;
-      const cols = Math.ceil(w / colStep) + 2;
-      const rows = Math.ceil(h / rowStep) + 2;
+      const rect = card.getBoundingClientRect(); // viewport coords = fixed field coords
+      const r0 = Math.max(0, Math.floor(rect.top / rowStep) - 1);
+      const r1 = Math.floor(rect.bottom / rowStep) + 1;
       let html = '';
-      for (let r = 0; r < rows; r++) {
+      for (let r = r0; r <= r1; r++) {
         const off = r % 2 ? colStep * 0.5 : 0;
-        for (let c = 0; c < cols; c++) {
-          const delay = (((r + c) * 0.05) % 1.2).toFixed(2);
-          const left = (c * colStep + off - colStep).toFixed(0);
-          const top = (r * rowStep - rowStep).toFixed(0);
-          html += `<div class="mh-spc-cube" style="left:${left}px;top:${top}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};--spc-delay:${delay}s"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div>`;
+        const c0 = Math.floor((rect.left - off) / colStep) - 1;
+        const c1 = Math.ceil((rect.right - off) / colStep) + 1;
+        for (let c = c0; c <= c1; c++) {
+          const gx = c * colStep + off, gy = r * rowStep;         // global field position
+          const left = (gx - rect.left).toFixed(0), top = (gy - rect.top).toFixed(0); // local to card
+          const delay = (((r + c) * 0.05 % 1.2 + 1.2) % 1.2).toFixed(2);
+          const ci = (((r * gCols + c) % pal.length) + pal.length) % pal.length;
+          html += `<div class="mh-spc-cube" style="left:${left}px;top:${top}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[ci]};--spc-delay:${delay}s"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div>`;
         }
       }
       cluster.innerHTML = html;
@@ -4062,7 +4420,7 @@
     drawGame(kind);
   }
   ['munkerMode','munkerSpacing','munkerThick','munkerOpacity','munkerSpeed','hexIn','inH','inT','cfgY','cfgM','cfgC','cfgRot','cfgChroma','centreW','cubeSize','cubeGap','cfgSteps'].forEach(id => {
-    const el=$(id); if(el) el.addEventListener('input', () => { syncMunker(); applyRenderPalette(); if ($('mhGame').value !== 'website') drawGame($('mhGame').value); });
+    const el=$(id); if(el) el.addEventListener('input', scheduleRenderPalette);
   });
   document.querySelectorAll('#centreModes button').forEach(btn => btn.addEventListener('click', () => setTimeout(applyRenderPalette, 0)));
   ['mhUnifiedMode','mhUnifiedPattern','mhAutoAnimate'].forEach(id => {
@@ -4123,11 +4481,7 @@
       const el = $(id);
       if (!el) return;
       const ev = el.tagName === 'SELECT' ? 'change' : 'input';
-      el.addEventListener(ev, () => setTimeout(() => {
-        syncMunker();
-        applyRenderPalette();
-        if ($('mhGame').value !== 'website') drawGame($('mhGame').value);
-      }, 0));
+      el.addEventListener(ev, scheduleRenderPalette);
     });
   }
   setTimeout(() => {
@@ -4140,7 +4494,7 @@
     const animate = $('munkerAnimate'); if(animate) animate.value = 'diag';
     if (typeof renderAll === 'function' && !renderAll.__mhPatched) {
       const originalRenderAll = renderAll;
-      renderAll = function(){ const result = originalRenderAll.apply(this, arguments); setTimeout(() => { syncMunker(); applyRenderPalette(); }, 0); return result; };
+      renderAll = function(){ const result = originalRenderAll.apply(this, arguments); scheduleRenderPalette(); return result; };
       renderAll.__mhPatched = true;
     }
     syncLineThickness($('mhLineThickness') ? $('mhLineThickness').value : 5, false);
@@ -4212,7 +4566,7 @@
     if (backBtn) backBtn.addEventListener('click', backToSplash);
 
     // ── Mode toggle buttons ────────────────────────────────────────────────
-    [['mhGridBtn','mh-grid-over'],['mhShadowBtn','mh-shadows'],['mhNeonBtn','mh-neon']].forEach(([id, cls]) => {
+    [['mhGridBtn','mh-grid-over'],['mhGraphBtn','mh-graph-paper'],['mhShadowBtn','mh-shadows'],['mhNeonBtn','mh-neon']].forEach(([id, cls]) => {
       const btn = document.getElementById(id);
       if (!btn) return;
       btn.addEventListener('click', () => {
@@ -4277,9 +4631,17 @@
 })();
 </script>
 
-<header>
-  <h1>Tonality</h1>
-  <span class="sub">CMY palette · additive (RGB-screen) complement studio</span>
+<header class="mh-brand-header">
+  <span class="mh-brand-mark" aria-hidden="true">
+    <svg viewBox="0 0 34 34" width="30" height="30" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="17,2 32,10 32,24 17,32 2,24 2,10" fill="var(--mh-a,#ffd24a)" opacity=".95"/>
+      <polygon points="17,2 32,10 17,18 2,10" fill="#fff" opacity=".55"/>
+      <polygon points="32,10 32,24 17,32 17,18" fill="var(--mh-b,#0000ff)" opacity=".9"/>
+      <polygon points="2,10 17,18 17,32 2,24" fill="var(--mh-c,#00ffff)" opacity=".85"/>
+    </svg>
+  </span>
+  <h1 class="mh-brand-word">HEXFIELD</h1>
+  <span class="sub">isometric palette · pattern · type engine</span>
 </header>
 
 <main>
@@ -4338,7 +4700,14 @@
             <option value="B">Lines = B hue</option>
             <option value="AB">Alternating A / B</option>
             <option value="comp">Lines = complement</option>
+            <option value="custom">Custom colours →</option>
           </select>
+        </label>
+        <label class="field" title="Custom line colours (used when Pattern = Custom). Two colours alternate when both are set differently.">Line colours
+          <span style="display:inline-flex;gap:5px;flex:1">
+            <input type="color" id="munkerLineA" value="#ffffff" style="flex:1;min-width:0;height:30px;padding:0;border:none;border-radius:5px;background:none;cursor:pointer">
+            <input type="color" id="munkerLineB" value="#000000" style="flex:1;min-width:0;height:30px;padding:0;border:none;border-radius:5px;background:none;cursor:pointer">
+          </span>
         </label>
         <label class="field" title="Gap between stripes. Set to 0 with an alternating pattern (B/W or A/B) for the classic Munker full-coverage illusion.">Spacing <input type="range" id="munkerSpacing" min="0" max="40" value="10"><span class="val" id="munkerSpacingv">10</span></label>
         <label class="field">Thickness <input type="range" id="munkerThick" min="1" max="20" value="5"><span class="val" id="munkerThickv">5</span></label>
@@ -4572,8 +4941,8 @@
           <label class="field" title="Ambient wash — blends the time-of-day atmosphere colour into every cell, regardless of position. Sun-setting tints everything orange.">Ambient <input type="range" id="cubeAmbient" min="0" max="100" value="0"><span class="val" id="cubeAmbientv">0</span></label>
           <label class="field" title="Lighting strength — atmosphere acts as a true light source. Combines multiplicative wash + additive sun + tone-shift baseline so palette tonality is recalibrated by time of day.">Lighting <input type="range" id="cubeLighting" min="0" max="100" value="0"><span class="val" id="cubeLightingv">0</span></label>
           <label class="field three-d-only" style="display:none" title="Explode factor — only used in Exploded 3D view. Spreads slices apart along Z.">Explode <input type="range" id="cubeExplode" min="100" max="500" value="200"><span class="val" id="cubeExplodev">200</span></label>
-          <label class="field" title="Lower bound of tone range. Clips dark cells out so the bottom-black layer doesn't block the gradient.">Tone min <input type="range" id="cubeToneMin" min="0" max="50" value="25"><span class="val" id="cubeToneMinv">25</span></label>
-          <label class="field" title="Upper bound of tone range. Clips light cells out so the top-white layer doesn't block the gradient.">Tone max <input type="range" id="cubeToneMax" min="50" max="100" value="75"><span class="val" id="cubeToneMaxv">75</span></label>
+          <label class="field" title="Lower bound of tone range. Clips dark cells out so the bottom-black layer doesn't block the gradient.">Tone min <input type="range" id="cubeToneMin" min="0" max="50" value="12"><span class="val" id="cubeToneMinv">12</span></label>
+          <label class="field" title="Upper bound of tone range. Clips light cells out so the top-white layer doesn't block the gradient.">Tone max <input type="range" id="cubeToneMax" min="50" max="100" value="88"><span class="val" id="cubeToneMaxv">88</span></label>
           <label class="field" title="Perspective effects — bottom row stays vivid (foreground), top desaturates (atmospheric haze). Reds also shift toward CYAN-neutral at extreme depth (top + back) — cyan is the bright atmospheric pivot, distant warms drift toward it. Curve sharpness ties to time-of-day (noon gentle, dusk sharp).">Perspective
             <select id="cubePerspective" style="flex:1">
               <option value="off" selected>Off</option>
@@ -5085,7 +5454,7 @@ function currentCentre() {
 //=========================================================================
 const munker = {
   mode: 'off', pattern: 'white', spacing: 10, thick: 5, opacity: 100,
-  animate: 'off', speed: 4,
+  animate: 'off', speed: 4, lineA: '#ffffff', lineB: '#000000',
 };
 
 // Build a Munker repeating-linear-gradient at the given CSS gradient angle.
@@ -5106,6 +5475,7 @@ function buildMunkerPattern(angleDeg) {
     case 'B':     c1 = bHex;      c2 = bHex;      break;
     case 'AB':    c1 = aHex;      c2 = bHex;      break;
     case 'comp':  c1 = compHex;   c2 = compHex;   break;
+    case 'custom': c1 = munker.lineA || '#ffffff'; c2 = munker.lineB || munker.lineA || '#ffffff'; break;
     default:      c1 = '#ffffff'; c2 = '#ffffff';
   }
   const op = munker.opacity / 100;
@@ -5152,6 +5522,11 @@ const HEX_FACE_MUNKER_ANGLE = {
   right: 120,  // stripes slope ↗, parallel to right rhombus's depth-edge
 };
 
+function _refreshChessIfActive() {
+  if (window.renderChessBoard && document.getElementById('mhBuilderChess')?.classList.contains('active')) {
+    window.renderChessBoard();
+  }
+}
 function applyMunker() {
   const body = document.body;
   if (munker.mode === 'off') {
@@ -5161,6 +5536,7 @@ function applyMunker() {
     body.classList.remove('munker-animate');
     // Refresh hex view to clear per-face patterns
     if (cubeState.viewMode === 'hex') updateCubeColors();
+    _refreshChessIfActive();
     return;
   }
   body.classList.add('munker-on');
@@ -5186,6 +5562,7 @@ function applyMunker() {
 
   // Refresh iso hex faces with new per-face patterns.
   if (cubeState.viewMode === 'hex') updateCubeColors();
+  _refreshChessIfActive();
 }
 
 //=========================================================================
@@ -5231,8 +5608,8 @@ const cubeState = {
   lighting: 0,       // 0–100% atmosphere-as-light (multiply + additive + tone shift)
   explode: 2.0,      // multiplier for Z spacing in 'exploded' view
   scrubZ: 0,         // current Z slice (used by both scrub + hex views)
-  toneMin: 25,
-  toneMax: 75,
+  toneMin: 12,
+  toneMax: 88,
   layerReveal: 'cycle', // 'cycle' | 'step' | 'drill' (used by hex view)
   pointillism: false,    // Seurat: structured 6-dot grid using neighbour colors
   speckles: false,       // Van Gogh: random ambient complement-color noise, denser in darks
@@ -5262,8 +5639,8 @@ function cubeStepCount() {
 // Defaults 25..75 so the topmost and bottommost rows aren't blocking the
 // gradient with near-white / near-black bands.
 function clippedTone(yi, N) {
-  const tmin = cubeState.toneMin ?? 20;
-  const tmax = cubeState.toneMax ?? 80;
+  const tmin = cubeState.toneMin ?? 12;
+  const tmax = cubeState.toneMax ?? 88;
   if (N <= 1) return (tmin + tmax) / 2;
   return tmin + (yi / (N - 1)) * (tmax - tmin);
 }
@@ -6786,6 +7163,20 @@ document.getElementById('munkerMode').addEventListener('change', e => {
 });
 document.getElementById('munkerPattern').addEventListener('change', e => {
   munker.pattern = e.target.value; applyMunker();
+});
+['munkerLineA','munkerLineB'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', e => {
+    munker[id === 'munkerLineA' ? 'lineA' : 'lineB'] = e.target.value;
+    // Picking a custom colour implies custom pattern mode.
+    if (munker.pattern !== 'custom') {
+      munker.pattern = 'custom';
+      const sel = document.getElementById('munkerPattern');
+      if (sel) sel.value = 'custom';
+    }
+    applyMunker();
+  });
 });
 function bindMunkerRange(id, valId, prop) {
   const el = document.getElementById(id);
