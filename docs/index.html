@@ -1503,6 +1503,12 @@
     box-shadow:0 0 0 2px var(--mh-a,#ffff00);
   }
   .mh-ls-grid { position:relative; overflow:hidden; }
+  .mh-ls-tag {
+    position:absolute; left:3px; bottom:2px; z-index:6; pointer-events:none;
+    font:7px 'Space Mono',monospace; letter-spacing:.04em;
+    color:rgba(255,255,255,.55); text-shadow:0 1px 3px rgba(0,0,0,.9);
+    white-space:nowrap;
+  }
   .mh-ls-cube {
     position:absolute;
     width:var(--mh-ls-sz,8px);
@@ -3298,7 +3304,7 @@
       id:'gen-'+seed,
       angles,
       budget:4+Math.floor(rng()*4),      // max segments per glyph (4–7)
-      weight:0.10+rng()*0.12,            // stroke width as fraction of size
+      weight:0.16+rng()*0.10,            // stroke width ≥~3px at mask size so downsampling keeps it
       jitter:rng()*0.06,                 // endpoint offset fraction
       slant:(rng()-.5)*0.3,              // horizontal shear
       jit,
@@ -3665,10 +3671,10 @@
       // True-complementary pair calibrated from the user's colour wheel:
       // letter cells sit at the exact 180° complement of the tile field, both
       // at a saturation/lightness derived from the wheel tone.
-      const letterL=Math.max(24,Math.min(46,baseTone*0.45+16));
+      const letterL=Math.max(36,Math.min(46,baseTone*0.45+20));
       const bgDark=`hsl(${schemeHue},38%,7%)`;       // deep tinted stage, reads as "not black"
-      const letterGray=`hsl(${compHue},62%,${letterL.toFixed(0)}%)`;  // letter = true complement
-      const bgGray=`hsl(${schemeHue},44%,${(letterL*0.45).toFixed(0)}%)`; // tile field = scheme hue
+      const letterGray=`hsl(${compHue},62%,${letterL.toFixed(0)}%)`;  // letter = true complement, bright
+      const bgGray=`hsl(${schemeHue},44%,12%)`;      // tile field = scheme hue, dim
 
       const wrap=document.createElement('div');
       wrap.className='mh-ls-grid-wrap';
@@ -3705,6 +3711,19 @@
       // Record/dedup this seed globally (mirrors background syncSimState).
       _recordLogoSeed(panelSeed, {text, font:fontName, rule:v.rule, hue:Math.round(schemeHue)});
 
+      // Area-sample the letter mask into the cell grid: a cell is a letter cell
+      // if ≥20% of its pixel block is letter — thin generated-font strokes
+      // survive the 60×30 → 16×8 downsample instead of falling between points.
+      const cellLetter=new Uint8Array(COLS*ROWS);
+      for(let row=0;row<ROWS;row++) for(let col=0;col<COLS;col++){
+        const x0=Math.floor(col/COLS*W), x1=Math.floor((col+1)/COLS*W);
+        const y0=Math.floor(row/ROWS*H), y1=Math.floor((row+1)/ROWS*H);
+        let hit=0, tot=0;
+        for(let y=y0;y<Math.max(y0+1,y1);y++) for(let x=x0;x<Math.max(x0+1,x1);x++){ tot++; if(mask[y*W+x]) hit++; }
+        cellLetter[row*COLS+col]=(hit/Math.max(1,tot))>=0.20 ? 1 : 0;
+      }
+      sim._cellLetter=cellLetter;
+
       // Build isometric cube cell grid
       const cells=[];
       const state=new Float32Array(COLS*ROWS*3); // [h,s,l] per cell
@@ -3716,10 +3735,10 @@
           cell.className='mh-ls-cube';
           cell.style.left=(col*colStep+offsetX).toFixed(1)+'px';
           cell.style.top=yPx.toFixed(1)+'px';
-          const mx=Math.floor(col/COLS*W), my=Math.floor(row/ROWS*H);
-          const inLetter=mask[my*W+mx]===1;
-          // Letter cells: neutral gray so Munker stripes dominate perceived color
-          // Background cells: dark tinted so letter shape reads structurally
+          const inLetter=cellLetter[row*COLS+col]===1;
+          // Letter cells: bright complement. Field cells: dim scheme hue.
+          // Lightness carries the letterform so it reads even through the
+          // B&W paywall filter.
           cell.style.setProperty('--pxc', inLetter ? letterGray : bgGray);
           const fT=document.createElement('div'); fT.className='mh-ls-f mh-ls-t';
           const fR=document.createElement('div'); fR.className='mh-ls-f mh-ls-r';
@@ -3739,12 +3758,11 @@
       sim._COLS=COLS; sim._ROWS=ROWS; sim._W=W; sim._H=H; sim._wrap=wrap;
       // Persistent fill: once a cell has been painted by a trail it never fades
       // back to dark — it settles at a floor lightness so the panel fills up.
+      // Letter cells rest bright (58), field cells dim (18): the letter reads
+      // by lightness alone.
       sim._visited=new Uint8Array(COLS*ROWS);
       sim._floorL=new Float32Array(COLS*ROWS);
-      for(let row=0;row<ROWS;row++) for(let col=0;col<COLS;col++){
-        const mx=Math.floor(col/COLS*W), my=Math.floor(row/ROWS*H);
-        sim._floorL[row*COLS+col]=mask[my*W+mx]===1 ? Math.min(56,letterL+10) : Math.max(16,letterL*0.5);
-      }
+      for(let i=0;i<COLS*ROWS;i++) sim._floorL[i]=cellLetter[i] ? 58 : 18;
 
       // ── Munker illusion stripe overlay ──────────────────────────────────────
       // Two near-complement hue bands at ~38% opacity via screen blend.
@@ -3766,6 +3784,15 @@
         transparent ${sw+gap+sw}px,
         transparent ${period}px)`;
       cubeGrid.appendChild(munker);
+
+      // Caption: which rule + font this tile is experimenting with
+      const tag=document.createElement('span');
+      tag.className='mh-ls-tag';
+      const fShort=fontName.startsWith('gen-')
+        ? 'gen-'+fontName.slice(-3)
+        : fontName.replace(/^'/,'').replace(/[',].*$/,'').slice(0,9);
+      tag.textContent=v.rule+' · '+fShort;
+      wrap.appendChild(tag);
 
       wrap.addEventListener('click',()=>{
         document.querySelectorAll('.mh-ls-grid-wrap').forEach(w=>w.classList.remove('mh-ls-sel'));
@@ -3802,12 +3829,32 @@
         if(sim.expanded && sim._wrap && !sim._wrap.classList.contains('mh-ls-sheen')){
           sim._wrap.classList.add('mh-ls-sheen');
         }
-        const {_cells:cells,_state:st,_COLS:C,_ROWS:R,_W:SW,_H:SH,_bgGray,_letterGray,_mask:smask,_visited:vis,_floorL:flr}=sim;
+        const {_cells:cells,_state:st,_COLS:C,_ROWS:R,_W:SW,_H:SH,_bgGray,_letterGray,_cellLetter:cl,_visited:vis,_floorL:flr}=sim;
+        // "Develop" end-state: once the balls have painted most of the letter
+        // interior, the panel resolves — letter cells lock to a solid bright
+        // complement, the field dims. Noise → trails → readable letter.
+        if(!sim._developed && sim.expanded){
+          let letterPx=0; for(let i=0;i<sim.mask.length;i++) letterPx+=sim.mask[i];
+          if(sim.innerVisited.size/Math.max(1,letterPx)>0.55){
+            sim._developed=true;
+            for(let i=0;i<cl.length;i++) flr[i]=cl[i]?64:14;
+          }
+        }
         // Fade cells toward their visited floor — painted cells never go dark,
         // so trails accumulate and the panel fills edge-to-edge.
         for(let i=0;i<st.length;i+=3){
           const fl=vis[i/3|0] ? flr[i/3|0] : 0;
           st[i+2]=fl+(st[i+2]-fl)*0.90;
+        }
+        // Developed panels: pin letter-cell hue to the complement so the
+        // letterform stays solid under continuing field activity.
+        if(sim._developed){
+          for(let i=0;i<cl.length;i++) if(cl[i]){
+            const si=i*3;
+            st[si]=sim._compHue; st[si+1]=85;
+            if(st[si+2]<flr[i]) st[si+2]=flr[i];
+            vis[i]=1;
+          }
         }
         // Paint trail positions
         const tail=sim.trails.slice(-sim.balls.length*40);
@@ -3837,8 +3884,7 @@
         for(let i=0;i<cells.length;i++){
           const si=i*3, l=st[si+2];
           if(l<3){
-            const mx=Math.floor((i%C)/C*SW), my=Math.floor((i/C|0)/R*SH);
-            cells[i].style.setProperty('--pxc', smask[my*SW+mx]===1 ? _letterGray : _bgGray);
+            cells[i].style.setProperty('--pxc', cl[i]===1 ? _letterGray : _bgGray);
           } else {
             cells[i].style.setProperty('--pxc',`hsl(${st[si]|0},${st[si+1]|0}%,${l|0}%)`);
           }
