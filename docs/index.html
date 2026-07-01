@@ -3206,33 +3206,9 @@
       // 2D flat mark SVG
       var flat2dSvg='<svg xmlns="http://www.w3.org/2000/svg" width="'+flat2dW+'" height="'+flat2dH+'">'+flat2d+'</svg>';
 
-      // ── Classic-brand style lockups (user's text + wheel palette) ──
-      // Stripes = 8-bar scanline wordmark (IBM spirit); Script = flowing
-      // italic on a colour disc with a wave (cola spirit); Arches = double
-      // golden arch over dark (McD spirit). All palette-calibrated, no
-      // trademark colours or marks — the style grammar applied to YOUR brand.
-      var escName = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      var stripesSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="210" height="72">'
-        +'<defs><pattern id="mhStripePat" patternUnits="userSpaceOnUse" width="4" height="9">'
-        +'<rect width="4" height="6" fill="'+p.aHex+'"/></pattern></defs>'
-        +'<text x="105" y="50" text-anchor="middle" font-family="\'Space Mono\',monospace" font-weight="700" font-size="'+(escName.length>8?26:36)+'" fill="url(#mhStripePat)">'+escName+'</text>'
-        +'</svg>';
-      var scriptSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="210" height="72">'
-        +'<rect x="4" y="6" width="202" height="60" rx="30" fill="'+p.bHex+'"/>'
-        +'<text x="105" y="42" text-anchor="middle" font-family="\'Brush Script MT\',\'Segoe Script\',cursive" font-style="italic" font-size="'+(escName.length>8?24:30)+'" fill="#fff">'+escName+'</text>'
-        +'<path d="M40,52 Q80,60 105,52 Q140,44 172,54" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
-        +'</svg>';
-      var archesSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="210" height="72">'
-        +'<path d="M62,62 Q80,6 98,62 M98,62 Q116,6 134,62" stroke="'+p.aHex+'" stroke-width="13" fill="none" stroke-linecap="round"/>'
-        +'<text x="105" y="70" text-anchor="middle" font-family="\'Space Mono\',monospace" font-weight="700" font-size="10" letter-spacing="3" fill="'+p.cHex+'">'+escName+'</text>'
-        +'</svg>';
-
       preview.innerHTML = variants.map(function(v){
         return _variantCard(v.label, _brandCubeSvg(CW, p.aHex, p.cHex, p.bHex, v.top, v.right, v.left));
-      }).join('') + _variantCard('2D flat', flat2dSvg)
-        + _variantCard('Stripes · 8-bar', stripesSvg)
-        + _variantCard('Script · wave', scriptSvg)
-        + _variantCard('Arches · golden', archesSvg);
+      }).join('') + _variantCard('2D flat', flat2dSvg);
     }
     var regen = $('mhLogoRegenBtn');
     if (regen && !regen._mhWired) {
@@ -3284,9 +3260,9 @@
     {rule:'chaos',   N:14, spd:5,   hOff:300, font:2},
     {rule:'spiral',  N:8,  spd:4,   hOff:330, font:2},
     {rule:'like-rep',N:12, spd:5.5, hOff:20,  font:3},
-    {rule:'excl',    N:14, spd:4.5, hOff:50,  font:3},
-    {rule:'seek',    N:10, spd:6.5, hOff:80,  font:3},
-    {rule:'no-rep',  N:12, spd:4,   hOff:110, font:3},
+    {rule:'excl',    N:14, spd:4.5, hOff:50,  font:3, style:'stripes'},
+    {rule:'seek',    N:10, spd:6.5, hOff:80,  font:3, style:'script'},
+    {rule:'no-rep',  N:12, spd:4,   hOff:110, font:3, style:'arches'},
   ];
   function _drawLEDBall(ctx,bx,by,hue,inside,tick){
     const S=3, cx=Math.round(bx), cy=Math.round(by);
@@ -3414,6 +3390,46 @@
       ctx.font=`700 ${fs}px ${font||"'Space Mono',monospace"}`;
       ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(ch, W/2, H/2);
+    }
+    const d=ctx.getImageData(0,0,W,H).data;
+    const mask=new Uint8Array(W*H);
+    for(let i=0;i<W*H;i++) mask[i]=d[i*4]<128?1:0;
+    return mask;
+  }
+  // ── Classic-brand style masks: the billiards engine renders these exactly
+  // like letters — stripes (IBM-spirit 8-bar glyph), script (cursive letter
+  // + wave), arches (double golden arch). A mask is a mask; everything
+  // downstream (develop, complements, inner sim, NFT claims) just works.
+  function _buildStyleMask(style, text, W, H, font){
+    if(style==='stripes'){
+      const mask=_buildLetterMask(text,W,H,font);
+      // Slice the glyph into horizontal bars aligned to the 8 cube-cell rows
+      // (alternate rows off) so the slicing survives the cell downsample
+      for(let y=0;y<H;y++) if(Math.floor(y/(H/8))%2===1) for(let x=0;x<W;x++) mask[y*W+x]=0;
+      return mask;
+    }
+    const c=document.createElement('canvas'); c.width=W; c.height=H;
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#000'; ctx.fillStyle='#000';
+    if(style==='script'){
+      const ch=(text||'H').charAt(0);
+      ctx.font=`italic 700 ${Math.round(H*0.66)}px 'Brush Script MT','Segoe Script',cursive`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(ch, W/2, H*0.42);
+      ctx.lineWidth=2; ctx.lineCap='round';
+      ctx.beginPath();
+      for(let x=8;x<=W-8;x++){
+        const y=H*0.82+Math.sin((x-8)/(W-16)*Math.PI*2)*H*0.08;
+        x===8?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    } else if(style==='arches'){
+      ctx.lineWidth=5; ctx.lineCap='round';
+      ctx.beginPath();
+      ctx.moveTo(W*0.22,H*0.88); ctx.quadraticCurveTo(W*0.36,-H*0.25,W*0.5,H*0.88);
+      ctx.moveTo(W*0.5,H*0.88);  ctx.quadraticCurveTo(W*0.64,-H*0.25,W*0.78,H*0.88);
+      ctx.stroke();
     }
     const d=ctx.getImageData(0,0,W,H).data;
     const mask=new Uint8Array(W*H);
@@ -3766,7 +3782,7 @@
       // from the panel seed: 16 unique letterforms per generation.
       const font=(fontKey==='gen') ? _genFont(panelSeed) : fontKey;
       const fontName=(fontKey==='gen') ? font.id : fontKey;
-      const mask=_buildLetterMask(text,W,H,font);
+      const mask=v.style ? _buildStyleMask(v.style,text,W,H,font) : _buildLetterMask(text,W,H,font);
       const sim=new BilliardsLogoSim(W,H,mask,v.N,v.spd,(schemeHue+vi*15)%360,panelSeed);
       sim._seed=panelSeed;
       sim._rule=v.rule; sim._v=v; sim._fontName=fontName;
@@ -3857,7 +3873,7 @@
       const fShort=fontName.startsWith('gen-')
         ? 'gen-'+fontName.slice(-3)
         : fontName.replace(/^'/,'').replace(/[',].*$/,'').slice(0,9);
-      tag.textContent=v.rule+' · '+fShort;
+      tag.textContent=v.style ? v.style+' · '+v.rule : v.rule+' · '+fShort;
       wrap.appendChild(tag);
 
       wrap.addEventListener('click',()=>{
