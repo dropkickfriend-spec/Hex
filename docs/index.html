@@ -10,8 +10,12 @@
      cross-visitor uniqueness. Leave blank to run fully local (sbClient()→null).
      These match SUPABASE_URL / SUPABASE_ANON_KEY in backend/.env.example. -->
 <script>
-  window.MH_SUPABASE_URL = window.MH_SUPABASE_URL || ''; // e.g. 'https://xxxx.supabase.co'
-  window.MH_SUPABASE_ANON_KEY = window.MH_SUPABASE_ANON_KEY || ''; // public anon key
+  window.MH_SUPABASE_URL = window.MH_SUPABASE_URL || 'https://uiobhojjgtsvyzuzqqiy.supabase.co';
+  window.MH_SUPABASE_ANON_KEY = window.MH_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpb2Job2pqZ3Rzdnl6dXpxcWl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MzI5MjcsImV4cCI6MjA5NjAwODkyN30.HlmWVmGPwhgryRGtqlMtawietmF0hfD31AA8jFYH-hs'; // public anon key (RLS-protected, safe to ship)
+  // $1 colour checkout — Supabase Edge Function (supabase/functions/stripe).
+  // Public URL, no secret here; the Stripe secret key lives only as a Supabase
+  // function secret (STRIPE_SECRET_KEY), set via the dashboard/CLI.
+  window.MH_BACKEND_URL = window.MH_BACKEND_URL || 'https://uiobhojjgtsvyzuzqqiy.supabase.co/functions/v1/stripe';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
 <script>
