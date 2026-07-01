@@ -1722,6 +1722,49 @@
     background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
     mix-blend-mode:multiply; }
   .mh-pxfont-screen canvas { display:block; width:100%; image-rendering:pixelated; border-radius:6px; }
+  /* While the landing (splash) is showing, hide the tool views behind it so the
+     vending machine is the first — and only — thing you see. */
+  #mhSplash:not(.mh-hidden) ~ main,
+  #mhSplash:not(.mh-hidden) ~ #mhRenderAdapter { display:none !important; }
+  /* ── Isometric $1 vending machine (splash centrepiece) ── */
+  .mh-ivend { display:flex; justify-content:center; margin:6px auto 26px; perspective:1500px; }
+  .mh-ivend-cab { position:relative; transform-style:preserve-3d; transform:rotateX(6deg) rotateY(-20deg);
+    filter:drop-shadow(0 26px 34px rgba(0,0,0,.6)); transition:transform .3s cubic-bezier(.2,.8,.3,1); }
+  .mh-ivend:hover .mh-ivend-cab { transform:rotateX(4deg) rotateY(-13deg); }
+  .mh-ivend-front { position:relative; width:300px; padding:14px 16px 22px; border-radius:10px;
+    background:linear-gradient(160deg,#2a2a38 0%,#14141e 55%,#20202c 100%);
+    box-shadow:inset 0 2px 0 rgba(255,255,255,.10), inset 0 0 0 2px #3a3a52; z-index:2; }
+  /* right + top depth faces = the isometric body */
+  .mh-ivend-side { position:absolute; top:6px; right:-26px; width:30px; height:calc(100% - 12px);
+    background:linear-gradient(#0c0c14,#05050a); transform:skewY(-34deg); border-radius:0 8px 8px 0;
+    box-shadow:inset -2px 0 0 rgba(0,0,0,.6); z-index:1; }
+  .mh-ivend-top { position:absolute; top:-24px; left:6px; width:calc(100% - 12px); height:28px;
+    background:linear-gradient(#40405a,#25253400); transform:skewX(-56deg); border-radius:8px 8px 0 0; z-index:1; }
+  .mh-ivend-brand { font:800 10px 'Space Mono',monospace; letter-spacing:.14em; color:var(--mh-a,#ffd24a);
+    text-align:center; margin-bottom:8px; text-shadow:0 0 8px var(--mh-a,#ffd24a); }
+  .mh-ivend-screenwrap { border-radius:7px; overflow:hidden; background:#04040a; padding:6px;
+    box-shadow:inset 0 0 16px rgba(0,0,0,.9), 0 0 0 2px #000; position:relative; }
+  .mh-ivend-screenwrap::after { content:''; position:absolute; inset:6px; pointer-events:none; border-radius:4px;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px); mix-blend-mode:multiply; }
+  .mh-ivend-screen { display:block; width:100%; image-rendering:pixelated; border-radius:4px; }
+  .mh-ivend-price { font:bold 11px 'Space Mono',monospace; letter-spacing:.06em; color:#e8e8f4; text-align:center; margin:10px 0 6px; }
+  .mh-ivend-slot { display:block; width:100%; padding:11px; border:none; border-radius:6px; cursor:pointer;
+    font:900 15px 'Space Mono',monospace; letter-spacing:.14em; color:#05050a;
+    background:linear-gradient(180deg,#ffe14a,#ff9500); box-shadow:0 4px 0 #b46b00,0 6px 16px rgba(255,150,0,.4);
+    transition:transform .1s, box-shadow .1s; }
+  .mh-ivend-slot:hover { filter:brightness(1.06); }
+  .mh-ivend-slot:active { transform:translateY(3px); box-shadow:0 1px 0 #b46b00; }
+  body.mh-colour-live .mh-ivend-slot { background:linear-gradient(180deg,#44ff88,#00cc55); box-shadow:0 4px 0 #008a3a,0 0 18px rgba(80,255,150,.4); }
+  body.mh-colour-live .mh-ivend-slot::after { content:' · TOP-UP'; }
+  .mh-ivend-btns { display:flex; gap:8px; margin-top:9px; }
+  .mh-ivend-btn { flex:1; padding:8px; border:none; border-radius:6px; cursor:pointer;
+    font:bold 10px 'Space Mono',monospace; letter-spacing:.08em; color:#dfe0ea;
+    background:rgba(255,255,255,.07); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); transition:background .12s,color .12s; }
+  .mh-ivend-btn:hover { background:rgba(255,255,255,.16); color:#fff; }
+  .mh-ivend-status { font:9px 'Space Mono',monospace; color:var(--mh-a,#ffd24a); text-align:center; margin-top:8px; min-height:12px; }
+  .mh-ivend-tray { margin-top:10px; height:16px; border-radius:4px; background:linear-gradient(#05050c,#101018);
+    box-shadow:inset 0 3px 8px rgba(0,0,0,.9); position:relative; overflow:hidden; }
+  .mh-ivend-tray-lip { position:absolute; left:8px; right:8px; bottom:4px; height:3px; border-radius:2px; background:rgba(255,255,255,.06); }
 </style>
 <div id="mhPageFold"></div>
 <!-- $1-for-colour: the whole site renders B&W until you pay; then 60s of colour -->
@@ -1733,6 +1776,25 @@
   <div class="mh-splash-eye">Hexfield · Palette Engine</div>
   <h1 class="mh-splash-h">What are we building today?</h1>
   <p class="mh-splash-sub">Palette-calibrated Munker optics for every medium. Pick a tool and the animated hex grid becomes your canvas.</p>
+  <!-- Isometric $1 vending machine — the centrepiece. B&W until you pay (60s colour). -->
+  <div class="mh-ivend" id="mhIVend">
+    <div class="mh-ivend-cab">
+      <div class="mh-ivend-side"></div>
+      <div class="mh-ivend-top"></div>
+      <div class="mh-ivend-front">
+        <div class="mh-ivend-brand">HEXFIELD · $1 GENERATOR</div>
+        <div class="mh-ivend-screenwrap"><canvas id="mhIVendScreen" class="mh-ivend-screen" width="240" height="132"></canvas></div>
+        <div class="mh-ivend-price">◎ $1 · 60 SECONDS OF COLOUR</div>
+        <button id="mhIVendPay" class="mh-ivend-slot">INSERT&nbsp;$1</button>
+        <div class="mh-ivend-btns">
+          <button id="mhIVendGif" class="mh-ivend-btn">⬇ GIF</button>
+          <button id="mhIVendPng" class="mh-ivend-btn">⬇ NFT / PNG</button>
+        </div>
+        <div id="mhIVendStatus" class="mh-ivend-status">Black &amp; white until you insert $1</div>
+        <div class="mh-ivend-tray"><span class="mh-ivend-tray-lip"></span></div>
+      </div>
+    </div>
+  </div>
   <div class="mh-splash-grid">
     <div class="mh-splash-card" data-dest="colour">
       <div class="mh-splash-cluster"></div>
@@ -8789,13 +8851,18 @@ renderPinned();
     _tick = setInterval(upd, 250);
   }
   function grantColour(sec){
-    var until = Date.now() + sec*1000;
+    // Continuous $1 top-ups: extend the current window instead of resetting it.
+    var now = Date.now();
+    var prev = parseInt(localStorage.getItem(KEY)||'0', 10);
+    var base = (prev && prev > now) ? prev : now;
+    var until = base + sec*1000;
     localStorage.setItem(KEY, String(until));
     // brief colour-burst flash, then the steady colour window
     body.classList.remove('mh-bw');
     void body.offsetWidth;
     runCountdown(until);
   }
+  window.mhGrantColour = grantColour;
   function startCheckout(){
     if(!BACKEND){ grantColour(COLOUR_SECONDS); return; }  // demo unlock without a backend
     var base = window.location.href.split('?')[0];
@@ -8825,6 +8892,71 @@ renderPinned();
     }
     if(badge) badge.addEventListener('click', startCheckout);
   });
+})();
+</script>
+<script>
+// ── Isometric $1 vending machine (splash centrepiece) ──────────────────────
+(function(){
+  function initIVend(){
+    var canvas = document.getElementById('mhIVendScreen');
+    var pay = document.getElementById('mhIVendPay');
+    var gifBtn = document.getElementById('mhIVendGif');
+    var pngBtn = document.getElementById('mhIVendPng');
+    var status = document.getElementById('mhIVendStatus');
+    if(!canvas) return;
+    var ctx = canvas.getContext('2d'), W = canvas.width, H = canvas.height;
+    var pal = (typeof getWheelPalette === 'function') ? getWheelPalette() : {hue:200, colors:[]};
+    function hueHex(h,s,l){ // hsl→css
+      return 'hsl('+((h%360+360)%360)+','+s+'%,'+l+'%)';
+    }
+    // Mini billiard: a few balls bounce, painting fading palette pixels — the
+    // "live generator" running on the machine's CRT.
+    var GX=40, GY=22, cw=W/GX, ch=H/GY;
+    var lit = new Float32Array(GX*GY), litH = new Float32Array(GX*GY);
+    var balls = Array.from({length:4}, function(_,i){
+      var a=Math.random()*6.28; return { x:Math.random()*GX, y:Math.random()*GY,
+        vx:Math.cos(a)*0.5, vy:Math.sin(a)*0.5, h:(pal.hue+i*70)%360 }; });
+    var raf=0;
+    function step(){
+      raf = requestAnimationFrame(step);
+      for(var i=0;i<lit.length;i++) lit[i]*=0.94;
+      for(var b of balls){
+        b.x+=b.vx; b.y+=b.vy; b.h=(b.h+1.3)%360;
+        if(b.x<0||b.x>=GX){ b.vx*=-1; b.x=Math.max(0,Math.min(GX-0.01,b.x)); }
+        if(b.y<0||b.y>=GY){ b.vy*=-1; b.y=Math.max(0,Math.min(GY-0.01,b.y)); }
+        var idx=(b.y|0)*GX+(b.x|0); lit[idx]=1; litH[idx]=b.h;
+      }
+      ctx.fillStyle='#04040a'; ctx.fillRect(0,0,W,H);
+      for(var gy=0;gy<GY;gy++) for(var gx=0;gx<GX;gx++){
+        var k=gy*GX+gx, v=lit[k]; if(v<0.04) continue;
+        ctx.fillStyle=hueHex(litH[k], 95, 30+v*45);
+        ctx.fillRect(Math.floor(gx*cw), Math.floor(gy*ch), Math.ceil(cw)+1, Math.ceil(ch)+1);
+      }
+    }
+    step();
+    function colourLive(){ return document.body.classList.contains('mh-colour-live'); }
+    if(pay) pay.addEventListener('click', function(){ var bd=document.getElementById('mhColourBadge'); if(bd) bd.click(); if(status) status.textContent = 'Colour unlocked — 60s!'; });
+    if(pngBtn) pngBtn.addEventListener('click', function(){
+      if(!colourLive()){ if(status) status.textContent='Insert $1 for a colour NFT.'; return; }
+      var a=document.createElement('a'); a.download='hexfield-'+Date.now()+'.png'; a.href=canvas.toDataURL('image/png'); a.click();
+      if(status) status.textContent='NFT/PNG saved!';
+    });
+    if(gifBtn) gifBtn.addEventListener('click', async function(){
+      if(!colourLive()){ if(status) status.textContent='Insert $1 for a colour GIF.'; return; }
+      if(status) status.textContent='Encoding GIF…';
+      try{
+        if(!window.GIF){ await new Promise(function(res,rej){ var s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+        var wres=await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
+        var wurl=URL.createObjectURL(new Blob([await wres.text()],{type:'application/javascript'}));
+        var gif=new GIF({workers:2,quality:8,width:W,height:H,workerScript:wurl});
+        for(var i=0;i<18;i++){ await new Promise(function(r){setTimeout(r,70);}); gif.addFrame(ctx,{copy:true,delay:70}); }
+        gif.on('finished',function(blob){ var a=document.createElement('a'); a.download='hexfield-'+Date.now()+'.gif'; a.href=URL.createObjectURL(blob); a.click(); if(status) status.textContent='GIF saved!'; });
+        gif.on('abort',function(){ if(status) status.textContent='GIF aborted.'; });
+        gif.render();
+      }catch(e){ if(status) status.textContent='GIF failed (offline?).'; }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initIVend); else initIVend();
 })();
 </script>
 </body>
