@@ -702,6 +702,9 @@
     margin: 12px;
     border-radius: 18px;
     padding: 14px;
+    /* Clear the suite-tab row (top row of #mhPageHexBg, hex height ~92px) so
+       the back-btn/mode-btns never sit under the fixed a11y tab proxies. */
+    padding-top: 104px;
     position: relative;
     z-index: 1;
   }
@@ -1071,7 +1074,7 @@
   }
   @keyframes mh-pan { from { transform: translate3d(-26px,-18px,0); } to { transform: translate3d(26px,18px,0); } }
   @media (max-width: 760px) {
-    .mh-render-adapter { margin: 8px; padding: 10px; }
+    .mh-render-adapter { margin: 8px; padding: 10px; padding-top: 100px; }
     .mh-target-stage { min-height: 430px; }
     .mh-block { grid-template-columns: 1fr; }
     .mh-cards { grid-template-columns: repeat(2, 1fr); }
@@ -1392,7 +1395,7 @@
   body.mh-shadows .mh-splash-h,
   body.mh-shadows .mh-splash-sub,
   body.mh-shadows .mh-splash-card { text-shadow:0 1px 6px rgba(0,0,0,.98),0 0 18px rgba(0,0,0,.8); }
-  .mh-mode-btns { display:inline-flex; gap:5px; margin-left:8px; vertical-align:middle; }
+  .mh-mode-btns { display:flex; flex-wrap:wrap; gap:5px; margin:0 0 10px; }
   .mh-mode-btn { background:rgba(255,255,255,.06); border:none; border-radius:8px; color:var(--ink-dim,#9090a8); font:10px 'Space Mono',monospace; letter-spacing:.06em; padding:6px 10px; min-height:0; cursor:pointer; transition:background .12s,color .12s; }
   .mh-mode-btn:hover { background:rgba(255,255,255,.12); color:var(--ink,#dddde8); }
   .mh-mode-btn.active { background:rgba(255,255,255,.14); color:var(--mh-a,#ffff00); box-shadow:0 0 8px var(--mh-a,#ffff00); }
@@ -2178,6 +2181,7 @@
     <div class="mh-render-toolbar" style="margin-top:4px;flex-wrap:wrap">
       <input id="mhLogoCategoryLogo" maxlength="40" value="" placeholder="Category  ·  e.g.  Tech · Design · Sport" style="flex:2" />
       <select id="mhLogoSimFont">
+        <option value="gen" selected>Generated · unique lines</option>
         <option value="'Silkscreen','Space Mono',monospace">Silkscreen · pixel</option>
         <option value="'Press Start 2P',monospace">Press Start · 8-bit</option>
         <option value="'VT323',monospace">VT323 · terminal</option>
@@ -3209,22 +3213,22 @@
   // 4 fonts × 4 rules = 16 combos
   const _lsFonts=["'Silkscreen','Space Mono',monospace","'Press Start 2P',monospace","'VT323',monospace","'Space Mono',monospace","Impact,display"];
   const _lsRules=[
-    {rule:'avoid',   N:4, spd:3.5, hOff:0,   font:0},
-    {rule:'flock',   N:5, spd:4,   hOff:30,  font:0},
-    {rule:'spiral',  N:4, spd:3,   hOff:60,  font:0},
-    {rule:'chaos',   N:5, spd:4,   hOff:90,  font:0},
-    {rule:'seek',    N:4, spd:3.5, hOff:120, font:1},
-    {rule:'avoid',   N:6, spd:4,   hOff:150, font:1},
-    {rule:'no-rep',  N:4, spd:3,   hOff:180, font:1},
-    {rule:'excl',    N:5, spd:4,   hOff:210, font:1},
-    {rule:'like-att',N:5, spd:3.5, hOff:240, font:2},
-    {rule:'flock',   N:4, spd:5,   hOff:270, font:2},
-    {rule:'chaos',   N:6, spd:3.5, hOff:300, font:2},
-    {rule:'spiral',  N:3, spd:2.5, hOff:330, font:2},
-    {rule:'like-rep',N:5, spd:4,   hOff:20,  font:3},
-    {rule:'excl',    N:7, spd:3,   hOff:50,  font:3},
-    {rule:'seek',    N:4, spd:5,   hOff:80,  font:3},
-    {rule:'no-rep',  N:6, spd:2.5, hOff:110, font:3},
+    {rule:'avoid',   N:10, spd:5,   hOff:0,   font:0},
+    {rule:'flock',   N:12, spd:5.5, hOff:30,  font:0},
+    {rule:'spiral',  N:10, spd:4.5, hOff:60,  font:0},
+    {rule:'chaos',   N:12, spd:5.5, hOff:90,  font:0},
+    {rule:'seek',    N:10, spd:5,   hOff:120, font:1},
+    {rule:'avoid',   N:14, spd:5.5, hOff:150, font:1},
+    {rule:'no-rep',  N:10, spd:4.5, hOff:180, font:1},
+    {rule:'excl',    N:12, spd:5.5, hOff:210, font:1},
+    {rule:'like-att',N:12, spd:5,   hOff:240, font:2},
+    {rule:'flock',   N:10, spd:6.5, hOff:270, font:2},
+    {rule:'chaos',   N:14, spd:5,   hOff:300, font:2},
+    {rule:'spiral',  N:8,  spd:4,   hOff:330, font:2},
+    {rule:'like-rep',N:12, spd:5.5, hOff:20,  font:3},
+    {rule:'excl',    N:14, spd:4.5, hOff:50,  font:3},
+    {rule:'seek',    N:10, spd:6.5, hOff:80,  font:3},
+    {rule:'no-rep',  N:12, spd:4,   hOff:110, font:3},
   ];
   function _drawLEDBall(ctx,bx,by,hue,inside,tick){
     const S=3, cx=Math.round(bx), cy=Math.round(by);
@@ -3237,16 +3241,122 @@
       ctx.fillRect(cx-1+c, cy-1+r, 1, 1);
     }
   }
+  // ── Generated fonts: constrained line grammar ─────────────────────────────
+  // Each glyph is a segment skeleton on a unit box. A generated "font" is a
+  // constraint set: only N allowed line orientations, a stroke budget, a weight,
+  // a slant, jitter. Same skeleton + different constraints = unique letterforms.
+  const _glyphSegs={
+    A:[[0,1,.5,0],[.5,0,1,1],[.2,.62,.8,.62]],
+    B:[[0,0,0,1],[0,0,.85,.25],[.85,.25,0,.5],[0,.5,.9,.75],[.9,.75,0,1]],
+    C:[[1,.15,.5,0],[.5,0,0,.3],[0,.3,0,.7],[0,.7,.5,1],[.5,1,1,.85]],
+    D:[[0,0,0,1],[0,0,.7,.15],[.7,.15,1,.5],[1,.5,.7,.85],[.7,.85,0,1]],
+    E:[[0,0,0,1],[0,0,1,0],[0,.5,.75,.5],[0,1,1,1]],
+    F:[[0,0,0,1],[0,0,1,0],[0,.5,.7,.5]],
+    G:[[1,.1,.4,0],[.4,0,0,.35],[0,.35,0,.7],[0,.7,.5,1],[.5,1,1,.9],[1,.9,1,.55],[1,.55,.55,.55]],
+    H:[[0,0,0,1],[1,0,1,1],[0,.5,1,.5]],
+    I:[[.5,0,.5,1],[.2,0,.8,0],[.2,1,.8,1]],
+    J:[[1,0,1,.75],[1,.75,.6,1],[.6,1,.15,.85]],
+    K:[[0,0,0,1],[1,0,0,.5],[0,.5,1,1]],
+    L:[[0,0,0,1],[0,1,1,1]],
+    M:[[0,1,0,0],[0,0,.5,.55],[.5,.55,1,0],[1,0,1,1]],
+    N:[[0,1,0,0],[0,0,1,1],[1,1,1,0]],
+    O:[[.5,0,1,.3],[1,.3,1,.7],[1,.7,.5,1],[.5,1,0,.7],[0,.7,0,.3],[0,.3,.5,0]],
+    P:[[0,0,0,1],[0,0,.9,.12],[.9,.12,.9,.4],[.9,.4,0,.52]],
+    Q:[[.5,0,1,.3],[1,.3,1,.7],[1,.7,.5,1],[.5,1,0,.7],[0,.7,0,.3],[0,.3,.5,0],[.6,.65,1,1]],
+    R:[[0,0,0,1],[0,0,.9,.12],[.9,.12,.9,.4],[.9,.4,0,.52],[.3,.52,1,1]],
+    S:[[1,.1,.3,0],[.3,0,0,.25],[0,.25,1,.7],[1,.7,.7,1],[.7,1,0,.9]],
+    T:[[0,0,1,0],[.5,0,.5,1]],
+    U:[[0,0,0,.7],[0,.7,.5,1],[.5,1,1,.7],[1,.7,1,0]],
+    V:[[0,0,.5,1],[.5,1,1,0]],
+    W:[[0,0,.25,1],[.25,1,.5,.4],[.5,.4,.75,1],[.75,1,1,0]],
+    X:[[0,0,1,1],[1,0,0,1]],
+    Y:[[0,0,.5,.5],[1,0,.5,.5],[.5,.5,.5,1]],
+    Z:[[0,0,1,0],[1,0,0,1],[0,1,1,1]],
+    '0':[[.5,0,1,.3],[1,.3,1,.7],[1,.7,.5,1],[.5,1,0,.7],[0,.7,0,.3],[0,.3,.5,0],[.75,.2,.25,.8]],
+    '1':[[.3,.2,.5,0],[.5,0,.5,1],[.25,1,.75,1]],
+    '2':[[0,.2,.5,0],[.5,0,1,.25],[1,.25,0,1],[0,1,1,1]],
+    '3':[[0,0,1,0],[1,0,.4,.45],[.4,.45,1,.75],[1,.75,.5,1],[.5,1,0,.85]],
+    '4':[[.7,1,.7,0],[.7,0,0,.65],[0,.65,1,.65]],
+    '5':[[1,0,0,0],[0,0,0,.45],[0,.45,.8,.5],[.8,.5,1,.75],[1,.75,.6,1],[.6,1,0,.9]],
+    '6':[[.8,0,.2,.4],[.2,.4,0,.75],[0,.75,.5,1],[.5,1,1,.75],[1,.75,.5,.5],[.5,.5,0,.75]],
+    '7':[[0,0,1,0],[1,0,.35,1]],
+    '8':[[.5,.45,.15,.25],[.15,.25,.5,0],[.5,0,.85,.25],[.85,.25,.5,.45],[.5,.45,.1,.75],[.1,.75,.5,1],[.5,1,.9,.75],[.9,.75,.5,.45]],
+    '9':[[.2,1,.8,.6],[.8,.6,1,.25],[1,.25,.5,0],[.5,0,0,.25],[0,.25,.5,.5],[.5,.5,1,.25]],
+  };
+  function _genFont(seed){
+    const rng=_mulberry32(seed);
+    // THE constraint: only 2–4 allowed line orientations
+    const pool=[0,45,90,135];
+    const nAng=2+Math.floor(rng()*3);
+    const angles=[];
+    while(angles.length<nAng){
+      const a=pool[Math.floor(rng()*pool.length)];
+      if(!angles.includes(a)) angles.push(a);
+    }
+    const jit=[]; for(let i=0;i<24;i++) jit.push((rng()-.5)*2);
+    return {
+      id:'gen-'+seed,
+      angles,
+      budget:4+Math.floor(rng()*4),      // max segments per glyph (4–7)
+      weight:0.10+rng()*0.12,            // stroke width as fraction of size
+      jitter:rng()*0.06,                 // endpoint offset fraction
+      slant:(rng()-.5)*0.3,              // horizontal shear
+      jit,
+    };
+  }
+  function _drawGenGlyph(ctx,ch,cx,cy,size,spec){
+    const segs=_glyphSegs[(ch||'H').toUpperCase()]||_glyphSegs.H;
+    // Keep only the longest `budget` segments — long strokes carry identity
+    const kept=segs.map((s,i)=>({s,i,len:Math.hypot(s[2]-s[0],s[3]-s[1])}))
+      .sort((a,b)=>b.len-a.len).slice(0,spec.budget)
+      .sort((a,b)=>a.i-b.i);
+    const gw=size*0.62, gh=size;
+    const x0=cx-gw/2, y0=cy-gh/2;
+    ctx.lineWidth=Math.max(2,size*spec.weight);
+    ctx.lineCap='square';
+    ctx.beginPath();
+    kept.forEach(({s,i},ki)=>{
+      let [x1,y1,x2,y2]=s;
+      // Quantize segment angle to nearest allowed orientation (rotate about midpoint)
+      const mx=(x1+x2)/2, my=(y1+y2)/2;
+      const dx=(x2-x1)*gw, dy=(y2-y1)*gh;
+      const len=Math.hypot(dx,dy);
+      let ang=Math.atan2(dy,dx)*180/Math.PI; // -180..180
+      let best=spec.angles[0], bd=1e9;
+      for(const a of spec.angles){
+        for(const cand of [a,a+180,a-180]){
+          const d=Math.abs(ang-cand);
+          if(d<bd){bd=d;best=cand;}
+        }
+      }
+      const ar=best*Math.PI/180;
+      const hx=Math.cos(ar)*len/2, hy=Math.sin(ar)*len/2;
+      const j=spec.jitter*size;
+      const ji=ki*2;
+      let ax=x0+mx*gw-hx+spec.jit[ji%24]*j, ay=y0+my*gh-hy+spec.jit[(ji+1)%24]*j;
+      let bx=x0+mx*gw+hx+spec.jit[(ji+2)%24]*j, by=y0+my*gh+hy+spec.jit[(ji+3)%24]*j;
+      // slant: shear x by vertical position
+      ax+=spec.slant*(cy+gh/2-ay); bx+=spec.slant*(cy+gh/2-by);
+      ctx.moveTo(ax,ay); ctx.lineTo(bx,by);
+    });
+    ctx.stroke();
+  }
   function _buildLetterMask(text, W, H, font) {
     const c=document.createElement('canvas'); c.width=W; c.height=H;
     const ctx=c.getContext('2d');
     ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#000';
     const ch=(text||'H').charAt(0);
-    const fs=Math.round(H*0.72);
-    ctx.font=`700 ${fs}px ${font||"'Space Mono',monospace"}`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(ch, W/2, H/2);
+    if(font && typeof font==='object' && font.angles){
+      // Generated font: constrained line-grammar renderer
+      ctx.strokeStyle='#000';
+      _drawGenGlyph(ctx,ch,W/2,H/2,Math.round(H*0.78),font);
+    } else {
+      ctx.fillStyle='#000';
+      const fs=Math.round(H*0.72);
+      ctx.font=`700 ${fs}px ${font||"'Space Mono',monospace"}`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(ch, W/2, H/2);
+    }
     const d=ctx.getImageData(0,0,W,H).data;
     const mask=new Uint8Array(W*H);
     for(let i=0;i<W*H;i++) mask[i]=d[i*4]<128?1:0;
@@ -3357,7 +3467,7 @@
     }
     step(){
       this.tick++;
-      if(!this.expanded && this.outerVisited.size/Math.max(1,this.outsideTotal)>0.42)
+      if(!this.expanded && (this.tick>900 || this.outerVisited.size/Math.max(1,this.outsideTotal)>0.28))
         this.expanded=true;
       for(const b of this.balls){
         b.life++;
@@ -3501,7 +3611,7 @@
     const brand=($('mhLogoTextLogo')||{}).value||'';
     const cat=($('mhLogoCategoryLogo')||{}).value||'';
     try{ await sb.from('logo_library').insert({
-      font:_lsFonts[v.font||0],rule:v.rule,hue_off:v.hOff,
+      font:(sim&&sim._fontName)||_lsFonts[v.font||0],rule:v.rule,hue_off:v.hOff,
       brand_name:brand,category:cat,
       coverage:sim.outerVisited.size,expanded:sim.expanded
     }); _loadLogoLibrary(); }catch(_){}
@@ -3552,10 +3662,13 @@
       // ── Per-panel color scheme derived from the color wheel ─────────────────
       const schemeHue=(baseHue+v.hOff)%360;
       const compHue=(schemeHue+180)%360;             // true complement — clean two-hue Munker pair
-      // Clean, near-black stage that matches the HUE CUBE render (no muddy mids).
+      // True-complementary pair calibrated from the user's colour wheel:
+      // letter cells sit at the exact 180° complement of the tile field, both
+      // at a saturation/lightness derived from the wheel tone.
+      const letterL=Math.max(24,Math.min(46,baseTone*0.45+16));
       const bgDark=`hsl(${schemeHue},38%,7%)`;       // deep tinted stage, reads as "not black"
-      const letterGray=`hsl(${schemeHue},10%,25%)`;  // subtle neutral: Munker stripes control perceived hue
-      const bgGray=`hsl(${schemeHue},24%,11%)`;      // dark tinted non-letter cells
+      const letterGray=`hsl(${compHue},62%,${letterL.toFixed(0)}%)`;  // letter = true complement
+      const bgGray=`hsl(${schemeHue},44%,${(letterL*0.45).toFixed(0)}%)`; // tile field = scheme hue
 
       const wrap=document.createElement('div');
       wrap.className='mh-ls-grid-wrap';
@@ -3567,30 +3680,30 @@
       wrap.appendChild(cubeGrid);
       grid.appendChild(wrap);
 
-      const font=fontOverride||_lsFonts[v.font||0];
-      const mask=_buildLetterMask(text,W,H,font);
       // Seeded per panel from the session seed + identity + generation. Global
       // no-repeat: if this seed was already seen (this session or read back from
       // Supabase), salt-and-rehash. The monotonically increasing generation
       // guarantees forward progress so the seed space can't deadlock.
+      const fontKey=fontOverride||'gen';
       let panelSeed, _att=0;
       do {
-        panelSeed=_seedFromString(sessionSeed+'|'+text+'|'+font+'|'+v.rule+'|'+vi+'|'+Math.round(baseHue)+'|g'+_currentGeneration+'|a'+_att);
+        panelSeed=_seedFromString(sessionSeed+'|'+text+'|'+fontKey+'|'+v.rule+'|'+vi+'|'+Math.round(baseHue)+'|g'+_currentGeneration+'|a'+_att);
         _att++;
       } while(_seenLogoSeeds.has(panelSeed) && _att<12);
+      // 'gen' → every panel gets its own constrained line-grammar font seeded
+      // from the panel seed: 16 unique letterforms per generation.
+      const font=(fontKey==='gen') ? _genFont(panelSeed) : fontKey;
+      const fontName=(fontKey==='gen') ? font.id : fontKey;
+      const mask=_buildLetterMask(text,W,H,font);
       const sim=new BilliardsLogoSim(W,H,mask,v.N,v.spd,(schemeHue+vi*15)%360,panelSeed);
       sim._seed=panelSeed;
-      sim._rule=v.rule; sim._v=v;
+      sim._rule=v.rule; sim._v=v; sim._fontName=fontName;
       sim._schemeHue=schemeHue; sim._compHue=compHue;
-      // Resting letter-interior colour pulled from the wheel tonality (real
-      // palette tone at the complement hue), not a near-black neutral. Balls
-      // paint brighter trails over this base.
-      const letterL=Math.max(26,Math.min(52,baseTone*0.5+18));
       const letterTint=`hsl(${compHue},66%,${letterL.toFixed(0)}%)`;
       sim._bgDark=bgDark; sim._bgGray=bgGray; sim._letterGray=letterTint; sim._mask=mask;
       _lsGrids.push(sim);
       // Record/dedup this seed globally (mirrors background syncSimState).
-      _recordLogoSeed(panelSeed, {text, font, rule:v.rule, hue:Math.round(schemeHue)});
+      _recordLogoSeed(panelSeed, {text, font:fontName, rule:v.rule, hue:Math.round(schemeHue)});
 
       // Build isometric cube cell grid
       const cells=[];
@@ -3624,6 +3737,14 @@
       }
       sim._cells=cells; sim._state=state;
       sim._COLS=COLS; sim._ROWS=ROWS; sim._W=W; sim._H=H; sim._wrap=wrap;
+      // Persistent fill: once a cell has been painted by a trail it never fades
+      // back to dark — it settles at a floor lightness so the panel fills up.
+      sim._visited=new Uint8Array(COLS*ROWS);
+      sim._floorL=new Float32Array(COLS*ROWS);
+      for(let row=0;row<ROWS;row++) for(let col=0;col<COLS;col++){
+        const mx=Math.floor(col/COLS*W), my=Math.floor(row/ROWS*H);
+        sim._floorL[row*COLS+col]=mask[my*W+mx]===1 ? Math.min(56,letterL+10) : Math.max(16,letterL*0.5);
+      }
 
       // ── Munker illusion stripe overlay ──────────────────────────────────────
       // Two near-complement hue bands at ~38% opacity via screen blend.
@@ -3668,28 +3789,33 @@
       for(const sim of _lsGrids){
         if(!sim||!sim._cells) continue;
         sim._applyRule(sim._rule);
-        sim.step(); sim.step(); sim.step(); sim.step(); sim.step();
+        sim.step(); sim.step(); sim.step(); sim.step(); sim.step(); sim.step(); sim.step(); sim.step();
         // Anchor ball hues toward scheme (outside) or comp (inside) for
         // a strong color-scheme read: letter interior vs boundary are distinct.
         if(sim._schemeHue!=null){
           for(const b of sim.balls){
             const tgt = b.inside ? sim._compHue : sim._schemeHue;
-            b.hue = (b.hue * 0.92 + tgt * 0.08 + 360) % 360;
+            b.hue = (b.hue * 0.88 + tgt * 0.12 + 360) % 360;
           }
         }
         // Trigger sheen once when coverage settles above ~85%
         if(sim.expanded && sim._wrap && !sim._wrap.classList.contains('mh-ls-sheen')){
           sim._wrap.classList.add('mh-ls-sheen');
         }
-        const {_cells:cells,_state:st,_COLS:C,_ROWS:R,_W:SW,_H:SH,_bgGray,_letterGray,_mask:smask}=sim;
-        // Fade all cells toward dark each tick
-        for(let i=0;i<st.length;i+=3) st[i+2]*=0.87;
+        const {_cells:cells,_state:st,_COLS:C,_ROWS:R,_W:SW,_H:SH,_bgGray,_letterGray,_mask:smask,_visited:vis,_floorL:flr}=sim;
+        // Fade cells toward their visited floor — painted cells never go dark,
+        // so trails accumulate and the panel fills edge-to-edge.
+        for(let i=0;i<st.length;i+=3){
+          const fl=vis[i/3|0] ? flr[i/3|0] : 0;
+          st[i+2]=fl+(st[i+2]-fl)*0.90;
+        }
         // Paint trail positions
-        const tail=sim.trails.slice(-sim.balls.length*20);
+        const tail=sim.trails.slice(-sim.balls.length*40);
         for(const pt of tail){
           const cx=Math.min(C-1,Math.max(0,pt.x/SW*C|0));
           const cy=Math.min(R-1,Math.max(0,pt.y/SH*R|0));
-          const si=(cy*C+cx)*3;
+          const ci=cy*C+cx, si=ci*3;
+          vis[ci]=1;
           st[si]=pt.h; st[si+1]=pt.ins?90:75;
           st[si+2]=Math.max(st[si+2],pt.ins?62:44);
         }
@@ -3699,6 +3825,7 @@
           const cy=Math.min(R-1,Math.max(0,b.y/SH*R|0));
           const idx=cy*C+cx;
           const si=idx*3;
+          vis[idx]=1;
           st[si]=b.hue; st[si+1]=100; st[si+2]=88;
           if(b._ci!==idx){
             const cell=cells[idx];
@@ -4332,8 +4459,8 @@
     for(let i=0;i<_lsRules.length;i++){
       _lsRules[i].hOff = Math.floor(Math.random()*360);
       _lsRules[i].rule = pick(_allRules);
-      _lsRules[i].N   = 3+Math.floor(Math.random()*5);
-      _lsRules[i].spd = +(rnd(2,5.5).toFixed(1));
+      _lsRules[i].N   = 8+Math.floor(Math.random()*7);
+      _lsRules[i].spd = +(rnd(4,6.5).toFixed(1));
       _lsRules[i].font= Math.floor(Math.random()*_lsFonts.length);
     }
     _startLogoSim();
