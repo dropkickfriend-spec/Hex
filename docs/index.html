@@ -692,7 +692,7 @@
 </head>
 <body>
 <style id="munkerhex-render-adapter">
-  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Silkscreen:wght@400;700&family=Press+Start+2P&family=VT323&display=swap');
   .mh-render-adapter {
     margin: 12px;
     border-radius: 18px;
@@ -1614,6 +1614,24 @@
   .mh-bc-right { background:var(--bc-right,#00ffff); }
   .mh-bc-top .mh-bc-stripes, .mh-bc-left .mh-bc-stripes, .mh-bc-right .mh-bc-stripes {
     position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:overlay; }
+  /* ── Brand cube v2: built from the SAME 2:1 dimetric clip-path faces as the
+        background lattice, so the mark sits flush on the planes behind it. ── */
+  .mh-bc2-scene { display:flex; justify-content:center; align-items:center; padding:16px 0; perspective:none; }
+  .mh-bc2 { position:relative; transition:transform .4s cubic-bezier(.2,.7,.2,1); }
+  .mh-bc2:hover { transform:translateY(-4px) scale(1.04); }
+  .mh-bc2-f { position:absolute; inset:0; }
+  .mh-bc2-t { background:var(--bc-top,#ffd24a);   clip-path:polygon(50% 0%,100% 25%,50% 50%,0% 25%);   filter:brightness(1.18); }
+  .mh-bc2-r { background:var(--bc-right,#00ffff);  clip-path:polygon(100% 25%,100% 75%,50% 100%,50% 50%); filter:brightness(0.86); }
+  .mh-bc2-l { background:var(--bc-left,#0000ff);   clip-path:polygon(0% 25%,50% 50%,50% 100%,0% 75%);    filter:brightness(0.58); }
+  .mh-bc2-stripes { position:absolute; inset:0; pointer-events:none; opacity:.55; mix-blend-mode:overlay; }
+  .mh-bc2-g { position:absolute; font:700 var(--bc-fs,26px) 'Silkscreen','Space Mono',monospace; line-height:1;
+    color:#05050c; text-shadow:0 1px 0 rgba(255,255,255,.35); user-select:none; }
+  /* Skew each initial into its parallelogram plane (arctan .5 = 26.57°). */
+  .mh-bc2-l .mh-bc2-g { left:25%; top:63%; transform:translate(-50%,-50%) skewY(26.57deg); }
+  .mh-bc2-r .mh-bc2-g { left:75%; top:63%; transform:translate(-50%,-50%) skewY(-26.57deg); }
+  .mh-bc2-sym { position:absolute; left:50%; top:25%; width:46%; height:46%;
+    transform:translate(-50%,-52%); display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .mh-bc2-sym svg { width:100%; height:100%; }
   /* ── Logo preview: 3D iso + 2D flat side by side ── */
   #mhLogoPreviewLogo { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
   .mh-logo-variant { flex:1; min-width:180px; border-radius:10px; overflow:hidden;
@@ -2109,9 +2127,10 @@
     <div class="mh-render-toolbar" style="margin-top:4px;flex-wrap:wrap">
       <input id="mhLogoCategoryLogo" maxlength="40" value="" placeholder="Category  ·  e.g.  Tech · Design · Sport" style="flex:2" />
       <select id="mhLogoSimFont">
+        <option value="'Silkscreen','Space Mono',monospace">Silkscreen · pixel</option>
+        <option value="'Press Start 2P',monospace">Press Start · 8-bit</option>
+        <option value="'VT323',monospace">VT323 · terminal</option>
         <option value="'Space Mono',monospace">Space Mono</option>
-        <option value="serif">Serif</option>
-        <option value="sans-serif">Sans</option>
         <option value="Impact,display">Impact</option>
       </select>
     </div>
@@ -2763,29 +2782,27 @@
   }
   // Build a single isometric brand cube: top = generated symbol, left/right = initials.
   function _buildBrandCube(container, p, text, seed){
-    const S = 84;
+    const S = 96;
     // Escape initials before injecting into innerHTML — a brand starting with
     // <, > or & would otherwise malform the markup and break the faces.
     const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const rawInits = _brandInitials(text);
     const inits = [esc(rawInits[0] || 'H'), esc(rawInits[1] || rawInits[0] || 'X')];
+    // Built from the same 2:1 dimetric clip-path faces as the background lattice
+    // (top/right/left), so the mark aligns flush with the cube planes behind it
+    // instead of floating at an arbitrary rotateX/rotateY.
     container.innerHTML =
-      `<div class="mh-brandcube-scene"><div class="mh-brandcube" style="width:${S}px;height:${S}px">`
-      + `<div class="mh-bc-face mh-bc-top"   style="width:${S}px;height:${S}px;transform:rotateX(90deg) translateZ(${S/2}px);--bc-top:${p.aHex}">`
-        + `<div class="mh-bc-stripes"></div>${_symbolSvg(p, seed, S)}</div>`
-      + `<div class="mh-bc-face mh-bc-left"  style="width:${S}px;height:${S}px;transform:translateZ(${S/2}px);--bc-left:${p.bHex}">`
-        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${inits[0]}</span></div>`
-      + `<div class="mh-bc-face mh-bc-right" style="width:${S}px;height:${S}px;transform:rotateY(90deg) translateZ(${S/2}px);--bc-right:${p.cHex}">`
-        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${inits[1]}</span></div>`
+      `<div class="mh-bc2-scene"><div class="mh-bc2" style="width:${S}px;height:${S}px;--bc-fs:${Math.round(S*0.3)}px">`
+      + `<div class="mh-bc2-f mh-bc2-l" style="--bc-left:${p.bHex}"><div class="mh-bc2-stripes"></div><span class="mh-bc2-g">${inits[0]}</span></div>`
+      + `<div class="mh-bc2-f mh-bc2-r" style="--bc-right:${p.cHex}"><div class="mh-bc2-stripes"></div><span class="mh-bc2-g">${inits[1]}</span></div>`
+      + `<div class="mh-bc2-f mh-bc2-t" style="--bc-top:${p.aHex}"><div class="mh-bc2-stripes"></div><div class="mh-bc2-sym">${_symbolSvg(p, seed, S)}</div></div>`
       + `</div></div>`;
-    // Paint the shared field stripes onto each face so the cube matches the site.
-    if (typeof munker !== 'undefined') {
-      const stripes = container.querySelectorAll('.mh-bc-stripes');
-      const mk = (a,b)=>`repeating-linear-gradient(${a}deg, rgba(0,0,0,.28) 0 3px, transparent 3px 9px)`;
-      if (stripes[0]) stripes[0].style.background = mk(60);
-      if (stripes[1]) stripes[1].style.background = mk(90);
-      if (stripes[2]) stripes[2].style.background = mk(120);
-    }
+    // Paint the shared field Munker stripes onto each face at the field's angles.
+    const stripes = container.querySelectorAll('.mh-bc2-stripes');
+    const mk = a => `repeating-linear-gradient(${a}deg, rgba(0,0,0,.30) 0 3px, transparent 3px 9px)`;
+    if (stripes[0]) stripes[0].style.background = mk(90);   // left face
+    if (stripes[1]) stripes[1].style.background = mk(120);  // right face
+    if (stripes[2]) stripes[2].style.background = mk(60);   // top face
   }
   function renderLogoDesigner() {
     var p = typeof getWheelPalette === 'function' ? getWheelPalette() : {aHex:'#ffff00',bHex:'#ff00ff',cHex:'#00ffff',hue:60};
@@ -2889,7 +2906,7 @@
   // ── Logo sim: billiards in letter boundary ────────────────────────────────
   let _lsGrids=[], _lsRafId=null, _lsRestartT=null;
   // 4 fonts × 4 rules = 16 combos
-  const _lsFonts=["'Space Mono',monospace","serif","sans-serif","Impact,display"];
+  const _lsFonts=["'Silkscreen','Space Mono',monospace","'Press Start 2P',monospace","'VT323',monospace","'Space Mono',monospace","Impact,display"];
   const _lsRules=[
     {rule:'avoid',   N:4, spd:3.5, hOff:0,   font:0},
     {rule:'flock',   N:5, spd:4,   hOff:30,  font:0},
@@ -3233,10 +3250,11 @@
     _rules.forEach((v,vi)=>{
       // ── Per-panel color scheme derived from the color wheel ─────────────────
       const schemeHue=(baseHue+v.hOff)%360;
-      const compHue=(schemeHue+174+(vi%3)*12)%360; // near-complement with slight variety per panel
-      const bgDark=`hsl(${schemeHue},60%,14%)`;     // visible hue tint — clearly not black
-      const letterGray=`hsl(0,0%,34%)`;              // neutral gray: Munker stripes control perceived hue
-      const bgGray=`hsl(${schemeHue},40%,20%)`;     // tinted mid-dark for non-letter cells
+      const compHue=(schemeHue+180)%360;             // true complement — clean two-hue Munker pair
+      // Clean, near-black stage that matches the HUE CUBE render (no muddy mids).
+      const bgDark=`hsl(${schemeHue},38%,7%)`;       // deep tinted stage, reads as "not black"
+      const letterGray=`hsl(${schemeHue},10%,25%)`;  // subtle neutral: Munker stripes control perceived hue
+      const bgGray=`hsl(${schemeHue},24%,11%)`;      // dark tinted non-letter cells
 
       const wrap=document.createElement('div');
       wrap.className='mh-ls-grid-wrap';
@@ -3266,8 +3284,8 @@
       // Resting letter-interior colour pulled from the wheel tonality (real
       // palette tone at the complement hue), not a near-black neutral. Balls
       // paint brighter trails over this base.
-      const letterL=Math.max(20,Math.min(46,baseTone*0.5+14));
-      const letterTint=`hsl(${compHue},52%,${letterL.toFixed(0)}%)`;
+      const letterL=Math.max(26,Math.min(52,baseTone*0.5+18));
+      const letterTint=`hsl(${compHue},66%,${letterL.toFixed(0)}%)`;
       sim._bgDark=bgDark; sim._bgGray=bgGray; sim._letterGray=letterTint; sim._mask=mask;
       _lsGrids.push(sim);
       // Record/dedup this seed globally (mirrors background syncSimState).
