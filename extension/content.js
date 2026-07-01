@@ -102,7 +102,7 @@
     btn.title = 'Render board in HexField isometric 3D style';
     btn.addEventListener('click', () => {
       const fen = getCurrentFen() || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-      const url = 'https://dropkickfriend-spec.github.io/hex/?fen=' + encodeURIComponent(fen) + '#chess';
+      const url = 'https://hexfield.win/?fen=' + encodeURIComponent(fen) + '#chess';
       window.open(url, '_blank', 'noopener,noreferrer');
     });
 

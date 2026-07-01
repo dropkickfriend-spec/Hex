@@ -1,10 +1,14 @@
 name: Deploy to GitHub Pages
 
+# Deploys docs/ exactly as committed. The site is authored directly in
+# docs/index.html; build-static.py (which regenerates it from the legacy
+# backend/ sources) is intentionally NOT run here.
+
 on:
   push:
     branches:
       - main
-      - claude/builder-live-edit-exports-lanved
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,28 +20,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Build static site
-        run: python3 build-static.py
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/
 
-  deploy:
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

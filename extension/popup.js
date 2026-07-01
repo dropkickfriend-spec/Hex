@@ -6,7 +6,7 @@ const CHESS_GLYPHS = {
 };
 
 const DEFAULT_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-const HEXFIELD_URL = 'https://dropkickfriend-spec.github.io/hex/';
+const HEXFIELD_URL = 'https://hexfield.win/';
 
 // Default palette (CMY — matches the app's default)
 let palette = { light: '#ffff00', dark: '#0033cc' };
