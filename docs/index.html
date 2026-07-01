@@ -1765,6 +1765,54 @@
   .mh-ivend-tray { margin-top:10px; height:16px; border-radius:4px; background:linear-gradient(#05050c,#101018);
     box-shadow:inset 0 3px 8px rgba(0,0,0,.9); position:relative; overflow:hidden; }
   .mh-ivend-tray-lip { position:absolute; left:8px; right:8px; bottom:4px; height:3px; border-radius:2px; background:rgba(255,255,255,.06); }
+  /* ── Isometric AI-band boombox ─────────────────────────────────────────── */
+  .mh-boom { display:flex; justify-content:center; margin:2px auto 26px; perspective:1500px; }
+  .mh-boom-cab { position:relative; transform-style:preserve-3d; transform:rotateX(7deg) rotateY(-18deg);
+    transition:transform .5s cubic-bezier(.2,.7,.2,1); }
+  .mh-boom:hover .mh-boom-cab { transform:rotateX(5deg) rotateY(-11deg); }
+  .mh-boom-front { position:relative; width:320px; padding:12px 16px 16px; border-radius:12px;
+    background:linear-gradient(150deg,#20202c,#0c0c14); border:1px solid rgba(255,255,255,.09);
+    box-shadow:0 24px 46px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05); }
+  .mh-boom-side { position:absolute; top:8px; right:-28px; width:32px; height:calc(100% - 16px);
+    background:linear-gradient(#161620,#07070c); transform:rotateY(90deg); transform-origin:left center;
+    border-radius:0 8px 8px 0; box-shadow:inset -6px 0 14px rgba(0,0,0,.7); }
+  .mh-boom-top { position:absolute; top:-22px; left:8px; width:calc(100% - 16px); height:26px;
+    background:linear-gradient(#2a2a38,#14141e); transform:rotateX(90deg); transform-origin:center bottom;
+    border-radius:8px 8px 0 0; box-shadow:inset 0 6px 12px rgba(0,0,0,.5); }
+  .mh-boom-handle { position:absolute; top:-40px; left:50%; width:120px; height:34px; transform:translateX(-50%);
+    border:5px solid #22222e; border-bottom:none; border-radius:20px 20px 0 0; box-shadow:inset 0 2px 3px rgba(255,255,255,.06); }
+  .mh-boom-brand { font:800 10px 'Space Mono',monospace; letter-spacing:.14em; color:var(--mh-a,#ffd24a);
+    text-align:center; margin-bottom:9px; text-shadow:0 0 8px currentColor; }
+  .mh-boom-deck { display:flex; align-items:center; gap:12px; }
+  .mh-boom-speaker { flex:0 0 78px; height:78px; border-radius:50%; background:radial-gradient(circle at 42% 38%,#2c2c3a,#050509 72%);
+    box-shadow:inset 0 0 0 3px rgba(0,0,0,.6), inset 0 0 14px rgba(0,0,0,.9); display:flex; align-items:center; justify-content:center;
+    position:relative; }
+  .mh-boom-speaker::before { content:''; position:absolute; inset:8px; border-radius:50%; border:1px solid rgba(255,255,255,.05); }
+  .mh-boom-cone { width:30px; height:30px; border-radius:50%; background:radial-gradient(circle at 40% 36%,#4a4a5e,#0a0a12 78%);
+    box-shadow:0 0 0 4px rgba(0,0,0,.5); transition:transform .06s linear; }
+  body.mh-colour-live .mh-boom-cone { background:radial-gradient(circle at 40% 36%,var(--mh-a,#ffd24a),#0a0a12 82%); }
+  .mh-boom-center { flex:1; display:flex; flex-direction:column; gap:6px; }
+  .mh-boom-scope { display:block; width:100%; height:auto; border-radius:5px; background:#04040a; image-rendering:pixelated;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), inset 0 0 12px rgba(0,0,0,.8); }
+  .mh-boom-reels { display:flex; justify-content:space-around; }
+  .mh-boom-reel { width:15px; height:15px; border-radius:50%; border:2px solid rgba(255,255,255,.14);
+    border-top-color:rgba(255,255,255,.4); }
+  body.mh-colour-live .mh-boom-reel { animation:mhBoomSpin .6s linear infinite; border-top-color:var(--mh-a,#ffd24a); }
+  @keyframes mhBoomSpin { to { transform:rotate(360deg); } }
+  .mh-boom-price { font:bold 11px 'Space Mono',monospace; letter-spacing:.06em; color:#e8e8f4; text-align:center; margin:11px 0 6px; }
+  .mh-boom-slot { display:block; width:100%; padding:11px; border:none; border-radius:6px; cursor:pointer;
+    font:800 12px 'Space Mono',monospace; letter-spacing:.1em; color:#3a1c00;
+    background:linear-gradient(180deg,#ffcf5a,#ff9e12); box-shadow:0 4px 0 #b46b00; transition:filter .12s,transform .06s; }
+  .mh-boom-slot:hover { filter:brightness(1.06); }
+  .mh-boom-slot:active { transform:translateY(3px); box-shadow:0 1px 0 #b46b00; }
+  body.mh-colour-live .mh-boom-slot { background:linear-gradient(180deg,#44ff88,#00cc55); box-shadow:0 4px 0 #008a3a,0 0 18px rgba(80,255,150,.4); }
+  body.mh-colour-live .mh-boom-slot::after { content:' · +60s'; }
+  .mh-boom-btns { display:flex; gap:8px; margin-top:9px; }
+  .mh-boom-btn { flex:1; padding:8px; border:none; border-radius:6px; cursor:pointer;
+    font:700 10px 'Space Mono',monospace; letter-spacing:.08em; color:#cfcfe0; background:rgba(255,255,255,.08);
+    transition:background .12s,color .12s; }
+  .mh-boom-btn:hover { background:rgba(255,255,255,.16); color:#fff; }
+  .mh-boom-status { font:9px 'Space Mono',monospace; color:var(--mh-a,#ffd24a); text-align:center; margin-top:8px; min-height:12px; }
 </style>
 <div id="mhPageFold"></div>
 <!-- $1-for-colour: the whole site renders B&W until you pay; then 60s of colour -->
@@ -1792,6 +1840,31 @@
         </div>
         <div id="mhIVendStatus" class="mh-ivend-status">Black &amp; white until you insert $1</div>
         <div class="mh-ivend-tray"><span class="mh-ivend-tray-lip"></span></div>
+      </div>
+    </div>
+  </div>
+  <!-- Isometric AI-band boombox — $1 buys 60s of generative music, clips out at 0:00. -->
+  <div class="mh-boom" id="mhBoom">
+    <div class="mh-boom-cab">
+      <div class="mh-boom-side"></div>
+      <div class="mh-boom-top"></div>
+      <div class="mh-boom-front">
+        <div class="mh-boom-handle"></div>
+        <div class="mh-boom-brand">HEXFIELD · AI BAND</div>
+        <div class="mh-boom-deck">
+          <div class="mh-boom-speaker" id="mhBoomSpkL"><span class="mh-boom-cone"></span></div>
+          <div class="mh-boom-center">
+            <canvas id="mhBoomScope" class="mh-boom-scope" width="120" height="70"></canvas>
+            <div class="mh-boom-reels"><span class="mh-boom-reel"></span><span class="mh-boom-reel"></span></div>
+          </div>
+          <div class="mh-boom-speaker" id="mhBoomSpkR"><span class="mh-boom-cone"></span></div>
+        </div>
+        <div class="mh-boom-price">◎ $1 · 60 SECONDS OF SOUND</div>
+        <button id="mhBoomPay" class="mh-boom-slot">INSERT&nbsp;$1 · PLAY</button>
+        <div class="mh-boom-btns">
+          <button id="mhBoomWav" class="mh-boom-btn">⬇ WAV</button>
+        </div>
+        <div id="mhBoomStatus" class="mh-boom-status">Silent until you insert $1</div>
       </div>
     </div>
   </div>
@@ -8957,6 +9030,213 @@ renderPinned();
     });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initIVend); else initIVend();
+})();
+</script>
+<script>
+// ── Isometric AI-band boombox (procedural Web Audio) ───────────────────────
+// Honest framing: this is a generative palette-driven sequencer, not a trained
+// model. $1 unlocks the shared 60s colour window; the boombox plays for that
+// window, over-modulates + hard-clips at 0:00 for the gag, then stops.
+// WAV download renders an 8-bar loop offline.
+(function(){
+  var KEY = 'mh_colour_until';
+  var CLIP_LEAD = 1.3;            // seconds of clip-out ramp before the window ends
+  // Minor-pentatonic degrees + a fixed melodic/bass groove.
+  var PENTA = [0,3,5,7,10];
+  var LEAD  = [0,2,1,3, 2,4,3,2, 1,3,4,2, 3,1,2,4];
+  var BASS  = {0:0, 6:2, 8:0, 10:3, 14:1};
+
+  function paletteParams(){
+    var pal = (typeof getWheelPalette === 'function') ? getWheelPalette() : {hue:210, colors:[]};
+    var hue = ((pal.hue||210)%360+360)%360;
+    var rootMidi = 40 + Math.round(hue/360*12);          // hue → key
+    var bpm = 92 + (hue % 44);                            // hue → tempo (92–135)
+    var chroma = (typeof cal !== 'undefined' && cal && cal.chroma!=null) ? cal.chroma : 80;
+    var timbre = Math.max(0, Math.min(1, chroma/120));    // chroma → brightness/waveshape
+    return { hue:hue, rootMidi:rootMidi, bpm:bpm, timbre:timbre,
+             rootHz: 440*Math.pow(2,(rootMidi-69)/12) };
+  }
+  function midiHz(m){ return 440*Math.pow(2,(m-69)/12); }
+  function makeCurve(drive){
+    var n=1024, c=new Float32Array(n), k=drive*100;
+    for(var i=0;i<n;i++){ var x=i/(n-1)*2-1; c[i]=(1+k)*x/(1+k*Math.abs(x)); }
+    return c;
+  }
+  // Play one 16th-step's voices into `dest` on AudioContext `ac`.
+  function scheduleStep(ac, dest, when, s, p){
+    var sixteenth = 60/p.bpm/4;
+    function tone(freq,dur,type,peak){
+      var o=ac.createOscillator(), g=ac.createGain();
+      o.type=type; o.frequency.value=freq;
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.exponentialRampToValueAtTime(peak, when+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, when+dur);
+      o.connect(g); g.connect(dest); o.start(when); o.stop(when+dur+0.02);
+    }
+    function noise(dur,peak){
+      var len=Math.max(1,(ac.sampleRate*dur)|0), b=ac.createBuffer(1,len,ac.sampleRate), d=b.getChannelData(0);
+      for(var i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);
+      var src=ac.createBufferSource(); src.buffer=b;
+      var hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=5000;
+      var g=ac.createGain(); g.gain.value=peak;
+      src.connect(hp); hp.connect(g); g.connect(dest); src.start(when); src.stop(when+dur);
+    }
+    // bass
+    if(BASS[s]!=null) tone(midiHz(p.rootMidi-12+PENTA[BASS[s]]), sixteenth*3.2, 'sawtooth', 0.26);
+    // lead arp
+    var deg=PENTA[LEAD[s]%5], oct=(LEAD[s]>=5?12:0);
+    tone(midiHz(p.rootMidi+12+deg+oct), sixteenth*1.7, p.timbre>0.55?'square':'triangle', 0.12);
+    // kick on the beat
+    if(s%4===0){
+      var o=ac.createOscillator(), g=ac.createGain();
+      o.frequency.setValueAtTime(150, when); o.frequency.exponentialRampToValueAtTime(46, when+0.12);
+      g.gain.setValueAtTime(0.6, when); g.gain.exponentialRampToValueAtTime(0.0001, when+0.16);
+      o.connect(g); g.connect(dest); o.start(when); o.stop(when+0.18);
+    }
+    // hats offbeat
+    if(s%2===1) noise(0.03, 0.12);
+  }
+
+  function initBoom(){
+    var payBtn = document.getElementById('mhBoomPay');
+    var wavBtn = document.getElementById('mhBoomWav');
+    var status = document.getElementById('mhBoomStatus');
+    var scope  = document.getElementById('mhBoomScope');
+    var coneL  = document.querySelector('#mhBoomSpkL .mh-boom-cone');
+    var coneR  = document.querySelector('#mhBoomSpkR .mh-boom-cone');
+    if(!payBtn) return;
+    var sctx = scope ? scope.getContext('2d') : null;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var ac=null, master=null, shaper=null, analyser=null, tdata=null;
+    var running=false, sched=0, step=0, nextTime=0, clipping=false, endAt=0, p=null;
+    function colourLive(){ return document.body.classList.contains('mh-colour-live'); }
+    function readEnd(){ return parseInt(localStorage.getItem(KEY)||'0',10); }
+
+    function buildGraph(){
+      ac = new AC();
+      master=ac.createGain(); master.gain.value=0.9;
+      shaper=ac.createWaveShaper(); shaper.curve=makeCurve(0.02); shaper.oversample='2x';
+      analyser=ac.createAnalyser(); analyser.fftSize=256; tdata=new Uint8Array(analyser.fftSize);
+      master.connect(shaper); shaper.connect(analyser); analyser.connect(ac.destination);
+    }
+    function scheduler(){
+      // lookahead scheduling
+      while(nextTime < ac.currentTime + 0.12){
+        scheduleStep(ac, master, nextTime, step, p);
+        var sixteenth=60/p.bpm/4;
+        nextTime += sixteenth; step=(step+1)%16;
+      }
+      // clip-out gag as the window closes
+      var now=Date.now(); endAt=readEnd();
+      var remain=(endAt-now)/1000;
+      if(remain>CLIP_LEAD && clipping){ // topped-up: recover
+        clipping=false; shaper.curve=makeCurve(0.02);
+        master.gain.cancelScheduledValues(ac.currentTime); master.gain.setTargetAtTime(0.9, ac.currentTime, 0.1);
+        if(status) status.textContent='Topped up — back in tune.';
+      }
+      if(remain<=CLIP_LEAD && remain>0 && !clipping){
+        clipping=true;
+        shaper.curve=makeCurve(0.9);                 // hard clip
+        master.gain.cancelScheduledValues(ac.currentTime);
+        master.gain.setValueAtTime(master.gain.value, ac.currentTime);
+        master.gain.linearRampToValueAtTime(3.2, ac.currentTime+CLIP_LEAD); // over-modulate
+        if(status) status.textContent='⚠ OVER-MODULATING…';
+      }
+      if(remain<=0){ stop(); return; }
+    }
+    function start(){
+      if(running) return;
+      p=paletteParams();
+      if(!ac) buildGraph();
+      if(ac.state==='suspended') ac.resume();
+      running=true; clipping=false; step=0; nextTime=ac.currentTime+0.05;
+      shaper.curve=makeCurve(0.02); master.gain.value=0.9;
+      sched=setInterval(scheduler, 25);
+      if(status) status.textContent='♪ AI band playing — key '+['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][p.rootMidi%12]+' · '+p.bpm+' BPM';
+    }
+    function stop(){
+      running=false; clipping=false;
+      if(sched){ clearInterval(sched); sched=0; }
+      if(master){ try{ master.gain.cancelScheduledValues(ac.currentTime);
+        master.gain.setTargetAtTime(0.0001, ac.currentTime, 0.05);}catch(e){} }
+      if(status) status.textContent='Silent until you insert $1';
+    }
+
+    // Visualiser: waveform on the CRT + speaker-cone pulse.
+    (function draw(){
+      requestAnimationFrame(draw);
+      if(!sctx) return;
+      var W=scope.width, H=scope.height;
+      sctx.fillStyle='#04040a'; sctx.fillRect(0,0,W,H);
+      var rms=0;
+      if(analyser && running){
+        analyser.getByteTimeDomainData(tdata);
+        var hue=(p?p.hue:210);
+        sctx.strokeStyle='hsl('+hue+',95%,60%)'; sctx.lineWidth=2; sctx.beginPath();
+        for(var i=0;i<tdata.length;i++){
+          var v=(tdata[i]-128)/128, x=i/(tdata.length-1)*W, y=H/2+v*H*0.42;
+          i?sctx.lineTo(x,y):sctx.moveTo(x,y); rms+=v*v;
+        }
+        sctx.stroke(); rms=Math.sqrt(rms/tdata.length);
+      } else {
+        sctx.strokeStyle='rgba(255,255,255,.12)'; sctx.lineWidth=1;
+        sctx.beginPath(); sctx.moveTo(0,H/2); sctx.lineTo(W,H/2); sctx.stroke();
+      }
+      var sc=1+Math.min(0.5, rms*2.2);
+      if(coneL) coneL.style.transform='scale('+sc+')';
+      if(coneR) coneR.style.transform='scale('+sc+')';
+    })();
+
+    // Pay → shared colour badge (unlock + start/extend the 60s clock).
+    payBtn.addEventListener('click', function(){
+      var bd=document.getElementById('mhColourBadge'); if(bd) bd.click();
+      // Colour class flips synchronously via grantColour; start the band.
+      setTimeout(start, 30);
+    });
+    // Keep music synced if colour is unlocked elsewhere (vending machine / badge).
+    setInterval(function(){
+      if(colourLive() && !running) start();
+      if(!colourLive() && running) stop();
+    }, 500);
+
+    // Offline render → WAV download (8 bars of the current groove).
+    wavBtn.addEventListener('click', async function(){
+      if(!colourLive()){ if(status) status.textContent='Insert $1 to record a WAV.'; return; }
+      if(status) status.textContent='Rendering WAV…';
+      try{
+        var pp=paletteParams(), sixteenth=60/pp.bpm/4, bars=8, steps=bars*16;
+        var dur=steps*sixteenth+0.5, SR=44100;
+        var OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+        var oc=new OAC(2, Math.ceil(SR*dur), SR);
+        var m=oc.createGain(); m.gain.value=0.85;
+        var sh=oc.createWaveShaper(); sh.curve=makeCurve(0.05);
+        m.connect(sh); sh.connect(oc.destination);
+        for(var i=0;i<steps;i++) scheduleStep(oc, m, 0.05+i*sixteenth, i%16, pp);
+        var buf=await oc.startRendering();
+        var blob=encodeWav(buf);
+        var a=document.createElement('a'); a.download='hexfield-band-'+Date.now()+'.wav';
+        a.href=URL.createObjectURL(blob); a.click();
+        if(status) status.textContent='WAV saved!';
+      }catch(e){ if(status) status.textContent='WAV failed: '+e.message; }
+    });
+
+    function encodeWav(buf){
+      var nch=buf.numberOfChannels, len=buf.length, SR=buf.sampleRate;
+      var out=new ArrayBuffer(44+len*nch*2), dv=new DataView(out);
+      function wstr(o,s){ for(var i=0;i<s.length;i++) dv.setUint8(o+i,s.charCodeAt(i)); }
+      wstr(0,'RIFF'); dv.setUint32(4,36+len*nch*2,true); wstr(8,'WAVE'); wstr(12,'fmt ');
+      dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,nch,true);
+      dv.setUint32(24,SR,true); dv.setUint32(28,SR*nch*2,true); dv.setUint16(32,nch*2,true);
+      dv.setUint16(34,16,true); wstr(36,'data'); dv.setUint32(40,len*nch*2,true);
+      var off=44;
+      for(var i=0;i<len;i++) for(var c=0;c<nch;c++){
+        var s=Math.max(-1,Math.min(1,buf.getChannelData(c)[i]));
+        dv.setInt16(off, s<0?s*0x8000:s*0x7FFF, true); off+=2;
+      }
+      return new Blob([out],{type:'audio/wav'});
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initBoom); else initBoom();
 })();
 </script>
 </body>
