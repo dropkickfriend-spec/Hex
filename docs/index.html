@@ -1627,6 +1627,21 @@
   .mh-chess-mode-btn.active { background:rgba(255,255,255,.14); color:var(--mh-a,#ffff00); box-shadow:0 0 8px var(--mh-a,#ffff00); }
   .mh-chess-coords { display:flex; justify-content:center; gap:0; max-width:420px; margin:0 auto; }
   .mh-chess-coord { flex:1; text-align:center; font:9px 'Space Mono',monospace; color:rgba(255,255,255,.3); }
+  /* ── Arcade: Snake reader ── */
+  .mh-snake-score { font:bold 12px 'Space Mono',monospace; color:var(--mh-a,#ffff00); text-shadow:0 0 10px var(--mh-a,#ffff00); letter-spacing:.08em; }
+  .mh-snake-hint { font:10px 'Space Mono',monospace; color:var(--ink-dim,#9090a8); }
+  .mh-snake-stage { position:relative; max-width:660px; margin:0 auto; border-radius:10px; overflow:hidden; box-shadow:0 0 0 1px rgba(255,255,255,.08),0 14px 40px rgba(0,0,0,.6); }
+  .mh-snake-canvas { display:block; width:100%; background:#05050c; image-rendering:pixelated; outline:none; cursor:pointer; }
+  .mh-snake-overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center;
+    font:bold 13px 'Space Mono',monospace; color:#fff; letter-spacing:.06em; background:rgba(5,5,12,.55);
+    text-shadow:0 2px 8px rgba(0,0,0,.9); padding:16px; pointer-events:none; transition:opacity .2s; }
+  .mh-snake-overlay.mh-hidden { opacity:0; }
+  .mh-snake-text { max-width:660px; margin:12px auto 0; display:flex; flex-direction:column; gap:6px; }
+  .mh-snake-line { font:13px/1.5 'Space Mono',monospace; color:rgba(150,150,175,.32); padding:5px 10px; border-radius:6px;
+    border-left:3px solid transparent; transition:color .3s, background .3s, border-color .3s; }
+  .mh-snake-line.mh-eaten { color:var(--ink,#e8e8f4); background:rgba(255,255,255,.04); border-left-color:var(--seg,var(--mh-a,#ffff00)); }
+  .mh-snake-line.mh-flash { animation:mhSnakeFlash .6s ease-out; }
+  @keyframes mhSnakeFlash { 0%{ background:var(--seg,#ffff00); color:#05050c; transform:scale(1.015); } 100%{ background:rgba(255,255,255,.04); transform:scale(1); } }
 </style>
 <div id="mhPageFold"></div>
 <div id="mhSplash">
@@ -1751,6 +1766,7 @@
     <button class="mh-suite-tab" data-suite-tab="logo"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Logo</span></button>
     <button class="mh-suite-tab" data-suite-tab="type"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Type</span></button>
     <button class="mh-suite-tab" data-suite-tab="chess"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Chess</span></button>
+    <button class="mh-suite-tab" data-suite-tab="snake"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Arcade</span></button>
   </div>
   <div class="mh-panels-wrap" id="mhPanelsWrap">
   <div id="mhFoldPaper"></div>
@@ -1919,6 +1935,19 @@
     <div class="mh-painter-tip" style="margin-top:10px">
       Chrome extension: <a href="../extension/README.md" style="color:var(--mh-a,#ffff00);text-decoration:none">install /extension</a> to inject HexField renders on chess.com + lichess.org
     </div>
+  </div>
+  <div class="mh-builder-panel" id="mhBuilderSnake">
+    <div class="mh-builder-title">Arcade · Snake reader — eat the pellets to reveal the page</div>
+    <div class="mh-render-toolbar" style="margin-bottom:8px;gap:8px;flex-wrap:wrap;align-items:center">
+      <button id="mhSnakeStart">▶ Start</button>
+      <span class="mh-snake-score" id="mhSnakeScore">0 / 0 read</span>
+      <span class="mh-snake-hint">Arrow keys / WASD · swipe on mobile · eat a pellet to reveal its sentence</span>
+    </div>
+    <div class="mh-snake-stage" id="mhSnakeStage">
+      <canvas id="mhSnakeCanvas" class="mh-snake-canvas" width="640" height="360" tabindex="0"></canvas>
+      <div class="mh-snake-overlay" id="mhSnakeOverlay">Press Start (or any arrow key) to play</div>
+    </div>
+    <div class="mh-snake-text" id="mhSnakeText"></div>
   </div>
   </div>
   <input id="mhUrl" value="https://example.com" style="display:none">
@@ -2505,15 +2534,19 @@
   // Build a single isometric brand cube: top = generated symbol, left/right = initials.
   function _buildBrandCube(container, p, text, seed){
     const S = 84;
-    const inits = _brandInitials(text);
+    // Escape initials before injecting into innerHTML — a brand starting with
+    // <, > or & would otherwise malform the markup and break the faces.
+    const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const rawInits = _brandInitials(text);
+    const inits = [esc(rawInits[0] || 'H'), esc(rawInits[1] || rawInits[0] || 'X')];
     container.innerHTML =
       `<div class="mh-brandcube-scene"><div class="mh-brandcube" style="width:${S}px;height:${S}px">`
       + `<div class="mh-bc-face mh-bc-top"   style="width:${S}px;height:${S}px;transform:rotateX(90deg) translateZ(${S/2}px);--bc-top:${p.aHex}">`
         + `<div class="mh-bc-stripes"></div>${_symbolSvg(p, seed, S)}</div>`
       + `<div class="mh-bc-face mh-bc-left"  style="width:${S}px;height:${S}px;transform:translateZ(${S/2}px);--bc-left:${p.bHex}">`
-        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${(inits[0]||'H')}</span></div>`
+        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${inits[0]}</span></div>`
       + `<div class="mh-bc-face mh-bc-right" style="width:${S}px;height:${S}px;transform:rotateY(90deg) translateZ(${S/2}px);--bc-right:${p.cHex}">`
-        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${(inits[1]||inits[0]||'X')}</span></div>`
+        + `<div class="mh-bc-stripes"></div><span class="mh-bc-glyph">${inits[1]}</span></div>`
       + `</div></div>`;
     // Paint the shared field stripes onto each face so the cube matches the site.
     if (typeof munker !== 'undefined') {
@@ -3182,6 +3215,10 @@
         // Pop the capsule open to reveal the art mid-encode.
         if (capsule) capsule.classList.add('mh-cap-open');
         gif.on('progress', pr => { if (gifStatus) gifStatus.textContent = `Encoding… ${Math.round(pr*100)}%`; });
+        // Always release the guard, even if encoding aborts/errors after render()
+        // starts (otherwise the button stays permanently ignored).
+        gif.on('abort', () => { if (gifStatus) gifStatus.textContent = 'GIF encoding aborted.'; _dispensing = false; });
+        gif.on('error', (err) => { if (gifStatus) gifStatus.textContent = 'GIF encoding failed.'; _dispensing = false; });
         gif.on('finished', blob => {
           const url = URL.createObjectURL(blob);
           const dl = $('mhVendGifDownload');
@@ -3444,6 +3481,142 @@
     if (status) { status.textContent = 'PNG exported!'; setTimeout(() => { status.textContent = ''; }, 1800); }
   }
 
+  // ── Arcade: Snake reader ────────────────────────────────────────────────
+  // "Each page is a game you navigate to read." A snake crosses a cube grid;
+  // eating a pellet reveals its sentence (flash in the palette colour). Read
+  // the whole page by eating every pellet.
+  const _SNAKE_LINES = [
+    'HEXFIELD turns colour theory into a playground.',
+    'Every background is a living isometric cube field.',
+    'Palettes are built from CMY light and additive complements.',
+    'The Munker illusion makes grey cells glow with borrowed colour.',
+    'Logos grow from billiard-ball simulations trapped inside letters.',
+    'Type, QR codes and chess boards all share one cube material.',
+    'Unique renders are seeded and synced so no two ever repeat.',
+    'Steer the snake to eat each pellet and reveal the story.',
+  ];
+  let _snake = null;
+  function _stopSnake(){ if(_snake){ _snake.stop(); _snake=null; } }
+  function _initSnake(){
+    _stopSnake();
+    const canvas=$('mhSnakeCanvas'), textWrap=$('mhSnakeText'), scoreEl=$('mhSnakeScore'),
+          overlay=$('mhSnakeOverlay'), startBtn=$('mhSnakeStart'), stage=$('mhSnakeStage');
+    if(!canvas||!textWrap) return;
+    const p = (typeof getWheelPalette==='function') ? getWheelPalette() : {aHex:'#ffff00',bHex:'#0000ff',cHex:'#00ffff',colors:[]};
+    const pal = [p.aHex,p.bHex,p.cHex,...(p.colors||[])].filter(Boolean);
+    // Build the sentence list (each tied to a pellet by index/colour).
+    textWrap.innerHTML = _SNAKE_LINES.map((s,i)=>{
+      const col = pal[i%pal.length];
+      const safe = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return `<div class="mh-snake-line" data-i="${i}" style="--seg:${col}">${safe}</div>`;
+    }).join('');
+    const lineEls = [...textWrap.querySelectorAll('.mh-snake-line')];
+
+    const CELL=20, COLS=Math.floor(canvas.width/CELL), ROWS=Math.floor(canvas.height/CELL);
+    const ctx=canvas.getContext('2d');
+    const game = {
+      snake:[{x:4,y:(ROWS>>1)}], dir:{x:1,y:0}, nextDir:{x:1,y:0}, grow:2,
+      pellets:[], eaten:0, running:false, dead:false, timer:null, tickMs:120, raf:0,
+    };
+    // Place one pellet per unread sentence on a free cell.
+    function placePellets(){
+      game.pellets=[];
+      const taken=new Set(game.snake.map(s=>s.x+','+s.y));
+      for(let i=0;i<_SNAKE_LINES.length;i++){
+        if(lineEls[i].classList.contains('mh-eaten')) continue;
+        let x,y,tries=0;
+        do{ x=2+((Math.random()*(COLS-4))|0); y=1+((Math.random()*(ROWS-2))|0); tries++; }
+        while(taken.has(x+','+y) && tries<80);
+        taken.add(x+','+y);
+        game.pellets.push({x,y,i,col:pal[i%pal.length]});
+      }
+    }
+    function reset(keepEaten){
+      game.snake=[{x:4,y:(ROWS>>1)}]; game.dir={x:1,y:0}; game.nextDir={x:1,y:0}; game.grow=2; game.dead=false;
+      if(!keepEaten){ game.eaten=0; lineEls.forEach(el=>el.classList.remove('mh-eaten')); }
+      placePellets(); updateScore();
+    }
+    function updateScore(){ if(scoreEl) scoreEl.textContent = `${game.eaten} / ${_SNAKE_LINES.length} read`; }
+    function _cube(cx,cy,col,bright){
+      const x=cx*CELL, y=cy*CELL, n=parseInt(col.replace('#',''),16);
+      const r=(n>>16)&255,g=(n>>8)&255,b=n&255, k=bright?1.25:1;
+      ctx.fillStyle=`rgb(${Math.min(255,r*1.5*k)|0},${Math.min(255,g*1.5*k)|0},${Math.min(255,b*1.5*k)|0})`;
+      ctx.fillRect(x+1,y+1,CELL-2,CELL*0.5);        // top (bright)
+      ctx.fillStyle=`rgb(${r*0.85*k|0},${g*0.85*k|0},${b*0.85*k|0})`;
+      ctx.fillRect(x+1,y+1+CELL*0.5,CELL-2,CELL*0.5-1); // body
+      ctx.fillStyle='rgba(0,0,0,.25)'; ctx.fillRect(x+1,y+CELL-3,CELL-2,2);
+    }
+    function draw(){
+      ctx.fillStyle='#05050c'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      // faint grid
+      ctx.strokeStyle='rgba(255,255,255,.04)'; ctx.lineWidth=1;
+      for(let x=0;x<=COLS;x++){ ctx.beginPath(); ctx.moveTo(x*CELL,0); ctx.lineTo(x*CELL,canvas.height); ctx.stroke(); }
+      for(let y=0;y<=ROWS;y++){ ctx.beginPath(); ctx.moveTo(0,y*CELL); ctx.lineTo(canvas.width,y*CELL); ctx.stroke(); }
+      // pellets (pulse)
+      const t=performance.now()/300;
+      game.pellets.forEach(pel=>{
+        const s=0.5+0.18*Math.sin(t+pel.i);
+        ctx.save(); ctx.globalAlpha=0.65+0.35*Math.sin(t+pel.i);
+        _cube(pel.x,pel.y,pel.col,true); ctx.restore();
+        ctx.fillStyle='#05050c'; ctx.font='bold 10px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(String(pel.i+1), pel.x*CELL+CELL/2, pel.y*CELL+CELL*0.55);
+      });
+      // snake
+      game.snake.forEach((seg,idx)=>{ _cube(seg.x,seg.y, pal[(idx)%pal.length], idx===0); });
+    }
+    function step(){
+      game.dir=game.nextDir;
+      let hx=game.snake[0].x+game.dir.x, hy=game.snake[0].y+game.dir.y;
+      hx=(hx+COLS)%COLS; hy=(hy+ROWS)%ROWS;                 // wrap around walls
+      // self collision → soft reset (keep what you've read)
+      if(game.snake.some(s=>s.x===hx&&s.y===hy)){ reset(true); return; }
+      game.snake.unshift({x:hx,y:hy});
+      const pi=game.pellets.findIndex(pel=>pel.x===hx&&pel.y===hy);
+      if(pi>=0){
+        const pel=game.pellets[pi]; game.pellets.splice(pi,1); game.grow+=1; game.eaten++;
+        const el=lineEls[pel.i]; if(el){ el.classList.add('mh-eaten','mh-flash'); el.scrollIntoView({block:'nearest',behavior:'smooth'});
+          setTimeout(()=>el.classList.remove('mh-flash'),600); }
+        updateScore();
+        if(game.eaten>=_SNAKE_LINES.length){ showOverlay('✦ Page fully read! Press Start to replay.'); game.running=false; return; }
+      }
+      if(game.grow>0) game.grow--; else game.snake.pop();
+      draw();
+    }
+    let _acc=0,_last=0;
+    function loop(now){
+      if(!game.running) return;
+      game.raf=requestAnimationFrame(loop);
+      if(!_last)_last=now; _acc+=now-_last; _last=now;
+      while(_acc>=game.tickMs){ step(); _acc-=game.tickMs; }
+    }
+    function showOverlay(msg){ if(overlay){ overlay.textContent=msg; overlay.classList.remove('mh-hidden'); } }
+    function hideOverlay(){ if(overlay) overlay.classList.add('mh-hidden'); }
+    function start(){ if(game.eaten>=_SNAKE_LINES.length) reset(false); game.running=true; game.dead=false; _last=0; _acc=0; hideOverlay(); canvas.focus(); cancelAnimationFrame(game.raf); game.raf=requestAnimationFrame(loop); }
+    function setDir(x,y){ if(x===-game.dir.x&&y===-game.dir.y) return; game.nextDir={x,y}; if(!game.running) start(); }
+    const keyHandler=(e)=>{
+      const k=e.key.toLowerCase();
+      if(k==='arrowup'||k==='w'){ setDir(0,-1); e.preventDefault(); }
+      else if(k==='arrowdown'||k==='s'){ setDir(0,1); e.preventDefault(); }
+      else if(k==='arrowleft'||k==='a'){ setDir(-1,0); e.preventDefault(); }
+      else if(k==='arrowright'||k==='d'){ setDir(1,0); e.preventDefault(); }
+    };
+    canvas.addEventListener('keydown', keyHandler);
+    // capture arrows even when canvas isn't focused, while the tab is active
+    const winKey=(e)=>{ if(document.getElementById('mhBuilderSnake')?.classList.contains('active')) keyHandler(e); };
+    window.addEventListener('keydown', winKey);
+    // swipe
+    let tsx=0,tsy=0;
+    canvas.addEventListener('touchstart',e=>{ const t=e.touches[0]; tsx=t.clientX; tsy=t.clientY; },{passive:true});
+    canvas.addEventListener('touchend',e=>{ const t=e.changedTouches[0]; const dx=t.clientX-tsx, dy=t.clientY-tsy;
+      if(Math.abs(dx)>Math.abs(dy)) setDir(dx>0?1:-1,0); else setDir(0,dy>0?1:-1); },{passive:true});
+    canvas.addEventListener('click', ()=>{ if(!game.running) start(); else canvas.focus(); });
+    if(startBtn) startBtn.onclick=()=>start();
+
+    game.stop=function(){ game.running=false; cancelAnimationFrame(game.raf); canvas.removeEventListener('keydown',keyHandler); window.removeEventListener('keydown',winKey); };
+    reset(false); draw();
+    _snake={ stop: game.stop };
+  }
+
   // Shuffle: randomise hue offsets, ball counts, speeds and re-run
   const _allRules=['avoid','flock','spiral','chaos','seek','no-rep','excl','like-att','like-rep'];
   function _shuffleLogoSim(){
@@ -3694,7 +3867,7 @@
     const outPanel = document.querySelector('.mh-builder-panel.active');
     if (!inPanel || inPanel === outPanel) return;
     document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
-    _stopLogoSims(); _stopTypeAlpha(); // stop sims on tab switch
+    _stopLogoSims(); _stopTypeAlpha(); _stopSnake(); // stop sims on tab switch
     const bg = document.getElementById('mhPageHexBg');
     if (bg) {
       bg.classList.add('mh-domino','mh-bg-pulse');
@@ -3715,6 +3888,7 @@
       if (tab === 'type') { if(typeof renderTypeScale==='function') renderTypeScale(); setTimeout(_startTypeAlpha, 200); }
       if (tab === 'logo') { renderLogoDesigner(); setTimeout(() => { _startLogoSim(); _initVendingMachine(); }, 250); }
       if (tab === 'chess') setTimeout(renderChessBoard, 60);
+      if (tab === 'snake') setTimeout(_initSnake, 60);
     }
     if (paper) {
       paper.classList.remove('mh-paper-cover','mh-paper-reveal');
