@@ -1081,13 +1081,15 @@
       linear-gradient(90deg,var(--mh-grid-line,rgba(128,128,128,.07)) 1px,transparent 1px);
     background-size:24px 24px; transform-origin:top center;
   }
-  #mhPageFold.mh-pf-cover { display:block; animation:mhPfCover 280ms cubic-bezier(.4,0,.2,1) forwards; }
-  #mhPageFold.mh-pf-reveal { display:block; animation:mhPfReveal 340ms cubic-bezier(.15,.7,.3,1.1) forwards; }
+  #mhPageFold { perspective:1200px; }
+  #mhPageFold.mh-pf-cover { display:block; animation:mhPfCover 340ms cubic-bezier(.4,0,.2,1) forwards; }
+  #mhPageFold.mh-pf-reveal { display:block; animation:mhPfReveal 380ms cubic-bezier(.15,.7,.3,1.1) forwards; }
+  /* Origami fold-down: the grid panel swings in on a top hinge, then away. */
   @keyframes mhPfCover {
-    0%{transform:scaleY(0.01);opacity:0}25%{opacity:1}100%{transform:scaleY(1);opacity:1}
+    0%{transform:rotateX(-90deg) scaleY(.4);opacity:0}30%{opacity:1}100%{transform:rotateX(0deg) scaleY(1);opacity:1}
   }
   @keyframes mhPfReveal {
-    0%{transform:scaleY(1);opacity:1}75%{opacity:.5}100%{transform:scaleY(0.01);opacity:0}
+    0%{transform:rotateX(0deg) scaleY(1);opacity:1}70%{opacity:.55}100%{transform:rotateX(88deg) scaleY(.35);opacity:0}
   }
   /* ── Splash page ── */
   #mhSplash {
@@ -1263,11 +1265,24 @@
   }
   /* ── Splash cube clusters: cubes already carry the 3D illusion via their
      own clip-path faces, so the card itself stays flat — no extra tilt ── */
-  /* ── Builder panel rise animation on tab switch ── */
-  .mh-builder-panel.active { animation:mhPanelRise .38s cubic-bezier(.2,.8,.35,1.3) forwards; }
-  @keyframes mhPanelRise {
-    from { transform:perspective(600px) rotateX(-6deg) translateY(10px); opacity:0; }
-    to   { transform:perspective(600px) rotateX(0deg)  translateY(0);    opacity:1; }
+  /* ── Builder panel transition on tab switch: Rubik cube face-turn ── */
+  .mh-panels-wrap { perspective:1400px; }
+  .mh-builder-panel.active { animation:mhRubikTurn .5s cubic-bezier(.5,.05,.25,1) forwards; transform-origin:left center; backface-visibility:hidden; }
+  @keyframes mhRubikTurn {
+    0%   { transform:rotateY(-88deg) scale(.94); opacity:0; filter:brightness(1.6); }
+    55%  { opacity:1; }
+    100% { transform:rotateY(0deg) scale(1); opacity:1; filter:brightness(1); }
+  }
+  /* Origami accordion fold — used by the full-page transition overlay. */
+  @keyframes mhOrigamiFold {
+    0%   { transform:perspective(1000px) rotateX(0deg); }
+    100% { transform:perspective(1000px) rotateX(88deg); }
+  }
+  body.mh-origami .mh-builder-panel.active { animation:mhOrigamiIn .52s cubic-bezier(.4,0,.2,1) forwards; transform-origin:top center; }
+  @keyframes mhOrigamiIn {
+    0%   { transform:perspective(1100px) rotateX(-90deg); opacity:0; }
+    60%  { opacity:1; }
+    100% { transform:perspective(1100px) rotateX(0deg); opacity:1; }
   }
   /* ── View mode toggles ── */
   body.mh-grid-over #mhPageHexBg { z-index:30; mix-blend-mode:screen; opacity:0.18; pointer-events:none; }
@@ -1642,6 +1657,14 @@
   .mh-snake-line.mh-eaten { color:var(--ink,#e8e8f4); background:rgba(255,255,255,.04); border-left-color:var(--seg,var(--mh-a,#ffff00)); }
   .mh-snake-line.mh-flash { animation:mhSnakeFlash .6s ease-out; }
   @keyframes mhSnakeFlash { 0%{ background:var(--seg,#ffff00); color:#05050c; transform:scale(1.015); } 100%{ background:rgba(255,255,255,.04); transform:scale(1); } }
+  /* ── Live billiard pixel font (retro CRT screen) ── */
+  .mh-pxfont-wrap { margin-bottom:12px; }
+  .mh-pxfont-screen { position:relative; border-radius:10px; overflow:hidden; background:#04040a;
+    box-shadow:inset 0 0 22px rgba(0,0,0,.9), 0 0 0 2px #1a1a2a, 0 10px 30px rgba(0,0,0,.55); padding:8px; }
+  .mh-pxfont-screen::after { content:''; position:absolute; inset:0; pointer-events:none; z-index:2;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
+    mix-blend-mode:multiply; }
+  .mh-pxfont-screen canvas { display:block; width:100%; image-rendering:pixelated; border-radius:6px; }
 </style>
 <div id="mhPageFold"></div>
 <div id="mhSplash">
@@ -1756,6 +1779,7 @@
     <button class="mh-mode-btn" id="mhGraphBtn" title="Graph-paper panels">Graph</button>
     <button class="mh-mode-btn" id="mhShadowBtn" title="Drop shadows">Shadow</button>
     <button class="mh-mode-btn" id="mhNeonBtn" title="Neon mode">Neon</button>
+    <button class="mh-mode-btn" id="mhOrigamiBtn" title="Origami fold transitions (off = Rubik cube turn)">Origami</button>
   </span>
   <div class="mh-suite-tabs" id="mhSuiteTabs">
     <button class="mh-suite-tab active" data-suite-tab="web"><div class="mh-ctab-cube"><div class="mh-ctab-f mh-ctab-t"></div><div class="mh-ctab-f mh-ctab-r"></div><div class="mh-ctab-f mh-ctab-l"></div></div><span class="mh-ctab-lbl">Web</span></button>
@@ -1841,11 +1865,6 @@
       <button id="mhLogoGifBtn">&#x25CF; Record GIF</button>
       <span id="mhLogoGifStatus" class="mh-export-status"></span>
     </div>
-    <div id="mhLogoSimGrid"></div>
-    <div id="mhLogoLibrary"></div>
-    <div class="mh-render-toolbar" style="margin-top:4px">
-      <button id="mhLogoNftBtn">Export Unique Art (PNG)</button>
-    </div>
     <!-- Retro vending machine — $1 unlocks colour render download via Stripe -->
     <div id="mhVending" class="mh-vending">
       <div class="mh-vend-screen">
@@ -1879,6 +1898,11 @@
       <a id="mhVendGifDownload" class="mh-download-link" download="hexfield-logo.gif">⬇ Download GIF</a>
       <span id="mhVendGifStatus" class="mh-export-status"></span>
     </div>
+    <div id="mhLogoSimGrid"></div>
+    <div id="mhLogoLibrary"></div>
+    <div class="mh-render-toolbar" style="margin-top:4px">
+      <button id="mhLogoNftBtn">Export Unique Art (PNG)</button>
+    </div>
     <div class="mh-render-toolbar" style="margin-top:10px;flex-wrap:wrap">
       <input id="mhLogoTextLogo" maxlength="24" value="HEXFIELD" placeholder="Brand name" style="flex:2" />
       <select id="mhLogoMarkLogo"><option value="hex">Hex mark</option><option value="cube">Cube mark</option><option value="none">Text only</option></select>
@@ -1900,6 +1924,14 @@
   <!-- ── Live Type panel ── -->
   <div class="mh-builder-panel" id="mhBuilderType">
     <div class="mh-builder-title">Live type · cube billiard alphabet</div>
+    <!-- Live billiard pixel font — retro bitmap letters lit by running sims -->
+    <div class="mh-pxfont-wrap">
+      <div class="mh-render-toolbar" style="gap:6px;margin-bottom:6px">
+        <input id="mhPxFontText" maxlength="14" value="HEX" placeholder="Type a word…" style="flex:1;text-transform:uppercase" />
+        <button id="mhPxFontShuffle" style="min-width:auto" title="New seed">&#x21BB;</button>
+      </div>
+      <div class="mh-pxfont-screen"><canvas id="mhPxFontCanvas" width="640" height="180"></canvas></div>
+    </div>
     <div class="mh-render-toolbar" style="margin-bottom:8px;gap:6px;flex-wrap:wrap">
       <span style="font:10px 'Space Mono',monospace;color:var(--ink-dim);letter-spacing:.1em">STYLE</span>
       <button class="mh-type-style-btn active" data-ts="0">Neon</button>
@@ -3617,6 +3649,90 @@
     _snake={ stop: game.stop };
   }
 
+  // ── Live billiard pixel font ────────────────────────────────────────────
+  // Retro bitmap letters whose pixels light up as billiard balls bounce inside
+  // each letter's mask. Reuses the seeded PRNG helpers (_mulberry32/_seedFromString).
+  let _pxFont = null, _pxFontSeed = 1;
+  function _stopPixelFont(){ if(_pxFont){ cancelAnimationFrame(_pxFont.raf); _pxFont.input && _pxFont.input.removeEventListener('input', _pxFont.oninput); _pxFont=null; } }
+  function _pxCharMask(ch, W, H){
+    const c=document.createElement('canvas'); c.width=W; c.height=H;
+    const x=c.getContext('2d'); x.fillStyle='#000'; x.fillRect(0,0,W,H);
+    x.fillStyle='#fff'; x.font='700 '+(H-3)+"px 'Space Mono',monospace"; x.textAlign='center'; x.textBaseline='middle';
+    x.fillText(ch, W/2, H/2+1);
+    const d=x.getImageData(0,0,W,H).data, m=new Uint8Array(W*H);
+    for(let i=0;i<W*H;i++) m[i]= d[i*4]>110 ? 1 : 0;
+    return m;
+  }
+  function _pxLetterSim(ch, W, H, seed){
+    const mask=_pxCharMask(ch, W, H);
+    const rng=_mulberry32(_seedFromString('px'+seed+ch));
+    const cells=[]; for(let i=0;i<W*H;i++) if(mask[i]) cells.push(i);
+    if(!cells.length) return {mask,W,H,balls:[],lit:new Float32Array(W*H)};
+    const N=Math.max(2, Math.min(4, cells.length>50?4:2)), balls=[];
+    for(let i=0;i<N;i++){ const c=cells[(rng()*cells.length)|0], a=rng()*6.283;
+      balls.push({x:c%W+.5, y:(c/W|0)+.5, vx:Math.cos(a)*0.85, vy:Math.sin(a)*0.85, hue:rng()*360}); }
+    return {mask,W,H,balls,lit:new Float32Array(W*H)};
+  }
+  function _pxStep(s){
+    const {mask,W,H,balls,lit}=s;
+    for(let i=0;i<lit.length;i++) lit[i]*=0.90;
+    const inM=(x,y)=>{ const xi=x|0,yi=y|0; return xi>=0&&xi<W&&yi>=0&&yi<H&&mask[yi*W+xi]; };
+    for(const b of balls){
+      let nx=b.x+b.vx, ny=b.y+b.vy;
+      if(!inM(nx,b.y)){ b.vx*=-1; nx=b.x; }
+      if(!inM(b.x,ny)){ b.vy*=-1; ny=b.y; }
+      if(!inM(nx,ny)){ b.vx*=-1; b.vy*=-1; nx=b.x; ny=b.y; }
+      b.x=nx; b.y=ny; b.hue=(b.hue+2.5)%360;
+      const idx=(b.y|0)*W+(b.x|0); if(mask[idx]) lit[idx]=1;
+    }
+  }
+  function _startPixelFont(){
+    _stopPixelFont();
+    const canvas=$('mhPxFontCanvas'), input=$('mhPxFontText'); if(!canvas||!input) return;
+    const p=(typeof getWheelPalette==='function')?getWheelPalette():{hue:200,colors:[]};
+    const LW=14, LH=20, GAP=2;
+    function build(){
+      const word=((input.value||'HEX').toUpperCase().slice(0,14))||'HEX';
+      const letters=[...word].map((ch,i)=> ch===' ' ? null : _pxLetterSim(ch, LW, LH, _pxFontSeed+i));
+      return { word, letters };
+    }
+    let state=build();
+    const ctx=canvas.getContext('2d');
+    function draw(){
+      const CW=canvas.width, CH=canvas.height;
+      ctx.fillStyle='#04040a'; ctx.fillRect(0,0,CW,CH);
+      const cols=state.letters.length, cell=Math.max(3, Math.min((CW-20)/(cols*(LW+GAP)), (CH-20)/LH));
+      const totalW=cols*(LW+GAP)*cell, ox=(CW-totalW)/2, oy=(CH-LH*cell)/2;
+      const baseHue=p.hue||200;
+      state.letters.forEach((s,li)=>{
+        const lx=ox+li*(LW+GAP)*cell;
+        if(!s) return;
+        for(let y=0;y<LH;y++) for(let x=0;x<LW;x++){
+          const idx=y*LW+x; if(!s.mask[idx]) continue;
+          const lit=s.lit[idx];
+          const hue=(baseHue + x*6 + y*3 + lit*60)%360;
+          const l=18+lit*54;           // dim letter body → bright where balls hit
+          ctx.fillStyle=`hsl(${hue|0},95%,${l|0}%)`;
+          ctx.fillRect((lx+x*cell)|0, (oy+y*cell)|0, Math.ceil(cell)-0.5, Math.ceil(cell)-0.5);
+          if(lit>0.5){ ctx.fillStyle=`hsla(${hue|0},100%,80%,${(lit-0.5)*0.7})`; ctx.fillRect((lx+x*cell)|0,(oy+y*cell)|0,Math.ceil(cell),Math.ceil(cell)); }
+        }
+      });
+    }
+    let _l=0,_a=0;
+    function loop(now){
+      _pxFont.raf=requestAnimationFrame(loop);
+      if(!_l)_l=now; _a+=now-_l; _l=now;
+      while(_a>=33){ state.letters.forEach(s=>s&&_pxStep(s)); _a-=33; }
+      draw();
+    }
+    const oninput=()=>{ state=build(); };
+    input.addEventListener('input', oninput);
+    _pxFont={ raf:0, input, oninput };
+    _pxFont.raf=requestAnimationFrame(loop);
+    const shuf=$('mhPxFontShuffle');
+    if(shuf && !shuf._pxWired){ shuf._pxWired=true; shuf.addEventListener('click', ()=>{ _pxFontSeed+= 7; state=build(); }); }
+  }
+
   // Shuffle: randomise hue offsets, ball counts, speeds and re-run
   const _allRules=['avoid','flock','spiral','chaos','seek','no-rep','excl','like-att','like-rep'];
   function _shuffleLogoSim(){
@@ -3867,7 +3983,7 @@
     const outPanel = document.querySelector('.mh-builder-panel.active');
     if (!inPanel || inPanel === outPanel) return;
     document.querySelectorAll('.mh-suite-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.suiteTab === tab));
-    _stopLogoSims(); _stopTypeAlpha(); _stopSnake(); // stop sims on tab switch
+    _stopLogoSims(); _stopTypeAlpha(); _stopSnake(); _stopPixelFont(); // stop sims on tab switch
     const bg = document.getElementById('mhPageHexBg');
     if (bg) {
       bg.classList.add('mh-domino','mh-bg-pulse');
@@ -3885,7 +4001,7 @@
       if (tab === 'qr') setTimeout(() => { if (typeof generateQr === 'function') generateQr(); }, 60);
       if (tab === 'kit' && typeof renderKitGrid === 'function') renderKitGrid();
       if (tab === 'fonts' && typeof loadFontEffects === 'function') loadFontEffects();
-      if (tab === 'type') { if(typeof renderTypeScale==='function') renderTypeScale(); setTimeout(_startTypeAlpha, 200); }
+      if (tab === 'type') { if(typeof renderTypeScale==='function') renderTypeScale(); setTimeout(_startTypeAlpha, 200); setTimeout(_startPixelFont, 120); }
       if (tab === 'logo') { renderLogoDesigner(); setTimeout(() => { _startLogoSim(); _initVendingMachine(); }, 250); }
       if (tab === 'chess') setTimeout(renderChessBoard, 60);
       if (tab === 'snake') setTimeout(_initSnake, 60);
@@ -4971,7 +5087,7 @@
     if (backBtn) backBtn.addEventListener('click', backToSplash);
 
     // ── Mode toggle buttons ────────────────────────────────────────────────
-    [['mhGridBtn','mh-grid-over'],['mhGraphBtn','mh-graph-paper'],['mhShadowBtn','mh-shadows'],['mhNeonBtn','mh-neon']].forEach(([id, cls]) => {
+    [['mhGridBtn','mh-grid-over'],['mhGraphBtn','mh-graph-paper'],['mhShadowBtn','mh-shadows'],['mhNeonBtn','mh-neon'],['mhOrigamiBtn','mh-origami']].forEach(([id, cls]) => {
       const btn = document.getElementById(id);
       if (!btn) return;
       btn.addEventListener('click', () => {
