@@ -1324,6 +1324,10 @@
     color:#ff2417; text-shadow:0 0 6px #ff2417, 0 0 14px rgba(255,40,30,.85), 0 0 3px #fff3; }
   .mh-colour-timer.mh-ct-ending #mhColourClock { animation:mhClockBlink .5s step-end infinite; }
   @keyframes mhClockBlink { 0%,100%{opacity:1} 50%{opacity:.28} }
+  /* ── Cube-BG mode: field renders like the clean HUE CUBE on black ── */
+  body.mh-cube-bg #mhPageHexBg { background:#000; }
+  body.mh-cube-bg .mh-pxf-t, body.mh-cube-bg .mh-pxf-r, body.mh-cube-bg .mh-pxf-l { animation:none !important; }
+  body.mh-cube-bg .mh-pxhex, body.mh-cube-bg .mh-pxhex-b { animation:none !important; opacity:1 !important; }
   /* ── View mode toggles ── */
   body.mh-grid-over #mhPageHexBg { z-index:30; mix-blend-mode:screen; opacity:0.18; pointer-events:none; }
   /* ── Graph-paper panels: lay a blueprint grid behind the tool panels ── */
@@ -1820,6 +1824,7 @@
 <section class="mh-render-adapter" id="mhRenderAdapter">
   <button class="mh-back-btn" id="mhBackBtn">&#8592; Tools</button>
   <span class="mh-mode-btns">
+    <button class="mh-mode-btn" id="mhCubeBgBtn" title="Render background like the HUE CUBE (clean cubes on black)">Cube BG</button>
     <button class="mh-mode-btn" id="mhGridBtn" title="Hex grid overlay">Grid+</button>
     <button class="mh-mode-btn" id="mhGraphBtn" title="Graph-paper panels">Graph</button>
     <button class="mh-mode-btn" id="mhShadowBtn" title="Drop shadows">Shadow</button>
@@ -4576,16 +4581,40 @@
     const sT = _faceStripe(60,  p.aHex, p.bHex);
     const sR = _faceStripe(120, p.bHex, p.cHex);
     const sL = _faceStripe(90,  p.cHex, p.aHex);
+    // ── Cube-BG mode: render the field like the clean HUE CUBE ──────────────
+    // Uniform hue×tone-mapped cubes (via cubeColorFor) with neat per-face
+    // Munker bands on black, instead of the rainbow palette-cycle + diagonal
+    // stripes. Defaults on (body.mh-cube-bg).
+    const cubeBg = document.body.classList.contains('mh-cube-bg');
+    const _chroma = (typeof cal !== 'undefined' && cal.chroma != null) ? cal.chroma : 80;
+    const _toHex = rgb => '#' + rgb.map(v => Math.max(0, Math.min(255, v|0)).toString(16).padStart(2,'0')).join('');
+    // Coherent single-hue-ish field like the HUE CUBE: the wheel hue drifts
+    // gently across the page (local coherence, soft gradient) with tonal
+    // variation by row — NOT a full 0–360 rainbow per column.
+    function _cubeHex(r, c) {
+      if (typeof rgbAt !== 'function') return p.aHex;
+      const hue  = (p.hue + (r + c) * 3) % 360;                 // gentle drift
+      const tone = 40 + ((r * 5 + c * 3) % 22);                 // 40..62 soft banding
+      return _toHex(rgbAt(hue, tone, _chroma));
+    }
+    // Neat single-colour bands (complement of the wheel hue) on each face.
+    const _bandRgb = (typeof rgbAt === 'function') ? rgbAt((p.hue + 180) % 360, 55, _chroma) : [0, 0, 60];
+    const _bandCss = `rgba(${_bandRgb[0]|0},${_bandRgb[1]|0},${_bandRgb[2]|0},.55)`;
+    function _cubeBand(angle) {
+      return `repeating-linear-gradient(${angle}deg, ${_bandCss} 0 4px, transparent 4px 13px)`;
+    }
+    const bT = cubeBg ? _cubeBand(60) : sT, bR = cubeBg ? _cubeBand(120) : sR, bL = cubeBg ? _cubeBand(90) : sL;
+    const colorAt = (r, c) => cubeBg ? _cubeHex(r, c) : pal[(r*cols+c) % pal.length];
     const existing = bg.children;
     if (existing.length === cols * rows) {
       let i = 0;
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           const t = existing[i++];
-          t.style.setProperty('--pxc', pal[(r*cols+c) % pal.length]);
-          if (t.children[0]) t.children[0].style.backgroundImage = sT;
-          if (t.children[1]) t.children[1].style.backgroundImage = sR;
-          if (t.children[2]) t.children[2].style.backgroundImage = sL;
+          t.style.setProperty('--pxc', colorAt(r, c));
+          if (t.children[0]) t.children[0].style.backgroundImage = bT;
+          if (t.children[1]) t.children[1].style.backgroundImage = bR;
+          if (t.children[2]) t.children[2].style.backgroundImage = bL;
         }
       }
       return;
@@ -4599,7 +4628,7 @@
         const delay = Math.min(maxDelay, ((r + c) * 0.04)).toFixed(2);
         const cls = (r+c)%2===1 ? 'mh-pxhex mh-pxhex-b' : 'mh-pxhex';
         const spawnCls = firstBuild ? ' mh-spawn-in' : '';
-        h += `<div class="${cls}${spawnCls}" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${pal[(r*cols+c)%pal.length]};--row:${r};animation-delay:-${delay}s;--spawn-delay:${delay}s"><div class="mh-pxf mh-pxf-t" style="background-image:${sT}"></div><div class="mh-pxf mh-pxf-r" style="background-image:${sR}"></div><div class="mh-pxf mh-pxf-l" style="background-image:${sL}"></div></div>`;
+        h += `<div class="${cls}${spawnCls}" style="left:${(c*colStep+Number(off)).toFixed(0)}px;top:${(r*rowStep).toFixed(0)}px;width:${sz}px;height:${hexH.toFixed(0)}px;--pxc:${colorAt(r,c)};--row:${r};animation-delay:-${delay}s;--spawn-delay:${delay}s"><div class="mh-pxf mh-pxf-t" style="background-image:${bT}"></div><div class="mh-pxf mh-pxf-r" style="background-image:${bR}"></div><div class="mh-pxf mh-pxf-l" style="background-image:${bL}"></div></div>`;
       }
     }
     bg.innerHTML = h;
@@ -4796,6 +4825,9 @@
   function tickSim() {
     if (!_sim || !_simTiles) return;
     _sim.step();
+    // Cube-BG mode keeps the clean, static HUE-CUBE colours — the reaction-
+    // diffusion still evolves (for global uniqueness) but doesn't repaint tiles.
+    if (document.body.classList.contains('mh-cube-bg')) return;
     const pal = getWheelPalette();
     const aH = pal.hue, bH = (aH+120)%360, cH = (aH+240)%360;
     _simTiles.forEach((el, i) => {
@@ -5214,6 +5246,25 @@
         btn.classList.toggle('active', document.body.classList.contains(cls));
       });
     });
+    // Cube-BG: clean HUE-CUBE-style field. Default ON; rebuild the field on toggle.
+    (function(){
+      const btn = document.getElementById('mhCubeBgBtn');
+      const rebuild = () => {
+        const bg = document.getElementById('mhPageHexBg');
+        if (bg) bg.dataset.built = '';                      // force a full rebuild
+        if (typeof buildPageHexBg === 'function') buildPageHexBg();
+        if (typeof buildSplashClusters === 'function') buildSplashClusters();
+      };
+      document.body.classList.add('mh-cube-bg');            // default on per user preference
+      rebuild();                                            // re-render the initial field in cube-BG style
+      if (btn) {
+        btn.classList.add('active');
+        btn.addEventListener('click', () => {
+          btn.classList.toggle('active', document.body.classList.toggle('mh-cube-bg'));
+          rebuild();
+        });
+      }
+    })();
     // ── NFT / unique art export from logo sim ────────────────────────────────
     document.addEventListener('click', function(e) {
       if (e.target.id !== 'mhLogoNftBtn') return;
