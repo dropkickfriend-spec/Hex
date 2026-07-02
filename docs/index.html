@@ -2173,10 +2173,6 @@
     <div class="mh-builder-title">Platform game designer · simple playable scene builder</div>
     <div class="mh-render-toolbar"><button id="mhGameBuilderBtn">Generate scene in render stage</button><span class="mh-export-status">Hex level, player, enemies, collectibles, and Munker ground use current palette.</span></div>
   </div>
-  <div class="mh-builder-panel" id="mhBuilderCharacter">
-    <div class="mh-builder-title">Character designer · player/enemy tokens</div>
-    <div class="mh-extra-grid" id="mhCharacterPreview"></div>
-  </div>
   <div class="mh-builder-panel" id="mhBuilderGif">
     <div class="mh-builder-title">GIF designer · timeline presets</div>
     <div class="mh-render-toolbar"><button id="mhGifDesignerBtn">Use current render for GIF</button><span class="mh-export-status">Exports through Website-builder export panel below.</span></div>
@@ -2217,6 +2213,8 @@
     <div id="mhLogoHexMark" style="display:flex;justify-content:center;align-items:center;padding:14px 0;min-height:100px"></div>
     <div class="mh-render-toolbar" style="margin-top:6px">
       <button id="mhLogoShuffleBtn">&#x21BB; Shuffle variations</button>
+      <button id="mhLogoFontBtn">&#x21BB; Fonts</button>
+      <button id="mhLogoHueBtn">&#x21BB; Colours</button>
       <button id="mhLogoGifBtn">&#x25CF; Record GIF</button>
       <span id="mhLogoGifStatus" class="mh-export-status"></span>
     </div>
@@ -3203,7 +3201,7 @@
   // Wordmark rendered in the session's generated line-grammar font — the brand
   // name set in a typeface that exists nowhere else, instead of plain Space Mono.
   function _genWordmarkUrl(text, seed, color, h){
-    const spec=_genFont(_seedFromString('wordmark|'+(seed||'x')));
+    const spec=_genFont(_seedFromString('wordmark|'+(seed||'x')+'|f'+_lsFontSalt));
     const chars=(text||'').toUpperCase().split('');
     const adv=h*0.82, pad=Math.ceil(h*0.25);
     const cv=document.createElement('canvas');
@@ -3229,7 +3227,7 @@
   }
   function _startCubeFaceSims(container, text){
     const p=(typeof getWheelPalette==='function')?getWheelPalette():{hue:200};
-    const key=(text||'')+'|'+Math.round(p.hue)+'|'+(_logoSeed||'');
+    const key=(text||'')+'|'+Math.round(p.hue)+'|'+(_logoSeed||'')+'|f'+_lsFontSalt+'|h'+_lsHueSalt;
     if(_cubeKey===key && _cubeRaf && container.querySelector('canvas')) return;
     _stopCubeFaceSims();
     _cubeKey=key;
@@ -3251,11 +3249,11 @@
       {o:[W/2,H/2], u:[W/2,-H/4], v:[0,H/2],    shade:'rgba(0,0,0,0.12)',       hOff:120},
       {o:[0,H/4],   u:[W/2,H/4],  v:[0,H/2],    shade:'rgba(0,0,0,0.42)',       hOff:240},
     ].map((f,i)=>{
-      const seed=_seedFromString((_logoSeed||'x')+'|cubeface|'+i+'|'+L[i]+'|'+Math.round(p.hue));
+      const seed=_seedFromString((_logoSeed||'x')+'|cubeface|'+i+'|'+L[i]+'|'+Math.round(p.hue)+'|f'+_lsFontSalt);
       const font=_genFont(seed);
       const mask=_buildLetterMask(L[i],S,S,font);
-      const sim=new BilliardsLogoSim(S,S,mask,6,4,(p.hue+f.hOff)%360,seed);
-      sim._schemeHue=(p.hue+f.hOff)%360;
+      const sim=new BilliardsLogoSim(S,S,mask,6,4,(p.hue+f.hOff+_lsHueSalt)%360,seed);
+      sim._schemeHue=(p.hue+f.hOff+_lsHueSalt)%360;
       sim._compHue=(sim._schemeHue+180)%360;
       // Prerender the resting letter layer once (complement tint on scheme base)
       const lc=document.createElement('canvas'); lc.width=S; lc.height=S;
@@ -3405,6 +3403,9 @@
 
   // ── Logo sim: billiards in letter boundary ────────────────────────────────
   let _lsGrids=[], _lsRafId=null, _lsRestartT=null;
+  // Restyle salts: bump one to reroll ONLY fonts or ONLY colours across the
+  // grid, hero cube and wordmarks, leaving everything else in place.
+  let _lsFontSalt=0, _lsHueSalt=0;
   // 4 fonts × 4 rules = 16 combos
   const _lsFonts=["'Silkscreen','Space Mono',monospace","'Press Start 2P',monospace","'VT323',monospace","'Space Mono',monospace","Impact,display"];
   const _lsRules=[
@@ -3489,6 +3490,13 @@
       if(!angles.includes(a)) angles.push(a);
     }
     const jit=[]; for(let i=0;i<24;i++) jit.push((rng()-.5)*2);
+    // Constraint rules v2: each font commits to ONE construction form and a
+    // density/negative-space/slicing regime — "only circles", "only arcs",
+    // "minimal", "IBM-sliced", etc.
+    const formR=rng();
+    const form = formR<0.40?'line' : formR<0.70?'arc' : formR<0.85?'circles' : 'triangles';
+    const denR=rng();
+    const density = denR<0.25?'minimal' : denR<0.75?'normal' : 'maximal';
     return {
       id:'gen-'+seed,
       angles,
@@ -3497,26 +3505,49 @@
       jitter:rng()*0.06,                 // endpoint offset fraction
       slant:(rng()-.5)*0.3,              // horizontal shear
       jit,
+      form,                              // line | arc | circles | triangles
+      curve:(rng()-.5)*1.2,              // arc bulge: sign = concave vs convex
+      density,                           // minimal | normal | maximal
+      counter:rng()<0.30,                // hollow inline core (negative space)
+      slice:rng()<0.25?(rng()<0.5?'h':'v'):null, // IBM-style banding
+      sliceBands:3+Math.floor(rng()*4),
     };
   }
   function _drawGenGlyph(ctx,ch,cx,cy,size,spec){
     const segs=_glyphSegs[(ch||'H').toUpperCase()]||_glyphSegs.H;
-    // Keep only the longest `budget` segments — long strokes carry identity
+    // Density regime: minimal keeps 2–3 strokes, maximal keeps every stroke
+    const budget = spec.density==='maximal' ? segs.length
+                 : spec.density==='minimal' ? Math.min(segs.length,2+(spec.budget%2))
+                 : spec.budget;
     const kept=segs.map((s,i)=>({s,i,len:Math.hypot(s[2]-s[0],s[3]-s[1])}))
-      .sort((a,b)=>b.len-a.len).slice(0,spec.budget)
+      .sort((a,b)=>b.len-a.len).slice(0,Math.max(2,budget))
       .sort((a,b)=>a.i-b.i);
     const gw=size*0.62, gh=size;
     const x0=cx-gw/2, y0=cy-gh/2;
-    ctx.lineWidth=Math.max(2,size*spec.weight);
-    ctx.lineCap='square';
-    ctx.beginPath();
-    kept.forEach(({s,i},ki)=>{
+    const wMul = spec.density==='minimal'?0.7 : spec.density==='maximal'?1.15 : 1;
+    const w=Math.max(2,size*spec.weight*wMul);
+    ctx.save();
+    ctx.fillStyle=ctx.strokeStyle; // shape forms fill, line forms stroke
+    // IBM-style slicing baked into the font: clip drawing to bands
+    if(spec.slice){
+      const bands=spec.sliceBands||4;
+      ctx.beginPath();
+      const span=(spec.slice==='h'?gh:gw)*1.3;
+      const step=span/bands, duty=step*0.58;
+      for(let b=0;b<bands;b++){
+        const off=b*step - span*0.12;
+        if(spec.slice==='h') ctx.rect(x0-gw*0.4, y0+off, gw*1.8, duty);
+        else ctx.rect(x0+off, y0-gh*0.2, duty, gh*1.4);
+      }
+      ctx.clip();
+    }
+    // Resolve segment endpoints: quantise to allowed orientations + jitter + slant
+    const pts=kept.map(({s},ki)=>{
       let [x1,y1,x2,y2]=s;
-      // Quantize segment angle to nearest allowed orientation (rotate about midpoint)
       const mx=(x1+x2)/2, my=(y1+y2)/2;
       const dx=(x2-x1)*gw, dy=(y2-y1)*gh;
       const len=Math.hypot(dx,dy);
-      let ang=Math.atan2(dy,dx)*180/Math.PI; // -180..180
+      let ang=Math.atan2(dy,dx)*180/Math.PI;
       let best=spec.angles[0], bd=1e9;
       for(const a of spec.angles){
         for(const cand of [a,a+180,a-180]){
@@ -3526,15 +3557,75 @@
       }
       const ar=best*Math.PI/180;
       const hx=Math.cos(ar)*len/2, hy=Math.sin(ar)*len/2;
-      const j=spec.jitter*size;
-      const ji=ki*2;
+      const j=spec.jitter*size, ji=ki*2;
       let ax=x0+mx*gw-hx+spec.jit[ji%24]*j, ay=y0+my*gh-hy+spec.jit[(ji+1)%24]*j;
       let bx=x0+mx*gw+hx+spec.jit[(ji+2)%24]*j, by=y0+my*gh+hy+spec.jit[(ji+3)%24]*j;
-      // slant: shear x by vertical position
       ax+=spec.slant*(cy+gh/2-ay); bx+=spec.slant*(cy+gh/2-by);
-      ctx.moveTo(ax,ay); ctx.lineTo(bx,by);
+      return [ax,ay,bx,by];
     });
-    ctx.stroke();
+    // Path builder shared by line/arc forms and the counter erase pass
+    const drawSegPath=(lw)=>{
+      ctx.lineWidth=lw; ctx.lineCap='square';
+      ctx.beginPath();
+      for(const [ax,ay,bx,by] of pts){
+        ctx.moveTo(ax,ay);
+        if(spec.form==='arc'){
+          // concave/convex: quadratic bulge perpendicular to the chord
+          const mx=(ax+bx)/2, my=(ay+by)/2;
+          const nx=-(by-ay), ny=(bx-ax);
+          const nl=Math.hypot(nx,ny)||1;
+          const k=spec.curve*Math.hypot(bx-ax,by-ay)*0.9;
+          ctx.quadraticCurveTo(mx+nx/nl*k, my+ny/nl*k, bx, by);
+        } else {
+          ctx.lineTo(bx,by);
+        }
+      }
+      ctx.stroke();
+    };
+    if(spec.form==='circles'){
+      // "must only render text using circles": rings along each stroke path
+      const r=Math.max(1.6,size*spec.weight*0.75);
+      ctx.lineWidth=Math.max(1,r*0.55);
+      ctx.beginPath();
+      for(const [ax,ay,bx,by] of pts){
+        const len=Math.hypot(bx-ax,by-ay), n=Math.max(2,Math.round(len/(r*1.5)));
+        for(let i=0;i<=n;i++){
+          const t=i/n, px=ax+(bx-ax)*t, py=ay+(by-ay)*t;
+          ctx.moveTo(px+r,py); ctx.arc(px,py,r,0,Math.PI*2);
+        }
+      }
+      ctx.stroke();
+    } else if(spec.form==='triangles'){
+      // "must only render text using triangles": alternating filled triangles
+      const s3=Math.max(2.4,size*spec.weight*1.6);
+      ctx.beginPath();
+      let flip=1;
+      for(const [ax,ay,bx,by] of pts){
+        const len=Math.hypot(bx-ax,by-ay), n=Math.max(2,Math.round(len/(s3*0.9)));
+        for(let i=0;i<=n;i++){
+          const t=i/n, px=ax+(bx-ax)*t, py=ay+(by-ay)*t;
+          flip=-flip;
+          ctx.moveTo(px, py-flip*s3*0.6);
+          ctx.lineTo(px-s3*0.55, py+flip*s3*0.4);
+          ctx.lineTo(px+s3*0.55, py+flip*s3*0.4);
+          ctx.closePath();
+        }
+      }
+      ctx.fill();
+    } else {
+      drawSegPath(w);
+      if(spec.density==='maximal'){
+        // doubled parallel stroke for chunky maximal letterforms
+        ctx.save(); ctx.translate(w*0.7,-w*0.5); drawSegPath(Math.max(1.5,w*0.6)); ctx.restore();
+      }
+    }
+    // Negative space: erase a hollow core out of the strokes
+    if(spec.counter && spec.form!=='triangles'){
+      ctx.globalCompositeOperation='destination-out';
+      drawSegPath(Math.max(1,w*0.35));
+      ctx.globalCompositeOperation='source-over';
+    }
+    ctx.restore();
   }
   function _buildLetterMask(text, W, H, font) {
     const c=document.createElement('canvas'); c.width=W; c.height=H;
@@ -3554,7 +3645,7 @@
     }
     const d=ctx.getImageData(0,0,W,H).data;
     const mask=new Uint8Array(W*H);
-    for(let i=0;i<W*H;i++) mask[i]=d[i*4]<128?1:0;
+    for(let i=0;i<W*H;i++) mask[i]=(d[i*4+3]>128 && d[i*4]<128)?1:0; // opaque AND dark (counter cutouts are transparent)
     return mask;
   }
   // ── Classic-brand style masks: the billiards engine renders these exactly
@@ -3594,7 +3685,7 @@
     }
     const d=ctx.getImageData(0,0,W,H).data;
     const mask=new Uint8Array(W*H);
-    for(let i=0;i<W*H;i++) mask[i]=d[i*4]<128?1:0;
+    for(let i=0;i<W*H;i++) mask[i]=(d[i*4+3]>128 && d[i*4]<128)?1:0; // opaque AND dark (counter cutouts are transparent)
     return mask;
   }
   // Word mask: up to 4 generated-font glyphs side by side (for the splash
@@ -3612,7 +3703,7 @@
     chars.forEach((ch,i)=>_drawGenGlyph(ctx, ch, x0+i*adv, H/2, gs, spec));
     const d=ctx.getImageData(0,0,W,H).data;
     const mask=new Uint8Array(W*H);
-    for(let i=0;i<W*H;i++) mask[i]=d[i*4]<128?1:0;
+    for(let i=0;i<W*H;i++) mask[i]=(d[i*4+3]>128 && d[i*4]<128)?1:0; // opaque AND dark (counter cutouts are transparent)
     return mask;
   }
   // Expose the engine to scripts outside this IIFE (splash $1 generator).
@@ -3975,7 +4066,7 @@
     const _rules = _evolvedRules(baseHue);
     _rules.forEach((v,vi)=>{
       // ── Per-panel color scheme derived from the color wheel ─────────────────
-      const schemeHue=(baseHue+v.hOff)%360;
+      const schemeHue=(baseHue+v.hOff+_lsHueSalt)%360;
       const compHue=(schemeHue+180)%360;             // true complement — clean two-hue Munker pair
       // True-complementary pair calibrated from the user's colour wheel:
       // letter cells sit at the exact 180° complement of the tile field, both
@@ -4007,7 +4098,7 @@
       } while(_seenLogoSeeds.has(panelSeed) && _att<12);
       // 'gen' → every panel gets its own constrained line-grammar font seeded
       // from the panel seed: 16 unique letterforms per generation.
-      const font=(fontKey==='gen') ? _genFont(panelSeed) : fontKey;
+      const font=(fontKey==='gen') ? _genFont(_seedFromString(String(panelSeed)+'|f'+_lsFontSalt)) : fontKey;
       const fontName=(fontKey==='gen') ? font.id : fontKey;
       const mask=v.style ? _buildStyleMask(v.style,text,W,H,font) : _buildLetterMask(text,W,H,font);
       const sim=new BilliardsLogoSim(W,H,mask,v.N,v.spd,(schemeHue+vi*15)%360,panelSeed);
@@ -4221,6 +4312,27 @@
     if(shuffleBtn&&!shuffleBtn._lsWired){
       shuffleBtn._lsWired=true;
       shuffleBtn.addEventListener('click',_shuffleLogoSim);
+    }
+    // Restyle buttons: reroll ONLY fonts / ONLY colours, everything else stays
+    const fontBtn=$('mhLogoFontBtn');
+    if(fontBtn&&!fontBtn._lsWired){
+      fontBtn._lsWired=true;
+      fontBtn.addEventListener('click',()=>{
+        _lsFontSalt++;
+        _cubeKey='';
+        _startLogoSim();
+        if(typeof renderLogoDesigner==='function') renderLogoDesigner();
+      });
+    }
+    const hueBtn=$('mhLogoHueBtn');
+    if(hueBtn&&!hueBtn._lsWired){
+      hueBtn._lsWired=true;
+      hueBtn.addEventListener('click',()=>{
+        _lsHueSalt=(_lsHueSalt+47)%360;
+        _cubeKey='';
+        _startLogoSim();
+        if(typeof renderLogoDesigner==='function') renderLogoDesigner();
+      });
     }
     // Wire GIF/WebM record button
     const gifBtn=$('mhLogoGifBtn');
@@ -5153,7 +5265,6 @@
       inPanel.classList.add('active');
       if (tab === 'web') renderWebDesigner();
       if (tab === 'game') { setVal('mhGame','platformer'); render(); }
-      if (tab === 'character') renderCharacterDesigner();
       if (tab === 'gif') updateBuilderCode();
       if (tab === 'qr') setTimeout(() => { if (typeof generateQr === 'function') generateQr(); }, 60);
       if (tab === 'kit' && typeof renderKitGrid === 'function') renderKitGrid();
@@ -5178,11 +5289,6 @@
     } else {
       _activateTab();
     }
-  }
-  function renderCharacterDesigner(){
-    const target = $('mhCharacterPreview'); if (!target) return;
-    const p = getWheelPalette();
-    target.innerHTML = ['Player token','Enemy token','Pickup token','Boss token'].map((label,i) => `<div class="mh-extra-card"><b>${label}</b><span style="display:inline-block;width:42px;height:48px;clip-path:polygon(50% 0%,92% 24%,92% 74%,50% 100%,8% 74%,8% 24%);background:${[p.aHex,p.bHex,p.cHex,renderPalette[2] || p.aHex][i]};box-shadow:0 0 18px ${[p.aHex,p.bHex,p.cHex,renderPalette[2] || p.aHex][i]};"></span><br/>Generated from exact palette + Munker field.</div>`).join('');
   }
 
   // ── QR Code Generator ─────────────────────────────────────────────────────
@@ -5670,7 +5776,6 @@
   const SUITE_TABS = [
     { id:'web',       label:'Web',       color:'hsl(45,92%,56%)' },
     { id:'game',      label:'Game',      color:'hsl(5,88%,58%)' },
-    { id:'character', label:'Character', color:'hsl(278,80%,64%)' },
     { id:'gif',       label:'GIF',       color:'hsl(195,90%,55%)' },
     { id:'qr',        label:'QR',        color:'hsl(135,72%,50%)' },
     { id:'logo',      label:'Logo',      color:'hsl(322,85%,60%)' },
@@ -6297,7 +6402,7 @@
     window.addEventListener('resize', () => { clearTimeout(window._mhBgTimer); window._mhBgTimer = setTimeout(() => { buildPageHexBg(); buildSplashClusters(); }, 220); });
     $('mhSaveWebBtn')?.addEventListener('click', downloadWebHtml);
     $('mhCopyWebBtn')?.addEventListener('click', copyBuilderCode);
-    syncMunker(); render(); renderWebDesigner(); renderCharacterDesigner();
+    syncMunker(); render(); renderWebDesigner();
     const qrGenBtn = $('mhQrGenerateBtn');
     if (qrGenBtn) {
       qrGenBtn.addEventListener('click', generateQr);
