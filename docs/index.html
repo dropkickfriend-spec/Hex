@@ -1742,6 +1742,14 @@
     letter-spacing:.12em; text-transform:uppercase; }
   /* ── Logo library: saved picks ── */
   #mhLogoLibrary { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px; min-height:0; }
+  /* ── NFT gallery wall: claimed pieces ── */
+  #mhNftGallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(74px,1fr)); gap:6px; }
+  .mh-nft-card {
+    background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.10); border-radius:6px;
+    padding:4px; text-align:center; font:8px 'Space Mono',monospace; color:var(--ink-dim,#9090a8);
+  }
+  .mh-nft-card canvas { width:100%; image-rendering:pixelated; border-radius:3px; display:block; margin-bottom:3px; }
+  .mh-nft-card .mh-nft-name { color:var(--ink,#e8e8f4); font-size:9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .mh-lib-chip {
     display:flex; flex-direction:column; align-items:center;
     background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10);
@@ -2237,6 +2245,11 @@
     </div>
     <div id="mhLogoSimGrid"></div>
     <div id="mhLogoLibrary"></div>
+    <!-- Public wall of claimed tokens — regenerated live from nft_tokens -->
+    <div id="mhNftGalleryWrap" style="display:none;margin:10px 0 4px">
+      <div class="mh-builder-title" style="font-size:11px">CLAIMED · <span id="mhNftCount">0</span> one-of-a-kind pieces · each owned by exactly one collector</div>
+      <div id="mhNftGallery"></div>
+    </div>
     <div class="mh-render-toolbar" style="margin-top:4px">
       <button id="mhLogoNftBtn">Export Unique Art (PNG)</button>
     </div>
@@ -3841,6 +3854,46 @@
       coverage:sim.outerVisited.size,expanded:sim.expanded
     }); _loadLogoLibrary(); }catch(_){}
   }
+  // Public gallery of claimed tokens. Thumbnails are regenerated
+  // deterministically from each token's stored seed — same seed, same
+  // generated font, same letterform — no images stored anywhere.
+  async function _loadNftGallery(){
+    const wrap=$('mhNftGalleryWrap'), gal=$('mhNftGallery');
+    if(!wrap||!gal) return;
+    const sb=(typeof sbNft==='function')?sbNft():null;
+    if(!sb){wrap.style.display='none';return;}
+    try{
+      const {data,count}=await sb.from('nft_tokens')
+        .select('token_id,seed,name,rule,hue,letters,claimed_at',{count:'exact'})
+        .order('claimed_at',{ascending:false}).limit(24);
+      if(!data||!data.length){wrap.style.display='none';return;}
+      wrap.style.display='block';
+      const cnt=$('mhNftCount'); if(cnt) cnt.textContent=String(count!=null?count:data.length);
+      gal.innerHTML='';
+      for(const r of data){
+        const card=document.createElement('div');
+        card.className='mh-nft-card';
+        card.title=(r.name||'')+' · '+(r.rule||'')+' · '+new Date(r.claimed_at).toLocaleDateString();
+        const cv=document.createElement('canvas');
+        cv.width=60; cv.height=30;
+        const ctx=cv.getContext('2d');
+        const hue=(r.hue!=null)?r.hue:200, comp=(hue+180)%360;
+        ctx.fillStyle=`hsl(${hue},45%,12%)`; ctx.fillRect(0,0,60,30);
+        try{
+          const seed=Number(r.seed)||0;
+          const mask=_buildLetterMask((r.letters||'H'),60,30,_genFont(seed));
+          ctx.fillStyle=`hsl(${comp},70%,55%)`;
+          for(let i=0;i<60*30;i++) if(mask[i]) ctx.fillRect(i%60,(i/60)|0,1,1);
+        }catch(_){}
+        const nm=document.createElement('div'); nm.className='mh-nft-name';
+        nm.textContent=r.name||('#'+String(r.token_id).slice(0,6));
+        const meta=document.createElement('div');
+        meta.textContent=(r.rule||'')+' · '+String(r.token_id).slice(0,6);
+        card.appendChild(cv); card.appendChild(nm); card.appendChild(meta);
+        gal.appendChild(card);
+      }
+    }catch(_){wrap.style.display='none';}
+  }
   async function _loadLogoLibrary(){
     const lib=$('mhLogoLibrary'); if(!lib) return;
     const sb=sbClient(); if(!sb){lib.innerHTML='';return;}
@@ -4124,6 +4177,7 @@
     }
     _rafLoop();
     _loadLogoLibrary();
+    _loadNftGallery();
 
     // Wire Shuffle button
     const shuffleBtn=$('mhLogoShuffleBtn');
@@ -4203,6 +4257,7 @@
       const certDl = $('mhVendCertDownload');
       if (certDl) { certDl.href = certUrl; certDl.download = `hexfield-nft-${data.token_id.slice(0,8)}.json`; certDl.style.display = 'inline-flex'; }
       if (statusEl) statusEl.textContent = `Token #${data.token_id.slice(0,8)} claimed — this artwork is yours alone.`;
+      _loadNftGallery();
     } catch (e) {
       const msg = String((e&&e.message)||e);
       if (msg.includes('duplicate') || msg.includes('unique') || (e&&e.code==='23505')) {
