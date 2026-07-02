@@ -15,7 +15,7 @@
   // $1 colour checkout — Supabase Edge Function (supabase/functions/stripe).
   // Public URL, no secret here; the Stripe secret key lives only as a Supabase
   // function secret (STRIPE_SECRET_KEY), set via the dashboard/CLI.
-  window.MH_BACKEND_URL = window.MH_BACKEND_URL || 'https://uiobhojjgtsvyzuzqqiy.supabase.co/functions/v1/stripe';
+  window.MH_BACKEND_URL = window.MH_BACKEND_URL || 'https://ujqngoliwxquosickvza.supabase.co/functions/v1/stripe';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
 <script>
@@ -2216,7 +2216,7 @@
     </div>
     <div class="mh-render-toolbar" style="margin-top:10px;flex-wrap:wrap">
       <input id="mhLogoTextLogo" maxlength="24" value="HEXFIELD" placeholder="Brand name" style="flex:2" />
-      <select id="mhLogoMarkLogo"><option value="hex">Hex mark</option><option value="cube">Cube mark</option><option value="none">Text only</option></select>
+      <select id="mhLogoMarkLogo"><option value="hex">Live cube · billiards</option><option value="cube">Live cube · alt seed</option><option value="none">Text only</option></select>
       <select id="mhLogoLayoutLogo"><option value="left">Mark left</option><option value="top">Mark top</option><option value="text">Text only</option></select>
     </div>
     <div class="mh-render-toolbar" style="margin-top:4px;flex-wrap:wrap">
@@ -3150,6 +3150,90 @@
     if (stripes[1]) stripes[1].style.background = mk(120);  // right face
     if (stripes[2]) stripes[2].style.background = mk(60);   // top face
   }
+  // ── Live brand cube: a billiards sim runs on each of the three iso planes ──
+  // Each visible face of the brand cube is its own 44×44 billiards sim
+  // rendering one brand letter, affine-mapped onto the face rhombus with
+  // canvas setTransform. Same engine, three planes.
+  let _cubeRaf=null, _cubeKey='';
+  function _stopCubeFaceSims(){
+    if(_cubeRaf){cancelAnimationFrame(_cubeRaf);_cubeRaf=null;}
+    _cubeKey='';
+  }
+  function _startCubeFaceSims(container, text){
+    const p=(typeof getWheelPalette==='function')?getWheelPalette():{hue:200};
+    const key=(text||'')+'|'+Math.round(p.hue)+'|'+(_logoSeed||'');
+    if(_cubeKey===key && _cubeRaf && container.querySelector('canvas')) return;
+    _stopCubeFaceSims();
+    _cubeKey=key;
+    const W=200, H=Math.round(200/0.866);
+    container.innerHTML='';
+    const canvas=document.createElement('canvas');
+    canvas.width=W; canvas.height=H;
+    canvas.style.cssText='width:180px;max-width:60vw;filter:drop-shadow(0 10px 22px rgba(0,0,0,.6))';
+    container.appendChild(canvas);
+    const ctx=canvas.getContext('2d');
+    const S=44; // sim resolution per face
+    const T=(text||'HEX').toUpperCase();
+    const L=[T.charAt(0)||'H', T.charAt(1)||T.charAt(0)||'E', T.charAt(2)||T.charAt(0)||'X'];
+    const rules=['avoid','flock','spiral'];
+    // Affine maps of the 44×44 sim square onto the three iso rhombi
+    // (same geometry as the .mh-pxf clip-paths).
+    const faces=[
+      {o:[W/2,0],   u:[W/2,H/4],  v:[-W/2,H/4], shade:'rgba(255,255,255,0.22)', hOff:0},
+      {o:[W/2,H/2], u:[W/2,-H/4], v:[0,H/2],    shade:'rgba(0,0,0,0.12)',       hOff:120},
+      {o:[0,H/4],   u:[W/2,H/4],  v:[0,H/2],    shade:'rgba(0,0,0,0.42)',       hOff:240},
+    ].map((f,i)=>{
+      const seed=_seedFromString((_logoSeed||'x')+'|cubeface|'+i+'|'+L[i]+'|'+Math.round(p.hue));
+      const font=_genFont(seed);
+      const mask=_buildLetterMask(L[i],S,S,font);
+      const sim=new BilliardsLogoSim(S,S,mask,6,4,(p.hue+f.hOff)%360,seed);
+      sim._schemeHue=(p.hue+f.hOff)%360;
+      sim._compHue=(sim._schemeHue+180)%360;
+      // Prerender the resting letter layer once (complement tint on scheme base)
+      const lc=document.createElement('canvas'); lc.width=S; lc.height=S;
+      const lctx=lc.getContext('2d');
+      lctx.fillStyle=`hsl(${sim._schemeHue},45%,12%)`; lctx.fillRect(0,0,S,S);
+      lctx.fillStyle=`hsl(${sim._compHue},62%,38%)`;
+      for(let j=0;j<S*S;j++) if(mask[j]) lctx.fillRect(j%S,(j/S)|0,1,1);
+      return Object.assign({},f,{sim,rule:rules[i%rules.length],letterCv:lc});
+    });
+    let last=0;
+    function loop(now){
+      _cubeRaf=requestAnimationFrame(loop);
+      if(now-last<33) return; last=now; // ~30fps
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.clearRect(0,0,W,H);
+      for(const f of faces){
+        const sim=f.sim;
+        sim._applyRule(f.rule);
+        sim.step(); sim.step(); sim.step();
+        for(const b of sim.balls){
+          const tgt=b.inside?sim._compHue:sim._schemeHue;
+          b.hue=(b.hue*0.9+tgt*0.1+360)%360;
+        }
+        ctx.setTransform(f.u[0]/S, f.u[1]/S, f.v[0]/S, f.v[1]/S, f.o[0], f.o[1]);
+        ctx.drawImage(f.letterCv,0,0);
+        const tail=sim.trails.slice(-sim.balls.length*60);
+        for(const pt of tail){
+          ctx.fillStyle=pt.ins?`hsla(${pt.h|0},90%,66%,0.85)`:`hsla(${pt.h|0},80%,55%,0.6)`;
+          ctx.fillRect(pt.x|0,pt.y|0,1,1);
+        }
+        for(const b of sim.balls){
+          ctx.fillStyle=`hsl(${b.hue|0},100%,85%)`;
+          ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);
+        }
+        // Pixel-TV scanlines along the sim rows
+        ctx.fillStyle='rgba(0,0,0,0.22)';
+        for(let y=0;y<S;y+=3) ctx.fillRect(0,y,S,0.6);
+        // Face shading matches the site's cube lighting
+        ctx.fillStyle=f.shade;
+        ctx.fillRect(0,0,S,S);
+      }
+      ctx.setTransform(1,0,0,1,0,0);
+    }
+    _cubeRaf=requestAnimationFrame(loop);
+  }
+
   function renderLogoDesigner() {
     var p = typeof getWheelPalette === 'function' ? getWheelPalette() : {aHex:'#ffff00',bHex:'#ff00ff',cHex:'#00ffff',hue:60};
     // If a billiard swatch was clicked, recolour the main mark/preview from it.
@@ -3166,9 +3250,8 @@
     var hexWrap = $('mhLogoHexMark');
     var _markType = ($('mhLogoMarkLogo') || {}).value || 'hex';
     if (hexWrap) {
-      if (_markType === 'none') hexWrap.innerHTML = '';            // Text only → no mark
-      else if (_markType === 'cube') _buildBrandCube(hexWrap, p, ($('mhLogoTextLogo') || {}).value || 'HEXFIELD', _logoSeed);
-      else _buildIsoCubeMark(_logoSeed, p, hexWrap);
+      if (_markType === 'none') { hexWrap.innerHTML = ''; _stopCubeFaceSims(); } // Text only → no mark
+      else _startCubeFaceSims(hexWrap, ($('mhLogoTextLogo') || {}).value || 'HEXFIELD');
     }
 
     var preview = $('mhLogoPreviewLogo');
@@ -4918,7 +5001,7 @@
     if (!inPanel || inPanel === outPanel) return;
     document.querySelectorAll('#mhPageHexBg [data-suite-tab]').forEach(el => el.classList.toggle('mh-tab-active', el.dataset.suiteTab === tab));
     window._mhActiveSuiteTab = tab;
-    _stopLogoSims(); _stopTypeAlpha(); _stopSnake(); _stopPixelFont(); // stop sims on tab switch
+    _stopLogoSims(); _stopCubeFaceSims(); _stopTypeAlpha(); _stopSnake(); _stopPixelFont(); // stop sims on tab switch
     const bg = document.getElementById('mhPageHexBg');
     if (bg) {
       bg.classList.add('mh-domino','mh-bg-pulse');
@@ -5380,10 +5463,14 @@
       const chr = (typeof cal !== 'undefined' && cal.chroma != null) ? cal.chroma : 80;
       return _toHex(rgbAt(hue, tone, chr));
     };
-    // Clean faces — no stripe overlay. The vivid solid-shaded cube (like the
-    // logo sim cells and splash clusters) IS the hue-cube look; the thick
-    // white Munker artefact lines were what made the field read as noise.
-    const bT = '', bR = '', bL = '';
+    // Shared pixel-TV texture: the same thin buildMunkerPattern weave the HUE
+    // CUBE wears, at the cube's per-face angles. With the sane thin defaults
+    // (3px lines / 8px gaps) the colour survives — the old washout was the
+    // 13px preset, not stripes per se.
+    const _mk = a => (typeof buildMunkerPattern === 'function' ? (buildMunkerPattern(a) || '') : '');
+    const bT = _mk(typeof HEX_FACE_MUNKER_ANGLE !== 'undefined' ? HEX_FACE_MUNKER_ANGLE.top : 60);
+    const bR = _mk(typeof HEX_FACE_MUNKER_ANGLE !== 'undefined' ? HEX_FACE_MUNKER_ANGLE.right : 120);
+    const bL = _mk(typeof HEX_FACE_MUNKER_ANGLE !== 'undefined' ? HEX_FACE_MUNKER_ANGLE.left : 90);
     const existing = bg.children;
     if (existing.length === cols * rows) {
       let i = 0;
