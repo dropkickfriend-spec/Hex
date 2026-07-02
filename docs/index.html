@@ -1884,6 +1884,13 @@
     background:linear-gradient(#40405a,#25253400); transform:skewX(-56deg); border-radius:8px 8px 0 0; z-index:1; }
   .mh-ivend-brand { font:800 10px 'Space Mono',monospace; letter-spacing:.14em; color:var(--mh-a,#ffd24a);
     text-align:center; margin-bottom:8px; text-shadow:0 0 8px var(--mh-a,#ffd24a); }
+  .mh-ivend-opts { display:flex; gap:5px; align-items:center; margin-bottom:8px; }
+  .mh-ivend-opts input { width:64px; padding:5px 7px !important; font:bold 11px 'Space Mono',monospace !important;
+    letter-spacing:.1em; text-transform:uppercase; text-align:center; }
+  .mh-ivend-swatches { display:flex; gap:4px; flex:1; justify-content:flex-end; }
+  .mh-ivend-sw { width:19px; height:19px; border-radius:4px; border:1px solid rgba(255,255,255,.25);
+    cursor:pointer; padding:0; min-height:0; }
+  .mh-ivend-sw.sel { outline:2px solid #fff; outline-offset:1px; }
   .mh-ivend-screenwrap { border-radius:7px; overflow:hidden; background:#04040a; padding:6px;
     box-shadow:inset 0 0 16px rgba(0,0,0,.9), 0 0 0 2px #000; position:relative; }
   .mh-ivend-screenwrap::after { content:''; position:absolute; inset:6px; pointer-events:none; border-radius:4px;
@@ -1980,6 +1987,10 @@
       <div class="mh-ivend-top"></div>
       <div class="mh-ivend-front">
         <div class="mh-ivend-brand">HEXFIELD · $1 GENERATOR</div>
+        <div class="mh-ivend-opts">
+          <input id="mhIVendText" maxlength="4" value="HEX" placeholder="WORD" spellcheck="false"/>
+          <span id="mhIVendSwatches" class="mh-ivend-swatches"></span>
+        </div>
         <div class="mh-ivend-screenwrap"><canvas id="mhIVendScreen" class="mh-ivend-screen" width="240" height="132"></canvas></div>
         <div class="mh-ivend-price">◎ $1 · 60 SECONDS OF COLOUR</div>
         <button id="mhIVendPay" class="mh-ivend-slot">INSERT&nbsp;$1</button>
@@ -3586,6 +3597,32 @@
     for(let i=0;i<W*H;i++) mask[i]=d[i*4]<128?1:0;
     return mask;
   }
+  // Word mask: up to 4 generated-font glyphs side by side (for the splash
+  // $1 generator's CRT, where a short word replaces the single letter).
+  function _buildWordMask(text, W, H, spec){
+    const c=document.createElement('canvas'); c.width=W; c.height=H;
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#000';
+    const chars=(text||'H').toUpperCase().split('').filter(ch=>_glyphSegs[ch]).slice(0,4);
+    if(!chars.length) chars.push('H');
+    const n=chars.length;
+    const gs=Math.min(H*0.66, (W*0.86)/n/0.78);
+    const adv=gs*0.82, x0=W/2-(n-1)*adv/2;
+    chars.forEach((ch,i)=>_drawGenGlyph(ctx, ch, x0+i*adv, H/2, gs, spec));
+    const d=ctx.getImageData(0,0,W,H).data;
+    const mask=new Uint8Array(W*H);
+    for(let i=0;i<W*H;i++) mask[i]=d[i*4]<128?1:0;
+    return mask;
+  }
+  // Expose the engine to scripts outside this IIFE (splash $1 generator).
+  window._mhSimKit = {
+    Sim: (...a)=>new BilliardsLogoSim(...a),
+    genFont: (seed)=>_genFont(seed),
+    wordMask: (t,W,H,s)=>_buildWordMask(t,W,H,s),
+    seedFrom: (s)=>_seedFromString(s),
+    recordSeed: (seed,meta)=>{ try{_recordLogoSeed(seed,meta);}catch(_){} },
+  };
   // Seeded PRNG (mulberry32) so a stored seed reproduces an exact render —
   // this is what lets logo nodes be globally unique/deduped rather than a
   // fresh random scatter every page load.
@@ -10051,35 +10088,94 @@ renderPinned();
     var status = document.getElementById('mhIVendStatus');
     if(!canvas) return;
     var ctx = canvas.getContext('2d'), W = canvas.width, H = canvas.height;
-    var pal = (typeof getWheelPalette === 'function') ? getWheelPalette() : {hue:200, colors:[]};
-    function hueHex(h,s,l){ // hsl→css
-      return 'hsl('+((h%360+360)%360)+','+s+'%,'+l+'%)';
+    // The REAL engine on the CRT: full BilliardsLogoSim via window._mhSimKit
+    // (word mask, generated font, rules, letter unlock, Supabase seed
+    // no-repeat), dense + fast, auto-cycling to a fresh unique generation
+    // once each one develops.
+    var SW=80, SH=44, cw=W/SW, ch=H/SH;
+    var wordEl = document.getElementById('mhIVendText');
+    var swWrap = document.getElementById('mhIVendSwatches');
+    var schemeHue = null; // null = follow the colour wheel
+    var HUES = [0,35,90,150,200,260,320];
+    if (swWrap) HUES.forEach(function(h){
+      var b=document.createElement('button');
+      b.className='mh-ivend-sw'; b.title='Scheme '+h+'°';
+      b.style.background='hsl('+h+',85%,52%)';
+      b.addEventListener('click', function(){
+        schemeHue=h;
+        swWrap.querySelectorAll('.mh-ivend-sw').forEach(function(x){x.classList.remove('sel');});
+        b.classList.add('sel');
+        regen();
+      });
+      swWrap.appendChild(b);
+    });
+    var sim=null, floor=null, gen=0, devTick=0;
+    var RULES=['chaos','avoid','flock','spiral','seek'];
+    function regen(){
+      var kit=window._mhSimKit; if(!kit) return;
+      gen++;
+      var word=((wordEl&&wordEl.value)||'HEX').trim()||'HEX';
+      var hue=(schemeHue!=null)?schemeHue:((typeof getWheelPalette==='function')?getWheelPalette().hue:200);
+      var seed=kit.seedFrom('ivend|'+word+'|'+hue+'|g'+gen+'|'+Date.now());
+      var font=kit.genFont(seed);
+      var mask=kit.wordMask(word,SW,SH,font);
+      sim=kit.Sim(SW,SH,mask,14,5.5,hue,seed);
+      sim._schemeHue=hue%360; sim._compHue=(hue+180)%360;
+      sim._rule=RULES[gen%RULES.length]; sim._mask=mask;
+      floor=new Float32Array(SW*SH);
+      devTick=0;
+      // Global no-repeat memory: every generation is registered in Supabase
+      // (dedup + generation counter live inside recordSeed).
+      kit.recordSeed(seed,{text:word,font:font.id,rule:sim._rule,hue:Math.round(hue)});
     }
-    // Mini billiard: a few balls bounce, painting fading palette pixels — the
-    // "live generator" running on the machine's CRT.
-    var GX=40, GY=22, cw=W/GX, ch=H/GY;
-    var lit = new Float32Array(GX*GY), litH = new Float32Array(GX*GY);
-    var balls = Array.from({length:4}, function(_,i){
-      var a=Math.random()*6.28; return { x:Math.random()*GX, y:Math.random()*GY,
-        vx:Math.cos(a)*0.5, vy:Math.sin(a)*0.5, h:(pal.hue+i*70)%360 }; });
-    var raf=0;
-    function step(){
+    if(wordEl){
+      var _wt=null;
+      wordEl.addEventListener('input',function(){ clearTimeout(_wt); _wt=setTimeout(regen,300); });
+      wordEl.addEventListener('click',function(e){ e.stopPropagation(); });
+    }
+    var raf=0, lastT=0;
+    function step(now){
       raf = requestAnimationFrame(step);
-      for(var i=0;i<lit.length;i++) lit[i]*=0.94;
-      for(var b of balls){
-        b.x+=b.vx; b.y+=b.vy; b.h=(b.h+1.3)%360;
-        if(b.x<0||b.x>=GX){ b.vx*=-1; b.x=Math.max(0,Math.min(GX-0.01,b.x)); }
-        if(b.y<0||b.y>=GY){ b.vy*=-1; b.y=Math.max(0,Math.min(GY-0.01,b.y)); }
-        var idx=(b.y|0)*GX+(b.x|0); lit[idx]=1; litH[idx]=b.h;
+      if(now-lastT<28) return; lastT=now;
+      if(!sim){ regen(); if(!sim) return; }
+      // dense + fast: 5 physics steps per frame
+      sim._applyRule(sim._rule);
+      sim.step(); sim.step(); sim.step(); sim.step(); sim.step();
+      for(var bi=0;bi<sim.balls.length;bi++){
+        var b=sim.balls[bi], tgt=b.inside?sim._compHue:sim._schemeHue;
+        b.hue=(b.hue*0.9+tgt*0.1+360)%360;
+      }
+      // persistent fill floor: painted cells stay lit, the word develops solid
+      var tail=sim.trails.slice(-sim.balls.length*50);
+      for(var ti=0;ti<tail.length;ti++){
+        var pt=tail[ti], k=(pt.y|0)*SW+(pt.x|0);
+        floor[k]=Math.max(floor[k], pt.ins?0.85:0.5);
       }
       ctx.fillStyle='#04040a'; ctx.fillRect(0,0,W,H);
-      for(var gy=0;gy<GY;gy++) for(var gx=0;gx<GX;gx++){
-        var k=gy*GX+gx, v=lit[k]; if(v<0.04) continue;
-        ctx.fillStyle=hueHex(litH[k], 95, 30+v*45);
-        ctx.fillRect(Math.floor(gx*cw), Math.floor(gy*ch), Math.ceil(cw)+1, Math.ceil(ch)+1);
+      for(var gy=0;gy<SH;gy++) for(var gx=0;gx<SW;gx++){
+        var kk=gy*SW+gx, inL=sim._mask[kk]===1, f=floor[kk];
+        var hh=inL?sim._compHue:sim._schemeHue;
+        var ll=inL ? (18+f*46) : (6+f*30);
+        if(!inL && f<0.03) continue; // bare stage stays dark
+        ctx.fillStyle='hsl('+(hh|0)+',80%,'+(ll|0)+'%)';
+        ctx.fillRect(Math.floor(gx*cw), Math.floor(gy*ch), Math.ceil(cw), Math.ceil(ch));
+      }
+      // balls on top, bright
+      for(var bj=0;bj<sim.balls.length;bj++){
+        var bb=sim.balls[bj];
+        ctx.fillStyle='hsl('+(bb.hue|0)+',100%,82%)';
+        ctx.fillRect(Math.floor(bb.x*cw)-2, Math.floor(bb.y*ch)-2, 4, 4);
+      }
+      // scanlines for the CRT read
+      ctx.fillStyle='rgba(0,0,0,0.25)';
+      for(var sy=0;sy<H;sy+=3) ctx.fillRect(0,sy,W,1);
+      // once developed, hold 3s then cycle to a fresh unique generation
+      if(sim.expanded){
+        devTick++;
+        if(devTick>108) regen(); // ~3s at 36fps
       }
     }
-    step();
+    raf = requestAnimationFrame(step);
     function colourLive(){ return document.body.classList.contains('mh-colour-live'); }
     if(pay) pay.addEventListener('click', function(){ var bd=document.getElementById('mhColourBadge'); if(bd) bd.click(); if(status) status.textContent = 'Colour unlocked — 60s!'; });
     if(pngBtn) pngBtn.addEventListener('click', function(){
