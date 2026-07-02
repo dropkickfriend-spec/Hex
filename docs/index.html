@@ -723,6 +723,32 @@
 </style>
 </head>
 <body>
+<!-- Retro CRT monitor overlay: scanlines + RGB aperture grille + vignette +
+     slow phosphor breathing. Pure CSS, pointer-events:none, sits over all UI. -->
+<div id="mhCrt" aria-hidden="true"></div>
+<style>
+  #mhCrt {
+    position:fixed; inset:0; pointer-events:none; z-index:9990;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, rgba(255,60,60,.028) 0 1px, rgba(60,255,60,.028) 1px 2px, rgba(80,80,255,.028) 2px 3px);
+    animation: mhCrtBreathe 4.2s ease-in-out infinite;
+  }
+  #mhCrt::before { /* curved-glass vignette */
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(ellipse 92% 88% at 50% 48%, transparent 62%, rgba(0,0,0,.38) 100%);
+  }
+  #mhCrt::after { /* rolling refresh band */
+    content:''; position:absolute; left:0; right:0; height:120px;
+    background:linear-gradient(180deg, transparent, rgba(255,255,255,.035), transparent);
+    animation: mhCrtRoll 7s linear infinite;
+  }
+  @keyframes mhCrtBreathe { 0%,100%{opacity:1} 50%{opacity:.93} }
+  @keyframes mhCrtRoll { from{top:-140px} to{top:100%} }
+  @media (prefers-reduced-motion: reduce) {
+    #mhCrt, #mhCrt::after { animation:none; }
+  }
+</style>
 <style id="munkerhex-render-adapter">
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Silkscreen:wght@400;700&family=Press+Start+2P&family=VT323&display=swap');
   .mh-render-adapter {
@@ -3150,6 +3176,24 @@
     if (stripes[1]) stripes[1].style.background = mk(120);  // right face
     if (stripes[2]) stripes[2].style.background = mk(60);   // top face
   }
+  // Wordmark rendered in the session's generated line-grammar font — the brand
+  // name set in a typeface that exists nowhere else, instead of plain Space Mono.
+  function _genWordmarkUrl(text, seed, color, h){
+    const spec=_genFont(_seedFromString('wordmark|'+(seed||'x')));
+    const chars=(text||'').toUpperCase().split('');
+    const adv=h*0.82, pad=Math.ceil(h*0.25);
+    const cv=document.createElement('canvas');
+    cv.width=Math.max(1,Math.ceil(chars.length*adv+pad*2));
+    cv.height=h+pad*2;
+    const ctx=cv.getContext('2d');
+    ctx.strokeStyle=color||'#fff';
+    chars.forEach((ch,i)=>{
+      if(!_glyphSegs[ch]) return; // spaces/unknowns advance silently
+      _drawGenGlyph(ctx, ch, pad+i*adv+adv/2, pad+h/2, h, spec);
+    });
+    return cv.toDataURL();
+  }
+
   // ── Live brand cube: a billiards sim runs on each of the three iso planes ──
   // Each visible face of the brand cube is its own 44×44 billiards sim
   // rendering one brand letter, affine-mapped onto the face rhombus with
@@ -3281,6 +3325,9 @@
       for(var mr2=0;mr2<2;mr2++){var ox2=(mr2%2===1)?CW2*0.5:0;for(var mc2=0;mc2<3;mc2++){flat2d+=_svgFlatDiamond(mc2*CW2+ox2,mr2*RS2,CW2,flat2dCols[fi++]);}}
       var flat2dW=Math.ceil(CW2*3+CW2*0.5), flat2dH=Math.ceil(CH2+RS2);
 
+      // Brand name set in this session's generated font (unique letterforms),
+      // not plain Space Mono.
+      var _wmUrl = _genWordmarkUrl(text, _logoSeed, textCol, 24);
       function _variantCard(label, markHtml) {
         var nameText = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
         var tagText = tagline.replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -3288,7 +3335,7 @@
           +'<div class="mh-logo-variant-label">'+label+'</div>'
           +markHtml
           +'<div style="margin-top:6px;text-align:left">'
-          +'<div style="font:700 18px \'Space Mono\',monospace;color:'+textCol+';text-shadow:0 0 8px rgba(0,0,0,.9)">'+nameText+'</div>'
+          +'<img src="'+_wmUrl+'" alt="'+nameText+'" style="height:22px;image-rendering:auto;filter:drop-shadow(0 0 6px rgba(0,0,0,.9))"/>'
           +(tagText?'<div style="font:9px \'Space Mono\',monospace;color:'+p.bHex+';letter-spacing:.13em;margin-top:3px">'+tagText+'</div>':'')
           +'</div></div>';
       }
@@ -5049,10 +5096,14 @@
   // ── QR Code Generator ─────────────────────────────────────────────────────
   let _qrSvgCache = '';
   function _loadQrLib(){
-    // Try two CDNs with a timeout so a blocked/slow CDN can't hang the UI.
+    // Same-origin vendored copy first (bulletproof), then CDN fallbacks.
+    // NOTE: qrcode@1.5.3 does NOT ship /build/ on the CDNs — that 404 was the
+    // "QR library failed to load (offline?)" error; 1.5.1 is the last version
+    // with the UMD build, and docs/vendor/qrcode.min.js is that exact file.
     const urls = [
-      'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
-      'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js',
+      'vendor/qrcode.min.js',
+      'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js',
+      'https://unpkg.com/qrcode@1.5.1/build/qrcode.min.js',
     ];
     return new Promise((resolve, reject) => {
       let i = 0;
